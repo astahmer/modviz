@@ -1,0 +1,22 @@
+{
+  "name": "modviz",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "bin": {
+    "modviz": "./dist/cli.js"
+  },
+  "scripts": {
+    "cli": "node mod/cli.ts",
+    "build": "tsc mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext",
+    "fmt": "biome format --fix"
+  },
+  "dependencies": {
+    "@thepassle/module-graph": "^0.12.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.4",
+    "@types/node": "^22.5.4",
+    "typescript": "^5.7.2"
+  }
+}
