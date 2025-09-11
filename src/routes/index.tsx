@@ -1,5 +1,5 @@
 import { ClientOnly, createFileRoute } from "@tanstack/react-router";
-import { GraphAll } from "~/components/graph";
+import { GraphAll } from "../components/graph";
 
 export const Route = createFileRoute("/")({
 	component: Home,
