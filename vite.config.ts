@@ -2,6 +2,11 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const srcDir = path.join(__dirname, "./src");
 
 export default defineConfig({
 	server: {
@@ -15,7 +20,7 @@ export default defineConfig({
 			customViteReactPlugin: true,
 			spa: { enabled: true },
 			tsr: {
-				srcDirectory: "./web/src",
+				srcDirectory: srcDir,
 			},
 		}),
 		viteReact(),

@@ -10,8 +10,8 @@
     "cli": "node mod/cli.ts",
     "cli:build": "tsc mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext",
     "fmt": "biome format --fix",
-    "dev": "vite dev web",
-    "build": "vite build web && tsc --noEmit",
+    "dev": "vite dev",
+    "build": "vite build && tsc --noEmit",
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
