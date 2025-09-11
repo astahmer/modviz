@@ -18,5 +18,5 @@ export async function startServer(userPort: number | undefined) {
 	await server.listen();
 
 	server.printUrls();
-	server.bindCLIShortcuts({ print: true });
+	// server.bindCLIShortcuts({ print: true });
 }

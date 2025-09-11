@@ -4,6 +4,8 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+// import { devtools } from "@tanstack/devtools-vite";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const srcDir = path.join(__dirname, "./src");
@@ -24,5 +26,6 @@ export default defineConfig({
 			},
 		}),
 		viteReact(),
+		tailwindcss(),
 	],
 });
