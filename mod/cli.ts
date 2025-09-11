@@ -10,6 +10,7 @@ import { exports } from "@thepassle/module-graph/plugins/exports.js";
 import { imports } from "@thepassle/module-graph/plugins/imports.js";
 import { typescript } from "@thepassle/module-graph/plugins/typescript.js";
 import { unusedExports } from "@thepassle/module-graph/plugins/unused-exports.js";
+import path from "node:path";
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -67,20 +68,6 @@ if (!existsSync(entryFile)) {
 
 console.log(`🔍 Analyzing dependency graph for: ${entryFile}`);
 
-const digraphPlugin: Plugin = {
-	name: "digraph-plugin",
-	end(moduleGraph) {
-		let digraph = "digraph {\n";
-		for (const [parent, importees] of moduleGraph.graph) {
-			digraph += `  "${parent}" -> ${[...importees].map((p) => `"${p}"`).join(",")}\n`;
-		}
-		digraph += "}";
-
-		// @ts-expect-error
-		moduleGraph.digraph = digraph;
-	},
-};
-
 const moduleGraph = await createModuleGraph(entryFile, {
 	exclude: [(importee) => importee.includes("node_modules")],
 	plugins: [
@@ -91,14 +78,11 @@ const moduleGraph = await createModuleGraph(entryFile, {
 		barrelFile({
 			amountOfExportsToConsiderModuleAsBarrel: 3,
 		}),
-		// digraphPlugin,
 	],
 });
 
-// Convert module graph to web-friendly format
 const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile);
 
-// Write the processed data
 writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
 console.log(`📊 Graph data saved to: ${flags.outputFile}`);
 
@@ -106,7 +90,6 @@ if (!flags.noUi) {
 	await launchWebUI(flags.port, flags.outputFile);
 }
 
-// Process module graph into web-friendly format
 function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryPoint: string,
@@ -115,40 +98,27 @@ function processModuleGraphForWeb(
 	const edgeList: GraphEdge[] = [];
 
 	for (const [filePath, importees] of moduleGraph.graph) {
-		// console.log(parent, importees);
-
 		const module = moduleGraph.modules.get(filePath)!;
 		const imports = (module.imports ?? []) as Import[];
 		const exports = (module.exports ?? []) as Export[];
 		const unusedExports = (module.unusedExports ?? []) as Export[];
-		const seen = new Set<string>();
 
-		// Create node
-		nodeList.push({
-			label: getFileLabel(filePath),
+		const node = {
+			name: path.basename(filePath),
 			path: filePath,
 			type: getNodeType(filePath, module, entryPoint),
-			imports: Array.from(importees),
-			// importedSymbols: Array.from(new Set(imports.map((imp) => imp.name))),
-			// imports: Array.from(new Set(imports.map((imp) => imp.module))),
+			imports,
+			exports,
+			unusedExports,
+			importees: Array.from(importees),
 			importedBy: module.importedBy,
-			exports: Array.from(
-				new Set(exports.map((exp) => exp.declaration.module).filter(Boolean)),
-			),
 			isBarrelFile: module.isBarrelFile || false,
 			chain: findImportChains(moduleGraph, (path) => path === filePath),
-			// unusedExports: Array.from(
-			// 	new Set(unusedExports.map((exp) => exp.name).filter(Boolean)),
-			// ),
-			// mod: { imports, exports },
-		});
+		};
+		nodeList.push(node);
 
 		importees.forEach((importee) => {
-			edgeList.push({
-				source: filePath,
-				target: importee,
-				type: "import",
-			});
+			edgeList.push({ source: filePath, target: importee });
 		});
 	}
 
@@ -163,15 +133,9 @@ function processModuleGraphForWeb(
 				.length,
 		},
 		nodes: nodeList,
-		// edges: edgeList,
+		edges: edgeList,
 		imports: uniqueModules,
-		edges: [],
 	};
-}
-
-function getFileLabel(filePath: string): string {
-	const parts = filePath.split("/");
-	return parts[parts.length - 1];
 }
 
 function getNodeType(
@@ -187,8 +151,10 @@ function getNodeType(
 
 async function launchWebUI(port: string | undefined, dataFile?: string) {
 	console.log(`🚀 Launching web UI...`);
-	const { startServer: createServer } = await import("./server/dev-server.ts");
-	await createServer(port ? Number.parseInt(port) : undefined, dataFile);
+	// const { startServer: createServer } = await import("./server/dev-server.ts");
+	// await createServer(port ? Number.parseInt(port) : undefined, dataFile);
+	const { startServer } = await import("./vite-dev-server.ts");
+	await startServer(port ? Number.parseInt(port) : undefined);
 }
 
 interface Import {
@@ -207,20 +173,21 @@ interface Export {
 }
 
 interface GraphNode {
-	label: string;
+	name: string;
 	path: string;
 	type: string;
-	imports: string[];
+	imports: Import[];
+	exports: Export[];
+	unusedExports: Export[];
+	importees: string[];
 	importedBy: string[];
-	exports: string[];
-	isBarrelFile: any;
-	unusedExports: string[];
+	isBarrelFile: boolean;
+	chain: string[][];
 }
 
 interface GraphEdge {
 	source: string;
 	target: string;
-	type: string;
 }
 
 function findImportChains(

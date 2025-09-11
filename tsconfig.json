@@ -6,8 +6,8 @@
 	"compilerOptions": {
 		"strict": true,
 		"esModuleInterop": true,
-		"module": "nodenext",
-		"moduleResolution": "nodenext",
+		// "module": "nodenext",
+		// "moduleResolution": "nodenext",
 		"lib": [
 			"DOM",
 			"DOM.Iterable",
@@ -19,6 +19,15 @@
 		"allowJs": true,
 		"forceConsistentCasingInFileNames": true,
 		"noEmit": true,
-		"allowImportingTsExtensions": true
+		"allowImportingTsExtensions": true,
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"resolveJsonModule": true,
+		"paths": {
+			"~/*": [
+				"./web/src/*"
+			]
+		},
 	}
 }
