@@ -7,9 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as React from "react";
+import appCss from "~/styles/app.css?url";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
-import appCss from "~/styles/app.css?url";
 import { seo } from "../utils/seo";
 
 export const Route = createRootRoute({
@@ -34,20 +34,7 @@ export const Route = createRootRoute({
 				sizes: "180x180",
 				href: "/apple-touch-icon.png",
 			},
-			{
-				rel: "icon",
-				type: "image/png",
-				sizes: "32x32",
-				href: "/favicon-32x32.png",
-			},
-			{
-				rel: "icon",
-				type: "image/png",
-				sizes: "16x16",
-				href: "/favicon-16x16.png",
-			},
 			{ rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
-			{ rel: "icon", href: "/favicon.ico" },
 		],
 		scripts: [
 			{
@@ -77,47 +64,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						activeOptions={{ exact: true }}
 					>
 						Home
-					</Link>{" "}
-					<Link
-						to="/posts"
-						activeProps={{
-							className: "font-bold",
-						}}
-					>
-						Posts
-					</Link>{" "}
-					<Link
-						to="/users"
-						activeProps={{
-							className: "font-bold",
-						}}
-					>
-						Users
-					</Link>{" "}
-					<Link
-						to="/route-a"
-						activeProps={{
-							className: "font-bold",
-						}}
-					>
-						Pathless Layout
-					</Link>{" "}
-					<Link
-						to="/deferred"
-						activeProps={{
-							className: "font-bold",
-						}}
-					>
-						Deferred
-					</Link>{" "}
-					<Link
-						// @ts-expect-error
-						to="/this-route-does-not-exist"
-						activeProps={{
-							className: "font-bold",
-						}}
-					>
-						This Route Does Not Exist
 					</Link>
 				</div>
 				<hr />

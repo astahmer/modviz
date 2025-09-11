@@ -154,7 +154,10 @@ async function launchWebUI(port: string | undefined, dataFile?: string) {
 	// const { startServer: createServer } = await import("./server/dev-server.ts");
 	// await createServer(port ? Number.parseInt(port) : undefined, dataFile);
 	const { startServer } = await import("./vite-dev-server.ts");
-	await startServer(port ? Number.parseInt(port) : undefined);
+	await startServer({
+		port: port ? Number.parseInt(port) : undefined,
+		outputPath: path.resolve(dataFile ?? flags.outputFile),
+	});
 }
 
 interface Import {

@@ -5,14 +5,23 @@ import { createServer } from "vite";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const root = path.join(__dirname, "..");
 
-export async function startServer(userPort: number | undefined) {
+export async function startServer(options: {
+	port: number | undefined;
+	outputPath: string;
+}) {
 	const server = await createServer({
 		// any valid user config options, plus `mode` and `configFile`
 		// configFile: path.join(root, "./vite.config.ts"),
 		root,
+		define: {
+			"import.meta.env.modvizPath": JSON.stringify(options.outputPath),
+		},
 		server: {
-			port: userPort,
+			port: options.port,
 			open: true,
+			// hmr: false,
+			// watch: null,
+			// ws: false,
 		},
 	});
 	await server.listen();

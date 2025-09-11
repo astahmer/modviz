@@ -12,7 +12,7 @@ const srcDir = path.join(__dirname, "./src");
 
 export default defineConfig({
 	server: {
-		port: 3000,
+		port: 3628,
 	},
 	plugins: [
 		tsConfigPaths({

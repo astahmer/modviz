@@ -63,7 +63,7 @@ export const GraphAll = () => {
 		edges: complexEdges,
 		pathHoverType: "all",
 	});
-	console.log(complexNodes);
+	console.log(complexNodes, import.meta.env);
 
 	return (
 		<div className="relative h-[500px] w-full">
