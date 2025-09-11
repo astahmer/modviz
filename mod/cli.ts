@@ -11,6 +11,7 @@ import { imports } from "@thepassle/module-graph/plugins/imports.js";
 import { typescript } from "@thepassle/module-graph/plugins/typescript.js";
 import { unusedExports } from "@thepassle/module-graph/plugins/unused-exports.js";
 import path from "node:path";
+import type { ModvizOutput, VizExport, VizImport } from "./types.ts";
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -94,14 +95,14 @@ function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryPoint: string,
 ) {
-	const nodeList: GraphNode[] = [];
-	const edgeList: GraphEdge[] = [];
+	const nodeList: ModvizOutput["nodes"] = [];
+	const edgeList: ModvizOutput["edges"] = [];
 
 	for (const [filePath, importees] of moduleGraph.graph) {
 		const module = moduleGraph.modules.get(filePath)!;
-		const imports = (module.imports ?? []) as Import[];
-		const exports = (module.exports ?? []) as Export[];
-		const unusedExports = (module.unusedExports ?? []) as Export[];
+		const imports = (module.imports ?? []) as VizImport[];
+		const exports = (module.exports ?? []) as VizExport[];
+		const unusedExports = (module.unusedExports ?? []) as VizExport[];
 
 		const node = {
 			name: path.basename(filePath),
@@ -158,39 +159,6 @@ async function launchWebUI(port: string | undefined, dataFile?: string) {
 		port: port ? Number.parseInt(port) : undefined,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),
 	});
-}
-
-interface Import {
-	name: string;
-	declaration: string;
-	kind: string;
-	module: string;
-	isTypeOnly: boolean;
-	attributes?: any[];
-}
-
-interface Export {
-	kind: string;
-	name: string;
-	declaration: { name: string; module: string };
-}
-
-interface GraphNode {
-	name: string;
-	path: string;
-	type: string;
-	imports: Import[];
-	exports: Export[];
-	unusedExports: Export[];
-	importees: string[];
-	importedBy: string[];
-	isBarrelFile: boolean;
-	chain: string[][];
-}
-
-interface GraphEdge {
-	source: string;
-	target: string;
 }
 
 function findImportChains(
