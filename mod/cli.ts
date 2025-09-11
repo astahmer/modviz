@@ -121,24 +121,25 @@ function processModuleGraphForWeb(
 		const imports = (module.imports ?? []) as Import[];
 		const exports = (module.exports ?? []) as Export[];
 		const unusedExports = (module.unusedExports ?? []) as Export[];
+		const seen = new Set<string>();
 
 		// Create node
 		nodeList.push({
-			id: filePath,
 			label: getFileLabel(filePath),
 			path: filePath,
-			size: module.source?.length || 0,
 			type: getNodeType(filePath, module, entryPoint),
 			imports: Array.from(importees),
+			// importedSymbols: Array.from(new Set(imports.map((imp) => imp.name))),
 			// imports: Array.from(new Set(imports.map((imp) => imp.module))),
 			importedBy: module.importedBy,
 			exports: Array.from(
 				new Set(exports.map((exp) => exp.declaration.module).filter(Boolean)),
 			),
 			isBarrelFile: module.isBarrelFile || false,
-			unusedExports: Array.from(
-				new Set(unusedExports.map((exp) => exp.name).filter(Boolean)),
-			),
+			chain: findImportChains(moduleGraph, (path) => path === filePath),
+			// unusedExports: Array.from(
+			// 	new Set(unusedExports.map((exp) => exp.name).filter(Boolean)),
+			// ),
 			// mod: { imports, exports },
 		});
 
@@ -151,16 +152,20 @@ function processModuleGraphForWeb(
 		});
 	}
 
+	const uniqueModules = moduleGraph.getUniqueModules();
+
 	return {
 		metadata: {
 			entryPoint,
-			totalFiles: nodeList.length,
+			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),
 			nodeModulesCount: nodeList.filter((n) => n.path.includes("node_modules"))
 				.length,
 		},
 		nodes: nodeList,
-		edges: edgeList,
+		// edges: edgeList,
+		imports: uniqueModules,
+		edges: [],
 	};
 }
 
@@ -202,10 +207,8 @@ interface Export {
 }
 
 interface GraphNode {
-	id: string;
 	label: string;
 	path: string;
-	size: number;
 	type: string;
 	imports: string[];
 	importedBy: string[];
@@ -218,4 +221,48 @@ interface GraphEdge {
 	source: string;
 	target: string;
 	type: string;
+}
+
+function findImportChains(
+	moduleGraph: ModuleGraph,
+	targetModule: string | string[] | ((module: string) => boolean),
+) {
+	/**
+	 * @type {string[][]}
+	 */
+	const chains: string[][] = [];
+	const seen = new Set<string>();
+
+	/**
+	 * @param {string} module
+	 * @param {string[]} path
+	 * @returns
+	 */
+	const dfs = (module: string, path: string[]) => {
+		const condition =
+			typeof targetModule === "function"
+				? targetModule(module)
+				: module === targetModule;
+
+		if (seen.has(module)) return;
+		seen.add(module);
+
+		if (condition) {
+			chains.push(path);
+			return;
+		}
+
+		const dependencies = moduleGraph.graph.get(module);
+		if (dependencies) {
+			for (const dependency of dependencies) {
+				dfs(dependency, [...path, dependency]);
+			}
+		}
+	};
+
+	for (const entrypoint of moduleGraph.entrypoints) {
+		dfs(entrypoint, [entrypoint]);
+	}
+
+	return chains;
 }
