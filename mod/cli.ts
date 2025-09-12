@@ -11,7 +11,9 @@ import { imports } from "@thepassle/module-graph/plugins/imports.js";
 import { typescript } from "@thepassle/module-graph/plugins/typescript.js";
 import { unusedExports } from "@thepassle/module-graph/plugins/unused-exports.js";
 import path from "node:path";
-import type { ModvizOutput, VizExport, VizImport } from "./types.ts";
+import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
+// import { parse } from "tsconfck";
+import { findWorkspaces, type Workspace } from "find-workspaces";
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -69,22 +71,42 @@ if (!existsSync(entryFile)) {
 
 console.log(`🔍 Analyzing dependency graph for: ${entryFile}`);
 
+// const tsconfig = await parse(entryFile);
+const workspaces = findWorkspaces(entryFile) ?? [];
+
 const moduleGraph = await createModuleGraph(entryFile, {
-	exclude: [(importee) => importee.includes("node_modules")],
+	exclude: [(importee) => importee.includes("node_modules")], // TODO configurable flag to allow this
 	plugins: [
 		typescript(),
 		imports,
 		exports,
 		unusedExports,
 		barrelFile({
-			amountOfExportsToConsiderModuleAsBarrel: 3,
+			amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
 		}),
 	],
 });
 
-const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile);
+const webGraphData = processModuleGraphForWeb(
+	moduleGraph,
+	entryFile,
+	workspaces,
+);
 
-writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
+writeFileSync(
+	flags.outputFile,
+	JSON.stringify(
+		{
+			...webGraphData,
+			workspaces: (workspaces ?? []).map((workspace) => ({
+				path: workspace.location,
+				name: workspace.package.name,
+			})),
+		},
+		null,
+		2,
+	),
+);
 console.log(`📊 Graph data saved to: ${flags.outputFile}`);
 
 if (!flags.noUi) {
@@ -94,20 +116,25 @@ if (!flags.noUi) {
 function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryPoint: string,
+	workspaces: Workspace[],
 ) {
 	const nodeList: ModvizOutput["nodes"] = [];
-	const edgeList: ModvizOutput["edges"] = [];
+	const edgeList = new Set<string>();
 
 	for (const [filePath, importees] of moduleGraph.graph) {
 		const module = moduleGraph.modules.get(filePath)!;
 		const imports = (module.imports ?? []) as VizImport[];
 		const exports = (module.exports ?? []) as VizExport[];
 		const unusedExports = (module.unusedExports ?? []) as VizExport[];
+		const pkg = workspaces.find((workspace) =>
+			filePath.startsWith(workspace.location),
+		);
 
-		const node = {
+		const node: VizNode = {
 			name: path.basename(filePath),
 			path: filePath,
 			type: getNodeType(filePath, module, entryPoint),
+			package: pkg ? { path: pkg.location, name: pkg.package.name } : undefined,
 			imports,
 			exports,
 			unusedExports,
@@ -119,7 +146,7 @@ function processModuleGraphForWeb(
 		nodeList.push(node);
 
 		importees.forEach((importee) => {
-			edgeList.push({ source: filePath, target: importee });
+			edgeList.add(`${filePath}->${importee}`);
 		});
 	}
 
@@ -134,7 +161,10 @@ function processModuleGraphForWeb(
 				.length,
 		},
 		nodes: nodeList,
-		edges: edgeList,
+		edges: Array.from(edgeList).map((edge) => {
+			const [source, target] = edge.split("->");
+			return { source, target };
+		}),
 		imports: uniqueModules,
 	};
 }

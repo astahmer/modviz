@@ -5,15 +5,19 @@ export interface ModvizOutput {
 	imports: string[];
 }
 
-interface VizEdge {
+export interface VizEdge {
 	source: string;
 	target: string;
 }
 
-interface VizNode {
+export interface VizNode {
 	name: string;
 	path: string;
 	type: string;
+	package?: {
+		path: string;
+		name: string;
+	};
 	imports: VizImport[];
 	exports: VizExport[];
 	unusedExports: any[];
