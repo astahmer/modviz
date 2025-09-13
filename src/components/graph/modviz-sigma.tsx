@@ -2,28 +2,41 @@ import {
 	ControlsContainer,
 	FullScreenControl,
 	SigmaContainer,
+	useSigma,
 	ZoomControl,
 } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 import { GraphSearch, GraphSearchOption } from "@react-sigma/graph-search";
 import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
+import { fitViewportToNodes } from "@sigma/utils";
 import { useCallback, useMemo, useState } from "react";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
-import type { ModvizOutput } from "../../../mod/types";
-import { FocusOnNode } from "./common/focus-on-node";
-import { fitViewportToNodes } from "@sigma/utils";
-import type Sigma from "sigma";
 import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+import type { ModvizOutput } from "../../../mod/types";
+import { FocusOnNode } from "./common/focus-on-node";
 
 export const ModvizSigma = (props: {
 	entryNode?: string;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 }) => {
+	return (
+		<SigmaContainer className="h-full w-full">
+			<SigmaGraph
+				entryNode={props.entryNode}
+				packages={props.packages}
+				nodes={props.nodes}
+			/>
+			<WithGraph />
+		</SigmaContainer>
+	);
+};
+
+const WithGraph = () => {
 	const [selectedNode, setSelectedNode] = useState<string | null>(null);
 	const [focusNode, setFocusNode] = useState<string | null>(null);
 
@@ -56,48 +69,32 @@ export const ModvizSigma = (props: {
 		[],
 	);
 
-	const [sigma, setSigma] = useState<Sigma<NodeType, EdgeType> | null>(null);
+	const sigma = useSigma<NodeType, EdgeType>();
+	const graph = sigma.getGraph();
 
 	const communities = useMemo(() => {
-		if (!sigma) return [];
-
-		const communities = new Set<string>();
-		const graph = sigma.getGraph();
+		const communities = new Map<string, string[]>();
 		graph.forEachNode(
-			(_nodeId, attrs) =>
-				attrs.louvainCommunity && communities.add(attrs.louvainCommunity),
+			(nodeId, attrs) =>
+				attrs.louvainCommunity &&
+				communities.set(
+					attrs.louvainCommunity,
+					(communities.get(attrs.louvainCommunity) ?? []).concat(nodeId),
+				),
 		);
-		return Array.from(communities);
+
+		return Array.from(communities.entries())
+			.sort((a, b) => {
+				const res = b[1].length - a[1].length;
+				return res !== 0 ? res : a[0].localeCompare(b[0]);
+			})
+			.map(([name, ids]) => ({ name, ids }));
 	}, [sigma]);
 
+	const nodes = graph.nodes();
+
 	return (
-		<SigmaContainer
-			ref={setSigma}
-			className="h-full w-full"
-			settings={{
-				autoCenter: true,
-				autoRescale: true,
-				zoomDuration: 150,
-				// hideEdgesOnMove: true,
-				// hideLabelsOnMove: true,
-				// labelSize: 20,
-				// labelDensity: 0.07,
-				// labelGridCellSize: 60,
-				labelRenderedSizeThreshold: 8,
-				// itemSizesReference: "screen",
-				// This function tells sigma to grow sizes linearly with the zoom, instead
-				// of relatively to the zoom ratio's square root:
-				// zoomToSizeRatioFunction: (x) => x,
-				// labelFont: "Lato, sans-serif",
-				// zIndex: true,
-				// stagePadding: 0,
-			}}
-		>
-			<SigmaGraph
-				entryNode={props.entryNode}
-				packages={props.packages}
-				nodes={props.nodes}
-			/>
+		<>
 			<FocusOnNode node={focusNode ?? selectedNode} />
 			<ControlsContainer position={"bottom-right"} className="mb-6">
 				<ZoomControl />
@@ -106,25 +103,53 @@ export const ModvizSigma = (props: {
 			</ControlsContainer>
 			<ControlsContainer position={"top-left"}>
 				<div className="flex flex-col flex-wrap gap-2 text-xs p-2">
-					{communities.map((community) => (
-						<button
-							key={community}
-							onClick={() => {
-								if (!sigma) return;
-
-								const graph = sigma.getGraph();
-								fitViewportToNodes(
-									sigma as never,
-									graph.filterNodes(
-										(_, attrs) => attrs.louvainCommunity === community,
-									),
-									{ animate: true },
-								);
-							}}
-						>
-							{community}
-						</button>
-					))}
+					<button
+						className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
+						onClick={() => {
+							fitViewportToNodes(sigma as never, nodes, {
+								animate: true,
+							});
+						}}
+					>
+						Reset view ({nodes.length} nodes)
+					</button>
+					{communities.map((community) => {
+						const graph = sigma.getGraph();
+						const color = community.ids.length
+							? graph.getNodeAttribute(community.ids[0], "color")
+							: "#E2E2E2";
+						return (
+							<button
+								key={community.name}
+								className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
+								onClick={() => {
+									fitViewportToNodes(
+										sigma as never,
+										graph.filterNodes(
+											(_, attrs) => attrs.louvainCommunity === community.name,
+										),
+										{ animate: true },
+									);
+								}}
+								onMouseEnter={() => {
+									const nodes = graph.filterNodes((nodeId, attrs) =>
+										community.ids.includes(nodeId),
+									);
+									nodes.forEach((nodeId) => {
+										graph.setNodeAttribute(nodeId, "highlighted", true);
+									});
+								}}
+								onMouseLeave={() => {
+									graph.forEachNode((nodeId) => {
+										graph.setNodeAttribute(nodeId, "highlighted", false);
+									});
+								}}
+							>
+								<div className="w-2 h-2" style={{ backgroundColor: color }} />
+								{community.name} ({community.ids.length})
+							</button>
+						);
+					})}
 				</div>
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
@@ -141,6 +166,6 @@ export const ModvizSigma = (props: {
 			<ControlsContainer position={"bottom-left"}>
 				<MiniMap width="100px" height="100px" />
 			</ControlsContainer>
-		</SigmaContainer>
+		</>
 	);
 };

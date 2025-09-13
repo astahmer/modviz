@@ -1,15 +1,11 @@
-import {
-	useLoadGraph,
-	useRegisterEvents,
-	useSetSettings,
-	useSigma,
-} from "@react-sigma/core";
+import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
 import { useEffect, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+
 const defaultColor = "#E2E2E2";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
@@ -61,6 +57,21 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
+			autoCenter: true,
+			autoRescale: true,
+			zoomDuration: 150,
+			// hideEdgesOnMove: true,
+			// hideLabelsOnMove: true,
+			// labelSize: 20,
+			// labelDensity: 0.07,
+			// labelGridCellSize: 60,s
+			labelRenderedSizeThreshold: 8,
+			// This function tells sigma to grow sizes linearly with the zoom, instead
+			// of relatively to the zoom ratio's square root:
+			// zoomToSizeRatioFunction: (x) => x,
+			// labelFont: "Lato, sans-serif",
+			// zIndex: true,
+			// stagePadding: 0,
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
 				const updated = {

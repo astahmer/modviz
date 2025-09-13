@@ -21,27 +21,6 @@ export type NodeType = {
 };
 export type EdgeType = { label: string; hidden?: boolean; color?: string };
 
-const colorList = [
-	"#5E6BFF",
-	"#FE2FB5",
-	"#B752F8",
-	"#F85252",
-	"#53d3f0",
-	"#A5243D",
-	"#edcf8e",
-	"#C28CAE",
-	"#54457F",
-	"#610F7F",
-	"#9BA2FF",
-	"#2A2E45",
-	"#FFDC5E",
-	"#FF86C8",
-	"#FF69EB",
-	"#1CFEBA",
-	"#034748",
-	"#95F2D9",
-];
-
 const defaultColor = "#E2E2E2";
 const getRandom = rng("modviz");
 
@@ -54,7 +33,7 @@ export const useCreateGraph = (props: {
 		const colors = new Map<string, string>();
 		props.packages.forEach((pkg, index) => {
 			// Use predefined colors first, then deterministic colors
-			colors.set(pkg.name, colorList[index] ?? deterministicColor(pkg.name));
+			colors.set(pkg.name, deterministicColor(pkg.name));
 		});
 		return colors;
 	}, [props.packages]);
@@ -133,7 +112,7 @@ const deterministicColor = (str: string): string => {
 	// Generate a single color using iwanthue with the string as seed
 	const colors = iwanthue(1, {
 		seed: str,
-		colorSpace: "intense",
+		colorSpace: "all",
 		clustering: "force-vector",
 	});
 

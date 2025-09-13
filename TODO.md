@@ -1,5 +1,4 @@
-- fit view button
-- display cluster names / fit view on it
+- display cluster names
 - leva configure layout settings
 - refresh graph button
 - save view url
