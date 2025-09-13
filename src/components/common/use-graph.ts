@@ -29,7 +29,7 @@ const colorList = [
 	"#FE2FB5",
 	"#B752F8",
 	"#F85252",
-	"#b9cfd4",
+	"#53d3f0",
 	"#A5243D",
 	"#edcf8e",
 	"#C28CAE",
@@ -78,8 +78,8 @@ export const useCreateGraph = (props: {
 
 			// Position entry node at center, others spread out more
 			const isEntry = props.entryNode === node.path;
-			const x = isEntry ? 0 : Math.abs(getRandom()) * 4; // Spread nodes more
-			const y = isEntry ? 0 : Math.abs(getRandom()) * 4; // Spread nodes more
+			const x = isEntry ? 0 : Math.abs(getRandom()) * 80; // Spread nodes more
+			const y = isEntry ? 0 : Math.abs(getRandom()) * 80; // Spread nodes more
 
 			graph.addNode(node.path, {
 				x,
@@ -87,7 +87,7 @@ export const useCreateGraph = (props: {
 				label: node.name,
 				modType: node.type,
 				cluster: node.package?.name ?? "default",
-				color: defaultColor,
+				color: packageColors.get(node.package?.name ?? "") ?? defaultColor,
 				size: clamp(floorMedian, floorMedian * 5, node.importees.length * 2),
 				highlighted: false,
 			});

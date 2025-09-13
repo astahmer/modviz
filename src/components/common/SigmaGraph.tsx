@@ -69,25 +69,21 @@ export const SigmaGraph = (props: {
 				const graph = sigma.getGraph();
 				const updated = {
 					...node,
-					// label: "",
+					label: "", // Hide labels by default
 					highlighted: node.highlighted || false,
-					// hidden: false,
 				};
 
 				if (props.entryNode) {
 					if (nodeId === props.entryNode) {
-						updated.label = node.label;
+						updated.label = node.label; // Always show entry node label
 						updated.size = Math.max(node.size * 1.5, 25); // Make entry node larger
 						updated.color = "#FF6B35"; // Distinct orange color for entry
 					}
 
-					if (
-						nodeId === props.entryNode ||
-						(graph.neighbors(nodeId).includes(props.entryNode) &&
-							node.color === defaultColor)
-					) {
-						// Don't override entry node color
-						if (nodeId !== props.entryNode) {
+					// Show labels for nodes connected to entry node
+					if (graph.neighbors(props.entryNode).includes(nodeId)) {
+						updated.label = node.label;
+						if (node.color === defaultColor) {
 							updated.color = "#FFB347"; // Lighter orange for neighbors
 						}
 					}
@@ -97,6 +93,7 @@ export const SigmaGraph = (props: {
 					const activeNode = graph.getNodeAttributes(activeNodeId);
 
 					if (nodeId === activeNodeId) {
+						updated.label = node.label; // Show label for active node
 						updated.size = clamp(node.size, 35, node.size + 10);
 					}
 
@@ -104,6 +101,7 @@ export const SigmaGraph = (props: {
 						nodeId === activeNodeId ||
 						graph.neighbors(activeNodeId).includes(nodeId)
 					) {
+						updated.label = node.label; // Show labels for active node and neighbors
 						updated.highlighted = true;
 
 						if (activeNodeId !== props.entryNode) {
@@ -115,7 +113,7 @@ export const SigmaGraph = (props: {
 					} else {
 						updated.color = defaultColor;
 						updated.highlighted = false;
-						updated.label = "";
+						updated.label = ""; // Hide labels for non-connected nodes
 					}
 				}
 				return updated;
