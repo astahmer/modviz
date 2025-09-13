@@ -20,7 +20,6 @@ export const ModvizSigma = (props: {
 }) => {
 	const [selectedNode, setSelectedNode] = useState<string | null>(null);
 	const [focusNode, setFocusNode] = useState<string | null>(null);
-	console.log({ selectedNode, focusNode });
 
 	const onFocus = useCallback((value: GraphSearchOption | null) => {
 		if (value === null) setFocusNode(null);
@@ -100,5 +99,3 @@ export const ModvizSigma = (props: {
 		</SigmaContainer>
 	);
 };
-
-const sigmaStyle = { height: "500px", width: "500px" };

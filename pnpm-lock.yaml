@@ -41,6 +41,9 @@ importers:
       '@react-sigma/minimap':
         specifier: ^5.0.5
         version: 5.0.5(graphology@0.26.0(graphology-types@0.24.8))(react@19.1.1)(sigma@3.0.2(graphology-types@0.24.8))
+      '@sigma/utils':
+        specifier: ^3.0.0
+        version: 3.0.0(sigma@3.0.2(graphology-types@0.24.8))
       '@tanstack/react-router':
         specifier: ^1.131.40
         version: 1.131.40(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -80,9 +83,6 @@ importers:
       react-icons:
         specifier: ^5.5.0
         version: 5.5.0(react@19.1.1)
-      reagraph:
-        specifier: ^4.30.4
-        version: 4.30.4(@types/react@19.1.12)(@types/three@0.180.0)(graphology-types@0.24.8)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(use-sync-external-store@1.5.0(react@19.1.1))
       seedrandom:
         specifier: ^3.0.5
         version: 3.0.5
@@ -1163,6 +1163,11 @@ packages:
     resolution: {integrity: sha512-StxAO/8ts62KZVRAm4JZYq9+NqNsV7RvimNK+YM7ry//zebEH6meuugqW/P5OFUCjyQgui+9fUxT6d5NShvMvA==}
     cpu: [x64]
     os: [win32]
+
+  '@sigma/utils@3.0.0':
+    resolution: {integrity: sha512-JCMjj3CHpA8yh8HcWm1YBs4Zdo2s0YUR2YKZ2NUlM2Purkdd8odLuaGQ/R/guSrBz/y+tOLSaQX7hKF6fkUG1g==}
+    peerDependencies:
+      sigma: '>=3.0.0-beta.29'
 
   '@sindresorhus/is@7.0.2':
     resolution: {integrity: sha512-d9xRovfKNz1SKieM0qJdO+PQonjnnIfSNWfHYnBSJ9hkjm0ZPw6HlxscDXYstp3z+7V2GOFHc+J0CYrYTjqCJw==}
@@ -4625,6 +4630,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.50.1':
     optional: true
+
+  '@sigma/utils@3.0.0(sigma@3.0.2(graphology-types@0.24.8))':
+    dependencies:
+      sigma: 3.0.2(graphology-types@0.24.8)
 
   '@sindresorhus/is@7.0.2': {}
 
