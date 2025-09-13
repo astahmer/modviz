@@ -82,11 +82,6 @@ export const useCreateGraph = (props: {
 		const graph = new DirectedGraph<NodeType, EdgeType>();
 		const nodesMap = new Map<string, VizNode>();
 
-		const median = props.nodes
-			.map((n) => n.importees.length)
-			.sort((a, b) => a - b)[props.nodes.length / 2];
-		const floorMedian = Math.floor(median);
-
 		props.nodes.forEach((node) => {
 			nodesMap.set(node.path, node);
 
@@ -105,7 +100,8 @@ export const useCreateGraph = (props: {
 				modType: node.type,
 				cluster: node.package?.name ?? "default",
 				color: packageColors.get(node.package?.name ?? "") ?? defaultColor,
-				size: clamp(2, floorMedian * 5, node.importees.length) * 2,
+				// size: clamp(2, 8, node.importees.length) * 2,
+				size: clamp(4, 25, node.importees.length) * 2,
 				highlighted: false,
 			});
 		});

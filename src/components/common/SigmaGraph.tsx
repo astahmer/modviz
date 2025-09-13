@@ -7,7 +7,6 @@ import {
 import { useLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
 import { useEffect, useState } from "react";
 import {
-	clamp,
 	useCreateGraph,
 	type EdgeType,
 	type NodeType,
@@ -23,11 +22,18 @@ export const SigmaGraph = (props: {
 }) => {
 	// Use ForceAtlas2 layout for better cluster positioning
 	const { assign: assignLayout } = useLayoutForceAtlas2({
-		iterations: 300,
+		iterations: 500,
 		settings: {
-			scalingRatio: 10,
-			strongGravityMode: true,
-			slowDown: 10,
+			// adjustSizes: true,
+			scalingRatio: 100,
+			gravity: 25,
+			// linLogMode: true,
+			// strongGravityMode: true,
+			// slowDown: 1,
+			// scalingRatio: 5,
+			// strongGravityMode: false,
+			// scalingRatio: 500,
+			// strongGravityMode: true,
 		},
 	});
 
@@ -106,7 +112,8 @@ export const SigmaGraph = (props: {
 
 					if (nodeId === hoveredNodeId) {
 						updated.label = node.label; // Show label for active node
-						updated.size = clamp(node.size, 35, node.size + 10);
+						// updated.size = clamp(node.size, 35, node.size + 10);
+						updated.size = node.size + 10;
 					}
 
 					if (
