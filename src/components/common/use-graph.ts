@@ -92,8 +92,8 @@ export const useCreateGraph = (props: {
 
 			// Position entry node at center, others spread out more
 			const isEntry = props.entryNode === node.path;
-			const x = isEntry ? 0 : Math.abs(getRandom()); // Spread nodes more
-			const y = isEntry ? 0 : Math.abs(getRandom()); // Spread nodes more
+			const x = isEntry ? 0 : Math.abs(getRandom());
+			const y = isEntry ? 0 : Math.abs(getRandom());
 
 			graph.addNode(node.path, {
 				x,

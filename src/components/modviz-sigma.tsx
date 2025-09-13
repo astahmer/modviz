@@ -64,6 +64,10 @@ export const ModvizSigma = (props: {
 				// labelDensity: 0.07,
 				// labelGridCellSize: 60,
 				labelRenderedSizeThreshold: 8,
+				// itemSizesReference: "screen",
+				// This function tells sigma to grow sizes linearly with the zoom, instead
+				// of relatively to the zoom ratio's square root:
+				// zoomToSizeRatioFunction: (x) => x,
 				// labelFont: "Lato, sans-serif",
 				// zIndex: true,
 				// stagePadding: 0,
