@@ -24,9 +24,8 @@ export const SigmaGraph = (props: {
 }) => {
 	// Use ForceAtlas2 layout for better cluster positioning
 	const { assign: assignLayout } = useLayoutForceAtlas2({
-		iterations: 50,
+		iterations: 300,
 		settings: {
-			gravity: 1,
 			scalingRatio: 10,
 			strongGravityMode: true,
 			slowDown: 10,
@@ -64,63 +63,76 @@ export const SigmaGraph = (props: {
 
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
-		const activeNode = selectedNode ?? hoveredNode;
+		const activeNodeId = selectedNode ?? hoveredNode;
 		setSettings({
-			nodeReducer: (node, data) => {
+			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
-				const newData = {
-					...data,
-					label: "",
-					highlighted: data.highlighted || false,
+				const updated = {
+					...node,
+					// label: "",
+					highlighted: node.highlighted || false,
 					// hidden: false,
 				};
 
 				if (props.entryNode) {
-					if (node === props.entryNode) {
-						newData.label = data.label;
+					if (nodeId === props.entryNode) {
+						updated.label = node.label;
+						updated.size = Math.max(node.size * 1.5, 25); // Make entry node larger
+						updated.color = "#FF6B35"; // Distinct orange color for entry
 					}
 
 					if (
-						node === props.entryNode ||
-						(graph.neighbors(node).includes(props.entryNode) &&
-							data.color === defaultColor)
+						nodeId === props.entryNode ||
+						(graph.neighbors(nodeId).includes(props.entryNode) &&
+							node.color === defaultColor)
 					) {
-						newData.color = "orange";
+						// Don't override entry node color
+						if (nodeId !== props.entryNode) {
+							updated.color = "#FFB347"; // Lighter orange for neighbors
+						}
 					}
 				}
 
-				if (activeNode) {
-					if (node === activeNode) {
-						newData.size = clamp(data.size, 30, data.size + 15);
+				if (activeNodeId) {
+					const activeNode = graph.getNodeAttributes(activeNodeId);
+
+					if (nodeId === activeNodeId) {
+						updated.size = clamp(node.size, 35, node.size + 10);
 					}
 
 					if (
-						node === activeNode ||
-						graph.neighbors(activeNode).includes(node)
+						nodeId === activeNodeId ||
+						graph.neighbors(activeNodeId).includes(nodeId)
 					) {
-						newData.highlighted = true;
+						updated.highlighted = true;
 
-						if (activeNode !== props.entryNode) {
-							newData.color = "#FA4F40";
+						if (activeNodeId !== props.entryNode) {
+							updated.color =
+								activeNode.color === defaultColor
+									? "#FA4F40"
+									: activeNode.color;
 						}
 					} else {
-						newData.color = defaultColor;
-						newData.highlighted = false;
-						newData.label = "";
+						updated.color = defaultColor;
+						updated.highlighted = false;
+						updated.label = "";
 					}
 				}
-				return newData;
+				return updated;
 			},
 			edgeReducer: (edge, data) => {
 				const graph = sigma.getGraph();
 				const newData: EdgeType = { ...data, hidden: true };
 
 				// Only show entry node edges if no node is hovered
-				if (!activeNode && props.entryNode) {
+				if (!activeNodeId && props.entryNode) {
 					if (graph.extremities(edge).includes(props.entryNode)) {
 						newData.hidden = false;
 					}
-				} else if (activeNode && graph.extremities(edge).includes(activeNode)) {
+				} else if (
+					activeNodeId &&
+					graph.extremities(edge).includes(activeNodeId)
+				) {
 					// Otheriwse show hovered node edges
 					newData.hidden = false;
 					newData.color = "red";

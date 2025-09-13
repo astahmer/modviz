@@ -3,6 +3,7 @@ import louvain from "graphology-communities-louvain";
 import iwanthue from "iwanthue";
 import { useCallback, useMemo } from "react";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { rng } from "~/components/common/gnrg";
 
 export type NodeType = {
 	x: number;
@@ -13,7 +14,7 @@ export type NodeType = {
 	highlighted?: boolean;
 	hidden?: boolean;
 	cluster?: string;
-	type?: string;
+	modType?: string;
 	louvainCommunity?: string;
 	packageSubCommunity?: string;
 };
@@ -45,6 +46,7 @@ const colorList = [
 ];
 
 const defaultColor = "#E2E2E2";
+const getRandom = rng("modviz");
 
 export const useCreateGraph = (props: {
 	entryNode?: string;
@@ -55,7 +57,8 @@ export const useCreateGraph = (props: {
 	const packageColors = useMemo(() => {
 		const colors = new Map<string, string>();
 		props.packages.forEach((pkg, index) => {
-			colors.set(pkg.name, colorList[index] ?? randomColor());
+			// Use predefined colors first, then deterministic colors
+			colors.set(pkg.name, colorList[index] ?? deterministicColor(pkg.name));
 		});
 		return colors;
 	}, [props.packages]);
@@ -72,20 +75,21 @@ export const useCreateGraph = (props: {
 
 		props.nodes.forEach((node) => {
 			nodesMap.set(node.path, node);
+
+			// Position entry node at center, others spread out more
+			const isEntry = props.entryNode === node.path;
+			const x = isEntry ? 0 : Math.abs(getRandom()) * 4; // Spread nodes more
+			const y = isEntry ? 0 : Math.abs(getRandom()) * 4; // Spread nodes more
+
 			graph.addNode(node.path, {
-				// Set random initial position cause some algorithms (e.g. forceAtlas2) don't work well without it
-				x: props.entryNode === node.path ? 0.5 : Math.random(),
-				y: props.entryNode === node.path ? 0.5 : Math.random(),
+				x,
+				y,
 				label: node.name,
+				modType: node.type,
 				cluster: node.package?.name ?? "default",
 				color: defaultColor,
-				// color:
-				// 	node.type === "entry"
-				// 		? "#637AB9"
-				// 		: (packageColors.get(node.package?.name ?? "") ?? defaultColor),
 				size: clamp(floorMedian, floorMedian * 5, node.importees.length * 2),
 				highlighted: false,
-				// hidden: true,
 			});
 		});
 
@@ -101,7 +105,8 @@ export const useCreateGraph = (props: {
 				const sourceNode = nodesMap.get(edge.source)!;
 				graph.addEdge(edge.source, edge.target, {
 					label: edge.source,
-					color: packageColors.get(sourceNode.package?.name ?? "") ?? "#E2E2E2",
+					color:
+						packageColors.get(sourceNode.package?.name ?? "") ?? defaultColor,
 				});
 			}
 		});
@@ -116,9 +121,21 @@ const randomColor = () => {
 	const digits = "0123456789abcdef";
 	let code = "#";
 	for (let i = 0; i < 6; i++) {
-		code += digits.charAt(Math.floor(Math.random() * 16));
+		code += digits.charAt(Math.floor(getRandom() * 16));
 	}
 	return code;
+};
+
+// Deterministic color generation using iwanthue
+const deterministicColor = (str: string): string => {
+	// Generate a single color using iwanthue with the string as seed
+	const colors = iwanthue(1, {
+		seed: str,
+		colorSpace: "intense",
+		clustering: "force-vector",
+	});
+
+	return colors[0] || randomColor();
 };
 
 function applyHybridClustering(
@@ -156,6 +173,7 @@ function applyHybridClustering(
 					louvain.assign(subgraph, {
 						nodeCommunityAttribute: "packageSubCommunity",
 						resolution: 0.8, // Lower resolution for finer sub-clusters
+						randomWalk: false,
 					});
 
 					// Transfer sub-community information back to main graph
@@ -181,7 +199,8 @@ function applyHybridClustering(
 		const clusterColors = new Map<string, string>();
 
 		packageGroups.forEach((nodeIds, packageName) => {
-			const baseColor = packageColors.get(packageName) || randomColor();
+			const baseColor =
+				packageColors.get(packageName) || deterministicColor(packageName);
 
 			// Get all sub-communities for this package
 			const subCommunities = new Set<string>();
@@ -198,15 +217,12 @@ function applyHybridClustering(
 			const subCommunitiesArray = Array.from(subCommunities);
 
 			if (subCommunitiesArray.length > 1) {
-				// Generate color variations for sub-clusters within the package
-				const subColors = iwanthue(subCommunitiesArray.length, {
-					seed: `${packageName}-subclusters`,
-					colorSpace: "intense",
-					clustering: "force-vector",
-				});
-
+				// Generate deterministic color variations for sub-clusters within the package
 				subCommunitiesArray.forEach((subCommunity, index) => {
-					clusterColors.set(subCommunity, subColors[index] || baseColor);
+					const subColor = deterministicColor(
+						`${packageName}-${subCommunity}-${index}`,
+					);
+					clusterColors.set(subCommunity, subColor);
 				});
 			} else {
 				// Single cluster for this package
@@ -214,10 +230,12 @@ function applyHybridClustering(
 			}
 		});
 
-		// Apply cluster colors to nodes (preserve entry node colors)
+		// Apply cluster colors to nodes (preserve entry node colors and positioning)
 		graph.forEachNode((node, attrs) => {
 			const currentAttrs = graph.getNodeAttributes(node);
-			if (currentAttrs.type !== "entry") {
+			const isEntry = currentAttrs.modType === "entry";
+
+			if (!isEntry) {
 				const louvainCommunity = attrs.louvainCommunity;
 				if (louvainCommunity && clusterColors.has(louvainCommunity)) {
 					graph.setNodeAttribute(
@@ -227,6 +245,14 @@ function applyHybridClustering(
 					);
 					graph.setNodeAttribute(node, "cluster", louvainCommunity);
 				}
+			} else {
+				// Entry node gets special treatment
+				graph.setNodeAttribute(node, "color", "#FF6B35"); // Distinct entry color
+				// graph.setNodeAttribute(
+				// 	node,
+				// 	"size",
+				// 	Math.max(currentAttrs.size * 1.5, 25),
+				// );
 			}
 		});
 
