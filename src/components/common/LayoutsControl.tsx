@@ -19,8 +19,9 @@ import {
 	useWorkerLayoutNoverlap,
 } from "@react-sigma/layout-noverlap";
 import { useLayoutRandom } from "@react-sigma/layout-random";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FaProjectDiagram } from "react-icons/fa";
+import { LuRefreshCcw } from "react-icons/lu";
 import { animateNodes } from "sigma/utils";
 
 type LayoutName =
@@ -51,9 +52,13 @@ export const LayoutsControl: React.FC = () => {
 	const layoutForce = useLayoutForce({ maxIterations: 100 });
 	const layoutForceAtlas2 = useLayoutForceAtlas2({
 		iterations: 100,
-		// settings: { adjustSizes: true, scalingRatio: 100 },
 		settings: {
-			gravity: 10,
+			gravity: 0.5, // Lower gravity to allow clusters to spread out
+			scalingRatio: 30, // Higher scaling for better separation
+			strongGravityMode: false, // Allow more natural clustering
+			slowDown: 5, // Faster convergence
+			outboundAttractionDistribution: true, // Better for clustered graphs
+			linLogMode: true, // Better for clustered networks
 		},
 	});
 	const workerNoverlap = useWorkerLayoutNoverlap();
@@ -106,59 +111,56 @@ export const LayoutsControl: React.FC = () => {
 		return () => document.removeEventListener("click", close);
 	}, [opened]);
 
+	const isRefreshingRef = useRef(false);
+	const refreshLayout = () => {
+		if (isRefreshingRef.current) return;
+		const { positions } = layouts[selectedLayout].layout;
+		animateNodes(sigma.getGraph(), positions(), { duration: 1000 }, () => {
+			isRefreshingRef.current = false;
+		});
+	};
+
 	return (
-		<>
-			<div>
-				{layouts[selectedLayout] && "worker" in layouts[selectedLayout] && (
-					<WorkerLayoutControl
-						layout={layouts[selectedLayout].worker!}
-						// autoRunFor={0}
-					/>
-				)}
-			</div>
-			<div>
-				<div className="react-sigma-control">
-					<button onClick={() => setOpened((e) => !e)}>
-						<FaProjectDiagram />
-					</button>
-					{opened === true && (
-						<ul
-							style={{
-								position: "absolute",
-								bottom: 0,
-								right: "35px",
-								backgroundColor: "#e7e9ed",
-								margin: 0,
-								padding: 0,
-								listStyle: "none",
-							}}
-						>
-							{Object.keys(layouts).map((name) => {
-								return (
-									<li key={name}>
-										<button
-											className="btn btn-link"
-											style={{
-												fontWeight: selectedLayout === name ? "bold" : "normal",
-												width: "100%",
-											}}
-											onClick={() => {
-												setSelectedLayout(name as LayoutName);
-												const { positions } = layouts[selectedLayout].layout;
-												animateNodes(sigma.getGraph(), positions(), {
-													duration: 1000,
-												});
-											}}
-										>
-											{name}
-										</button>
-									</li>
-								);
-							})}
-						</ul>
-					)}
-				</div>
-			</div>
-		</>
+		<div className="react-sigma-control">
+			<button onClick={refreshLayout}>
+				<LuRefreshCcw />
+			</button>
+			<button onClick={() => setOpened((e) => !e)}>
+				<FaProjectDiagram />
+			</button>
+			{opened === true && (
+				<ul
+					style={{
+						position: "absolute",
+						bottom: 0,
+						right: "35px",
+						backgroundColor: "#e7e9ed",
+						margin: 0,
+						padding: 0,
+						listStyle: "none",
+					}}
+				>
+					{Object.keys(layouts).map((name) => {
+						return (
+							<li key={name}>
+								<button
+									className="btn btn-link"
+									style={{
+										fontWeight: selectedLayout === name ? "bold" : "normal",
+										width: "100%",
+									}}
+									onClick={() => {
+										setSelectedLayout(name as LayoutName);
+										refreshLayout();
+									}}
+								>
+									{name}
+								</button>
+							</li>
+						);
+					})}
+				</ul>
+			)}
+		</div>
 	);
 };

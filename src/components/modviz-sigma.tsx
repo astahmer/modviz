@@ -77,7 +77,7 @@ export const ModvizSigma = (props: {
 				edges={props.edges}
 			/>
 			<FocusOnNode node={focusNode ?? selectedNode} />
-			<ControlsContainer position={"bottom-right"}>
+			<ControlsContainer position={"bottom-right"} className="mb-6">
 				<ZoomControl />
 				<FullScreenControl />
 				{/* <LayoutsControl /> */}
