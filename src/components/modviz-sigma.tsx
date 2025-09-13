@@ -17,7 +17,6 @@ export const ModvizSigma = (props: {
 	entryNode?: string;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
-	edges: ModvizOutput["edges"];
 }) => {
 	const [selectedNode, setSelectedNode] = useState<string | null>(null);
 	const [focusNode, setFocusNode] = useState<string | null>(null);
@@ -74,7 +73,6 @@ export const ModvizSigma = (props: {
 				entryNode={props.entryNode}
 				packages={props.packages}
 				nodes={props.nodes}
-				edges={props.edges}
 			/>
 			<FocusOnNode node={focusNode ?? selectedNode} />
 			<ControlsContainer position={"bottom-right"} className="mb-6">

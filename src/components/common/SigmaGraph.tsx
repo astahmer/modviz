@@ -20,7 +20,6 @@ export const SigmaGraph = (props: {
 	entryNode?: string;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
-	edges: ModvizOutput["edges"];
 }) => {
 	// Use ForceAtlas2 layout for better cluster positioning
 	const { assign: assignLayout } = useLayoutForceAtlas2({
@@ -38,11 +37,11 @@ export const SigmaGraph = (props: {
 	const setSettings = useSetSettings<NodeType, EdgeType>();
 	const loadGraph = useLoadGraph<NodeType, EdgeType>();
 
-	const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-	const [selectedNode, setSelectedNode] = useState<string | null>(null);
+	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
 
-	/** When component mount => load the graph */
+	/** When component mount => load the graph + register events */
 	useEffect(() => {
 		// Create & load the graph
 		const graph = makeGraph();
@@ -51,19 +50,19 @@ export const SigmaGraph = (props: {
 
 		// Register the events
 		registerEvents({
-			enterNode: (event) => setHoveredNode(event.node),
-			leaveNode: () => setHoveredNode(null),
+			enterNode: (event) => setHoveredNodeId(event.node),
+			leaveNode: () => setHoveredNodeId(null),
 			downNode: (event) =>
-				setSelectedNode((current) =>
+				setSelectedNodeId((current) =>
 					current === event.node ? null : event.node,
 				),
-			clickStage: () => setSelectedNode(null),
+			clickStage: () => setSelectedNodeId(null),
 		});
 	}, [loadGraph, registerEvents, makeGraph, assignLayout]);
 
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
-		const activeNodeId = selectedNode ?? hoveredNode;
+		const activeNodeId = selectedNodeId ?? hoveredNodeId;
 		setSettings({
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
@@ -76,7 +75,6 @@ export const SigmaGraph = (props: {
 				if (props.entryNode) {
 					if (nodeId === props.entryNode) {
 						updated.label = node.label; // Always show entry node label
-						updated.size = Math.max(node.size * 1.5, 25); // Make entry node larger
 						updated.color = "#FF6B35"; // Distinct orange color for entry
 					}
 
@@ -118,28 +116,29 @@ export const SigmaGraph = (props: {
 				}
 				return updated;
 			},
-			edgeReducer: (edge, data) => {
+			edgeReducer: (edgeId, edge) => {
 				const graph = sigma.getGraph();
-				const newData: EdgeType = { ...data, hidden: true };
+				const updated: EdgeType = { ...edge, hidden: true };
 
 				// Only show entry node edges if no node is hovered
 				if (!activeNodeId && props.entryNode) {
-					if (graph.extremities(edge).includes(props.entryNode)) {
-						newData.hidden = false;
+					if (graph.extremities(edgeId).includes(props.entryNode)) {
+						updated.hidden = false;
 					}
 				} else if (
 					activeNodeId &&
-					graph.extremities(edge).includes(activeNodeId)
+					graph.extremities(edgeId).includes(activeNodeId)
 				) {
 					// Otheriwse show hovered node edges
-					newData.hidden = false;
-					newData.color = "red";
+					const activeNode = graph.getNodeAttributes(activeNodeId);
+					updated.hidden = false;
+					updated.color = activeNode.color;
 				}
 
-				return newData;
+				return updated;
 			},
 		});
-	}, [selectedNode, hoveredNode, setSettings, sigma, props.entryNode]);
+	}, [selectedNodeId, hoveredNodeId, setSettings, sigma, props.entryNode]);
 
 	return null;
 };

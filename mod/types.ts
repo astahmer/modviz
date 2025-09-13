@@ -1,13 +1,7 @@
 export interface ModvizOutput {
 	metadata: VizMetadata;
 	nodes: VizNode[];
-	edges: VizEdge[];
 	imports: string[];
-}
-
-export interface VizEdge {
-	source: string;
-	target: string;
 }
 
 export interface VizNode {

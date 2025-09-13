@@ -118,7 +118,7 @@ function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryPoint: string,
 	workspaces: Array<{ path: string; name: string }>,
-) {
+): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
 
@@ -163,10 +163,10 @@ function processModuleGraphForWeb(
 			packages: workspaceList,
 		},
 		nodes: nodeList,
-		edges: Array.from(edgeList).map((edge) => {
-			const [source, target] = edge.split("->");
-			return { source, target };
-		}),
+		// edges: Array.from(edgeList).map((edge) => {
+		// 	const [source, target] = edge.split("->");
+		// 	return { source, target };
+		// }),
 		imports: uniqueModules,
 	};
 }

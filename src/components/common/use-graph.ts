@@ -52,7 +52,6 @@ export const useCreateGraph = (props: {
 	entryNode?: string;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
-	edges: ModvizOutput["edges"];
 }) => {
 	const packageColors = useMemo(() => {
 		const colors = new Map<string, string>();
@@ -63,10 +62,25 @@ export const useCreateGraph = (props: {
 		return colors;
 	}, [props.packages]);
 
+	const edges = useMemo(() => {
+		const ids = new Set<string>();
+		props.nodes.forEach((node) => {
+			node.importees.forEach((importee) => {
+				ids.add(`${node.path}->${importee}`);
+			});
+		});
+		return {
+			ids,
+			list: Array.from(ids).map((edge) => {
+				const [source, target] = edge.split("->");
+				return { source, target };
+			}),
+		};
+	}, [props.nodes]);
+
 	return useCallback(() => {
 		const graph = new DirectedGraph<NodeType, EdgeType>();
 		const nodesMap = new Map<string, VizNode>();
-		const edges = new Set<string>();
 
 		const median = props.nodes
 			.map((n) => n.importees.length)
@@ -78,30 +92,26 @@ export const useCreateGraph = (props: {
 
 			// Position entry node at center, others spread out more
 			const isEntry = props.entryNode === node.path;
-			const x = isEntry ? 0 : Math.abs(getRandom()) * 80; // Spread nodes more
-			const y = isEntry ? 0 : Math.abs(getRandom()) * 80; // Spread nodes more
+			const x = isEntry ? 0 : Math.abs(getRandom()); // Spread nodes more
+			const y = isEntry ? 0 : Math.abs(getRandom()); // Spread nodes more
 
 			graph.addNode(node.path, {
 				x,
 				y,
-				label: node.name,
+				label:
+					node.package && node.isBarrelFile
+						? `${node.package?.name}/${node.name}`
+						: node.name,
 				modType: node.type,
 				cluster: node.package?.name ?? "default",
 				color: packageColors.get(node.package?.name ?? "") ?? defaultColor,
-				size: clamp(floorMedian, floorMedian * 5, node.importees.length * 2),
+				size: clamp(2, floorMedian * 5, node.importees.length) * 2,
 				highlighted: false,
 			});
 		});
 
-		props.edges.forEach((edge) => {
-			const edgeId = `${edge.source}->${edge.target}`;
-			if (
-				nodesMap.has(edge.source) &&
-				nodesMap.has(edge.target) &&
-				!edges.has(edgeId)
-			) {
-				edges.add(edgeId);
-
+		edges.list.forEach((edge) => {
+			if (nodesMap.has(edge.source) && nodesMap.has(edge.target)) {
 				const sourceNode = nodesMap.get(edge.source)!;
 				graph.addEdge(edge.source, edge.target, {
 					label: edge.source,
@@ -114,7 +124,7 @@ export const useCreateGraph = (props: {
 		applyHybridClustering(graph, packageColors);
 
 		return graph as Graph<NodeType, EdgeType>;
-	}, [packageColors]);
+	}, [edges.list, packageColors]);
 };
 
 const randomColor = () => {
@@ -156,7 +166,7 @@ function applyHybridClustering(
 
 		// Apply Louvain clustering within each package for sub-clustering
 		packageGroups.forEach((nodeIds, packageName) => {
-			if (nodeIds.length > 3) {
+			if (nodeIds.length > 4) {
 				// Only sub-cluster if package has enough nodes
 				// Create a subgraph for this package
 				const subgraph = graph.copy();
@@ -167,12 +177,12 @@ function applyHybridClustering(
 					}
 				});
 
-				if (subgraph.order > 2) {
-					// Need at least 3 nodes for meaningful clustering
+				if (subgraph.order > 4) {
+					// Need at least 5 nodes for meaningful clustering
 					// Apply Louvain to the subgraph
 					louvain.assign(subgraph, {
 						nodeCommunityAttribute: "packageSubCommunity",
-						resolution: 0.8, // Lower resolution for finer sub-clusters
+						resolution: 1, // Lower resolution for finer sub-clusters
 						randomWalk: false,
 					});
 
