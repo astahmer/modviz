@@ -10,7 +10,7 @@ const fetchGraphData = createServerFn().handler(async (ctx) => {
 });
 
 const Sigma = lazy(() =>
-	import("../components/modviz-sigma").then((module) => ({
+	import("../components/graph/modviz-sigma").then((module) => ({
 		default: module.ModvizSigma,
 	})),
 );
@@ -37,7 +37,7 @@ function Home() {
 			<Suspense>
 				{/* <Sigma nodes={graphData.nodes} edges={graphData.edges} /> */}
 				<Sigma
-					entryNode={graphData.metadata.entryPoint}
+					entryNode={graphData.metadata.entryFile}
 					packages={graphData.metadata.packages}
 					nodes={graphData.nodes}
 				/>

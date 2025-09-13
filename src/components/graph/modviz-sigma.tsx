@@ -8,10 +8,16 @@ import "@react-sigma/core/lib/style.css";
 import { GraphSearch, GraphSearchOption } from "@react-sigma/graph-search";
 import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
-import { useCallback, useState } from "react";
-import { SigmaGraph } from "~/components/common/SigmaGraph";
-import type { ModvizOutput } from "../../mod/types";
-import { FocusOnNode } from "./common/FocusOnNode";
+import { useCallback, useMemo, useState } from "react";
+import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
+import type { ModvizOutput } from "../../../mod/types";
+import { FocusOnNode } from "./common/focus-on-node";
+import { fitViewportToNodes } from "@sigma/utils";
+import type Sigma from "sigma";
+import type {
+	EdgeType,
+	NodeType,
+} from "~/components/graph/common/use-create-graph";
 
 export const ModvizSigma = (props: {
 	entryNode?: string;
@@ -50,8 +56,23 @@ export const ModvizSigma = (props: {
 		[],
 	);
 
+	const [sigma, setSigma] = useState<Sigma<NodeType, EdgeType> | null>(null);
+
+	const communities = useMemo(() => {
+		if (!sigma) return [];
+
+		const communities = new Set<string>();
+		const graph = sigma.getGraph();
+		graph.forEachNode(
+			(_nodeId, attrs) =>
+				attrs.louvainCommunity && communities.add(attrs.louvainCommunity),
+		);
+		return Array.from(communities);
+	}, [sigma]);
+
 	return (
 		<SigmaContainer
+			ref={setSigma}
 			className="h-full w-full"
 			settings={{
 				autoCenter: true,
@@ -81,6 +102,30 @@ export const ModvizSigma = (props: {
 			<ControlsContainer position={"bottom-right"} className="mb-6">
 				<ZoomControl />
 				<FullScreenControl />
+				{/* <LayoutsControl /> */}
+			</ControlsContainer>
+			<ControlsContainer position={"top-left"}>
+				<div className="flex flex-col flex-wrap gap-2 text-xs p-2">
+					{communities.map((community) => (
+						<button
+							key={community}
+							onClick={() => {
+								if (!sigma) return;
+
+								const graph = sigma.getGraph();
+								fitViewportToNodes(
+									sigma as never,
+									graph.filterNodes(
+										(_, attrs) => attrs.louvainCommunity === community,
+									),
+									{ animate: true },
+								);
+							}}
+						>
+							{community}
+						</button>
+					))}
+				</div>
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
 			<ControlsContainer position={"top-right"}>

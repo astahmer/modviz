@@ -2,8 +2,9 @@ import Graph, { DirectedGraph } from "graphology";
 import louvain from "graphology-communities-louvain";
 import iwanthue from "iwanthue";
 import { useCallback, useMemo } from "react";
-import type { ModvizOutput, VizNode } from "../../../mod/types";
-import { rng } from "~/components/common/gnrg";
+import type { ModvizOutput, VizNode } from "../../../../mod/types";
+import { rng } from "~/components/graph/common/gnrg";
+import { clamp } from "~/components/graph/common/clamp";
 
 export type NodeType = {
 	x: number;
@@ -19,10 +20,6 @@ export type NodeType = {
 	packageSubCommunity?: string;
 };
 export type EdgeType = { label: string; hidden?: boolean; color?: string };
-
-export const clamp = (min: number, max: number, value: number) => {
-	return Math.min(Math.max(min, value), max);
-};
 
 const colorList = [
 	"#5E6BFF",
@@ -100,8 +97,7 @@ export const useCreateGraph = (props: {
 				modType: node.type,
 				cluster: node.package?.name ?? "default",
 				color: packageColors.get(node.package?.name ?? "") ?? defaultColor,
-				// size: clamp(2, 8, node.importees.length) * 2,
-				size: clamp(4, 25, node.importees.length) * 2,
+				size: clamp(4, 15, node.importees.length),
 				highlighted: false,
 			});
 		});
@@ -148,10 +144,10 @@ function applyHybridClustering(
 	graph: Graph<NodeType, EdgeType>,
 	packageColors: Map<string, string>,
 ) {
+	const packageGroups = new Map<string, string[]>();
 	// Apply hybrid clustering: package-based primary + Louvain secondary
 	try {
 		// Group nodes by package first
-		const packageGroups = new Map<string, string[]>();
 		graph.forEachNode((nodeId, attrs) => {
 			const packageName = attrs.cluster || "default";
 			if (!packageGroups.has(packageName)) {
@@ -178,7 +174,7 @@ function applyHybridClustering(
 					// Apply Louvain to the subgraph
 					louvain.assign(subgraph, {
 						nodeCommunityAttribute: "packageSubCommunity",
-						resolution: 1, // Lower resolution for finer sub-clusters
+						resolution: 1, // Higher means more groups
 						randomWalk: false,
 					});
 
@@ -271,4 +267,6 @@ function applyHybridClustering(
 			error,
 		);
 	}
+
+	return packageGroups;
 }

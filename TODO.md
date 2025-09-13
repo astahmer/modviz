@@ -1,0 +1,12 @@
+- fit view button
+- display cluster names / fit view on it
+- leva configure layout settings
+- refresh graph button
+- save view url
+- find chain from -> to
+- hide/show clusters
+- filter by regex (package name, folder etc)
+- filter by number of edges
+- click to collapse/expand selected node
+- view mode (edge = imported by vs edge = importing)
+- lasso selection https://github.com/pentamorfico/sigmajs-select-rectangle/blob/main/index.js

@@ -100,10 +100,7 @@ const webGraphData = processModuleGraphForWeb(
 writeFileSync(
 	flags.outputFile,
 	JSON.stringify(
-		{
-			...webGraphData,
-			workspaces: workspaceList,
-		},
+		webGraphData,
 		null,
 		2,
 	),
@@ -116,7 +113,7 @@ if (!flags.noUi) {
 
 function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
-	entryPoint: string,
+	entryFile: string,
 	workspaces: Array<{ path: string; name: string }>,
 ): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
@@ -131,7 +128,7 @@ function processModuleGraphForWeb(
 		const node: VizNode = {
 			name: path.basename(filePath),
 			path: filePath,
-			type: getNodeType(filePath, module, entryPoint),
+			type: getNodeType(filePath, module, entryFile),
 			package: workspaces.find((workspace) =>
 				filePath.startsWith(workspace.path),
 			),
@@ -154,7 +151,8 @@ function processModuleGraphForWeb(
 
 	return {
 		metadata: {
-			entryPoint,
+			entryFile: entryFile,
+			// entrypoints: moduleGraph.entrypoints,
 			basePath: moduleGraph.basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),
