@@ -47,9 +47,15 @@ export interface VizImport {
 	attributes?: any[];
 }
 
+interface VizPackage {
+	path: string;
+	name: string;
+}
 interface VizMetadata {
 	entryPoint: string;
+	basePath: string;
 	totalFiles: number;
 	generatedAt: string;
 	nodeModulesCount: number;
+	packages: VizPackage[];
 }

@@ -45,7 +45,12 @@ function Home() {
 		<div className="p-2 h-[800px]">
 			<Suspense>
 				{/* <Sigma nodes={graphData.nodes} edges={graphData.edges} /> */}
-				<Sigma nodes={graphData.nodes} edges={graphData.edges} />
+				<Sigma
+					entryNode={graphData.metadata.entryPoint}
+					packages={graphData.metadata.packages}
+					nodes={graphData.nodes}
+					edges={graphData.edges}
+				/>
 				{/* <GraphAll
 					nodes={graphData.nodes.map((n) => ({
 						id: n.path,

@@ -87,10 +87,14 @@ const moduleGraph = await createModuleGraph(entryFile, {
 	],
 });
 
+const workspaceList = (workspaces ?? []).map((workspace) => ({
+	path: path.relative(moduleGraph.basePath, workspace.location),
+	name: workspace.package.name,
+}));
 const webGraphData = processModuleGraphForWeb(
 	moduleGraph,
 	entryFile,
-	workspaces,
+	workspaceList,
 );
 
 writeFileSync(
@@ -98,10 +102,7 @@ writeFileSync(
 	JSON.stringify(
 		{
 			...webGraphData,
-			workspaces: (workspaces ?? []).map((workspace) => ({
-				path: workspace.location,
-				name: workspace.package.name,
-			})),
+			workspaces: workspaceList,
 		},
 		null,
 		2,
@@ -116,7 +117,7 @@ if (!flags.noUi) {
 function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryPoint: string,
-	workspaces: Workspace[],
+	workspaces: Array<{ path: string; name: string }>,
 ) {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
@@ -126,15 +127,14 @@ function processModuleGraphForWeb(
 		const imports = (module.imports ?? []) as VizImport[];
 		const exports = (module.exports ?? []) as VizExport[];
 		const unusedExports = (module.unusedExports ?? []) as VizExport[];
-		const pkg = workspaces.find((workspace) =>
-			filePath.startsWith(workspace.location),
-		);
 
 		const node: VizNode = {
 			name: path.basename(filePath),
 			path: filePath,
 			type: getNodeType(filePath, module, entryPoint),
-			package: pkg ? { path: pkg.location, name: pkg.package.name } : undefined,
+			package: workspaces.find((workspace) =>
+				filePath.startsWith(workspace.path),
+			),
 			imports,
 			exports,
 			unusedExports,
@@ -155,10 +155,12 @@ function processModuleGraphForWeb(
 	return {
 		metadata: {
 			entryPoint,
+			basePath: moduleGraph.basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),
 			nodeModulesCount: nodeList.filter((n) => n.path.includes("node_modules"))
 				.length,
+			packages: workspaceList,
 		},
 		nodes: nodeList,
 		edges: Array.from(edgeList).map((edge) => {

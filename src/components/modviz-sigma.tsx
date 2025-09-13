@@ -14,6 +14,8 @@ import type { ModvizOutput } from "../../mod/types";
 import { FocusOnNode } from "./common/FocusOnNode";
 
 export const ModvizSigma = (props: {
+	entryNode?: string;
+	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 	edges: ModvizOutput["edges"];
 }) => {
@@ -58,11 +60,22 @@ export const ModvizSigma = (props: {
 				autoRescale: true,
 				zoomDuration: 150,
 				// hideEdgesOnMove: true,
-				hideLabelsOnMove: false,
+				// hideLabelsOnMove: true,
 				// labelSize: 20,
+				// labelDensity: 0.07,
+				// labelGridCellSize: 60,
+				labelRenderedSizeThreshold: 8,
+				// labelFont: "Lato, sans-serif",
+				// zIndex: true,
+				// stagePadding: 0,
 			}}
 		>
-			<SigmaGraph nodes={props.nodes} edges={props.edges} />
+			<SigmaGraph
+				entryNode={props.entryNode}
+				packages={props.packages}
+				nodes={props.nodes}
+				edges={props.edges}
+			/>
 			<FocusOnNode node={focusNode ?? selectedNode} />
 			<ControlsContainer position={"bottom-right"}>
 				<ZoomControl />
