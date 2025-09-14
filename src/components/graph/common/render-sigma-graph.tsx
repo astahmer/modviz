@@ -22,22 +22,22 @@ export const SigmaGraph = (props: {
 }) => {
 	const controls = useControls({
 		iterations: {
-			min: 100,
-			max: 1000,
+			min: 10,
+			max: 300,
 			step: 10,
-			value: props.layout?.iterations ?? 500,
+			value: props.layout?.iterations ?? 100,
 		},
 		gravity: {
 			min: 0,
-			max: 500,
+			max: 1000,
 			step: 1,
-			value: props.layout?.settings?.gravity ?? 50,
+			value: props.layout?.settings?.gravity ?? props.nodes.length / 4,
 		},
 		scalingRatio: {
 			min: 1,
-			max: 100,
+			max: 300,
 			step: 1,
-			value: props.layout?.settings?.scalingRatio ?? 5,
+			value: props.layout?.settings?.scalingRatio ?? props.nodes.length / 15,
 		},
 		strongGravityMode: props.layout?.settings?.strongGravityMode ?? false, // true?
 		linLogMode: props.layout?.settings?.linLogMode ?? false,
@@ -56,7 +56,11 @@ export const SigmaGraph = (props: {
 					"cluster-label-layers",
 				);
 				if (clusterLabelLayer) {
-					clusterLabelLayer.style.display = value ? "none" : "initial";
+					if (value) {
+						clusterLabelLayer.dataset.hidden = "true";
+					} else {
+						delete clusterLabelLayer.dataset.hidden;
+					}
 				}
 			},
 		},

@@ -248,9 +248,12 @@ const useClusterLabelLayer = (
 	);
 
 	useEffect(() => {
-		const layer =
-			document.getElementById("cluster-label-layers") ??
-			document.createElement("div");
+		let layer = document.getElementById("cluster-label-layers")!;
+		const hasLayer = Boolean(layer);
+		if (!hasLayer) {
+			layer = document.createElement("div");
+		}
+
 		layer.id = "cluster-label-layers";
 		layer.dataset.hidden = hideClusterLabels ? "true" : undefined;
 		if (hideClusterLabels) {
@@ -265,13 +268,15 @@ const useClusterLabelLayer = (
 		clusterMap.forEach((cluster) => {
 			if (cluster.nodes.length < 5) return;
 			const viewportPos = sigma.graphToViewport(cluster as Coordinates);
-			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-sm text-2xl" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color}">${cluster.inferredName || cluster.name}</div>`;
+			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-md text-2xl" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color}">${cluster.inferredName || cluster.name}</div>`;
 		});
 		layer.innerHTML = clusterLabelsDoms;
 
 		// insert the layer underneath the hovers layer
-		const container = sigma.getContainer();
-		container.insertBefore(layer, container.querySelector(".sigma-hovers"));
+		if (!hasLayer) {
+			const container = sigma.getContainer();
+			container.insertBefore(layer, container.querySelector(".sigma-hovers"));
+		}
 
 		// Clusters labels position needs to be updated on each render
 		const listener = () => {
