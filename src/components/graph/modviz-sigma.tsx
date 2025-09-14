@@ -2,7 +2,6 @@ import {
 	ControlsContainer,
 	FullScreenControl,
 	SigmaContainer,
-	useSigma,
 	ZoomControl,
 } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
@@ -10,12 +9,15 @@ import { GraphSearch, GraphSearchOption } from "@react-sigma/graph-search";
 import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
 import { fitViewportToNodes } from "@sigma/utils";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type Sigma from "sigma";
+import type { Coordinates } from "sigma/types";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
 import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
 import { FocusOnNode } from "./common/focus-on-node";
 
@@ -24,19 +26,20 @@ export const ModvizSigma = (props: {
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 }) => {
+	const [sigma, setSigma] = useState<Sigma<NodeType, EdgeType> | null>(null);
 	return (
-		<SigmaContainer className="h-full w-full">
+		<SigmaContainer ref={setSigma} className="h-full w-full">
 			<SigmaGraph
 				entryNode={props.entryNode}
 				packages={props.packages}
 				nodes={props.nodes}
 			/>
-			<WithGraph />
+			{sigma && <WithGraph sigma={sigma as never} />}
 		</SigmaContainer>
 	);
 };
 
-const WithGraph = () => {
+const WithGraph = (props: { sigma: Sigma<NodeType, EdgeType> }) => {
 	const [selectedNode, setSelectedNode] = useState<string | null>(null);
 	const [focusNode, setFocusNode] = useState<string | null>(null);
 
@@ -69,28 +72,12 @@ const WithGraph = () => {
 		[],
 	);
 
-	const sigma = useSigma<NodeType, EdgeType>();
+	const sigma = props.sigma;
+	const clusterMap = useClusterMap(sigma);
+	const clusterList = useClusterList(clusterMap);
+	useClusterLabelLayer(sigma, clusterMap);
+
 	const graph = sigma.getGraph();
-
-	const communities = useMemo(() => {
-		const communities = new Map<string, string[]>();
-		graph.forEachNode(
-			(nodeId, attrs) =>
-				attrs.louvainCommunity &&
-				communities.set(
-					attrs.louvainCommunity,
-					(communities.get(attrs.louvainCommunity) ?? []).concat(nodeId),
-				),
-		);
-
-		return Array.from(communities.entries())
-			.sort((a, b) => {
-				const res = b[1].length - a[1].length;
-				return res !== 0 ? res : a[0].localeCompare(b[0]);
-			})
-			.map(([name, ids]) => ({ name, ids }));
-	}, [sigma]);
-
 	const nodes = graph.nodes();
 
 	return (
@@ -113,43 +100,43 @@ const WithGraph = () => {
 					>
 						Reset view ({nodes.length} nodes)
 					</button>
-					{communities.map((community) => {
-						const graph = sigma.getGraph();
-						const color = community.ids.length
-							? graph.getNodeAttribute(community.ids[0], "color")
-							: "#E2E2E2";
-						return (
-							<button
-								key={community.name}
-								className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
-								onClick={() => {
-									fitViewportToNodes(
-										sigma as never,
-										graph.filterNodes(
-											(_, attrs) => attrs.louvainCommunity === community.name,
-										),
-										{ animate: true },
-									);
-								}}
-								onMouseEnter={() => {
-									const nodes = graph.filterNodes((nodeId, attrs) =>
-										community.ids.includes(nodeId),
-									);
-									nodes.forEach((nodeId) => {
-										graph.setNodeAttribute(nodeId, "highlighted", true);
-									});
-								}}
-								onMouseLeave={() => {
-									graph.forEachNode((nodeId) => {
-										graph.setNodeAttribute(nodeId, "highlighted", false);
-									});
-								}}
-							>
-								<div className="w-2 h-2" style={{ backgroundColor: color }} />
-								{community.name} ({community.ids.length})
-							</button>
-						);
-					})}
+					{clusterList
+						.filter((cluster) => cluster.nodes.length > 5)
+						.map((cluster) => {
+							return (
+								<button
+									key={cluster.name}
+									className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
+									onClick={() => {
+										fitViewportToNodes(
+											sigma as never,
+											graph.filterNodes(
+												(_, attrs) => attrs.louvainCommunity === cluster.name,
+											),
+											{ animate: true },
+										);
+									}}
+									onMouseEnter={() => {
+										graph.forEachNode((nodeId) => {
+											if (cluster.nodes.includes(nodeId)) {
+												graph.setNodeAttribute(nodeId, "highlighted", true);
+											}
+										});
+									}}
+									onMouseLeave={() => {
+										graph.forEachNode((nodeId) => {
+											graph.setNodeAttribute(nodeId, "highlighted", false);
+										});
+									}}
+								>
+									<div
+										className="w-2 h-2"
+										style={{ backgroundColor: cluster.color }}
+									/>
+									{cluster.inferredName || cluster.name}({cluster.nodes.length})
+								</button>
+							);
+						})}
 				</div>
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
@@ -168,4 +155,116 @@ const WithGraph = () => {
 			</ControlsContainer>
 		</>
 	);
+};
+
+interface Cluster {
+	name: string;
+	inferredName?: string;
+	path: string;
+	x?: number;
+	y?: number;
+	color?: string;
+	positions: { x: number; y: number }[];
+	nodes: string[];
+}
+
+const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
+	return useMemo(() => {
+		const map = new Map<string, Cluster>();
+		const graph = sigma.getGraph();
+		graph.forEachNode((nodeId, attrs) => {
+			if (!attrs.cluster) return;
+			const cluster = map.get(attrs.cluster);
+			if (cluster) {
+				cluster.nodes.push(nodeId);
+				cluster.positions.push({ x: attrs.x, y: attrs.y });
+				return;
+			}
+
+			map.set(attrs.cluster, {
+				name: attrs.cluster,
+				path: attrs.clusterPath ?? "",
+				nodes: [nodeId],
+				positions: [{ x: attrs.x, y: attrs.y }],
+				color: attrs.color,
+			});
+		});
+
+		// calculate the cluster's nodes barycenter to use this as cluster label position
+		map.forEach((cluster) => {
+			cluster.x =
+				cluster.positions.reduce((acc, p) => acc + p.x, 0) /
+				cluster.positions.length;
+			cluster.y =
+				cluster.positions.reduce((acc, p) => acc + p.y, 0) /
+				cluster.positions.length;
+
+			const pathsLabel = inferPathsLabel(
+				cluster.nodes.map((path) => path.replace(cluster.path, "")),
+			);
+			if (pathsLabel) {
+				cluster.inferredName = pathsLabel;
+			}
+		});
+
+		return map;
+	}, [sigma]);
+};
+
+const useClusterList = (clusterMap: Map<string, Cluster>) => {
+	return useMemo(() => {
+		const clusterList = Array.from(clusterMap.entries())
+			.sort((a, b) => {
+				const res = b[1].nodes.length - a[1].nodes.length;
+				return res !== 0 ? res : a[0].localeCompare(b[0]);
+			})
+			.map(([_name, cluster]) => cluster);
+		return clusterList;
+	}, [clusterMap]);
+};
+
+const useClusterLabelLayer = (
+	sigma: Sigma<NodeType, EdgeType>,
+	clusterMap: Map<string, Cluster>,
+) => {
+	useEffect(() => {
+		const clustersLayer =
+			document.getElementById("cluster-label-layers") ??
+			document.createElement("div");
+		clustersLayer.id = "cluster-label-layers";
+		clustersLayer.className =
+			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden";
+		let clusterLabelsDoms = "";
+		clusterMap.forEach((cluster) => {
+			if (cluster.nodes.length < 5) return;
+			const viewportPos = sigma.graphToViewport(cluster as Coordinates);
+			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-sm text-2xl" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color}">${cluster.inferredName || cluster.name}</div>`;
+		});
+		clustersLayer.innerHTML = clusterLabelsDoms;
+
+		// insert the layer underneath the hovers layer
+		const container = sigma.getContainer();
+		container.insertBefore(
+			clustersLayer,
+			container.querySelector(".sigma-hovers"),
+		);
+
+		// Clusters labels position needs to be updated on each render
+		const listener = () => {
+			clusterMap.forEach((cluster) => {
+				const clusterLabel = document.getElementById(cluster.name);
+				if (clusterLabel) {
+					// update position from the viewport
+					const viewportPos = sigma.graphToViewport(cluster as Coordinates);
+					clusterLabel.style.top = `${viewportPos.y}px`;
+					clusterLabel.style.left = `${viewportPos.x}px`;
+				}
+			});
+		};
+		sigma.on("afterRender", listener);
+
+		return () => {
+			sigma.off("afterRender", listener);
+		};
+	}, [clusterMap]);
 };

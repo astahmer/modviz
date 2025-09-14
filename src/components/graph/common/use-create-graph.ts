@@ -10,11 +10,13 @@ export type NodeType = {
 	x: number;
 	y: number;
 	label: string;
+	originalLabel: string;
 	size: number;
 	color: string;
 	highlighted?: boolean;
 	hidden?: boolean;
 	cluster?: string;
+	clusterPath?: string;
 	modType?: string;
 	louvainCommunity?: string;
 	packageSubCommunity?: string;
@@ -65,16 +67,19 @@ export const useCreateGraph = (props: {
 			const isEntry = props.entryNode === node.path;
 			const x = isEntry ? 0 : Math.abs(getRandom());
 			const y = isEntry ? 0 : Math.abs(getRandom());
+			const label =
+				node.package && node.isBarrelFile
+					? `${node.package?.name}/${node.name}`
+					: node.name;
 
 			graph.addNode(node.path, {
 				x,
 				y,
-				label:
-					node.package && node.isBarrelFile
-						? `${node.package?.name}/${node.name}`
-						: node.name,
+				label,
+				originalLabel: label,
 				modType: node.type,
 				cluster: node.package?.name ?? "default",
+				clusterPath: node.package?.path,
 				color: packageColors.get(node.package?.name ?? "") ?? defaultColor,
 				size: clamp(4, 15, node.importees.length),
 				highlighted: false,
@@ -153,7 +158,7 @@ function applyHybridClustering(
 					// Apply Louvain to the subgraph
 					louvain.assign(subgraph, {
 						nodeCommunityAttribute: "packageSubCommunity",
-						resolution: 1, // Higher means more groups
+						resolution: 5, // Higher means more groups
 						randomWalk: false,
 					});
 

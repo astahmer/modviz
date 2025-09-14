@@ -14,8 +14,16 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-	// const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+	// const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+	// Hide cluster labels when hovering node
+	useEffect(() => {
+		const clusterLabelLayer = document.getElementById("cluster-label-layers");
+		if (clusterLabelLayer) {
+			clusterLabelLayer.style.display = hoveredNodeId ? "none" : "initial";
+		}
+	}, [Boolean(hoveredNodeId)]);
 
 	// registerEvents
 	useEffect(() => {
@@ -57,9 +65,11 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
+			allowInvalidContainer: true,
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
+			renderLabels: Boolean(hoveredNodeId),
 			// hideEdgesOnMove: true,
 			// hideLabelsOnMove: true,
 			// labelSize: 20,
@@ -76,13 +86,10 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 				const graph = sigma.getGraph();
 				const updated = {
 					...node,
-					label: "", // Hide labels by default
 					highlighted: node.highlighted || false,
 				};
 
 				if (hoveredNodeId && graph.hasNode(hoveredNodeId)) {
-					const activeNode = graph.getNodeAttributes(hoveredNodeId);
-
 					if (nodeId === hoveredNodeId) {
 						updated.label = node.label; // Show label for active node
 						updated.size = node.size + clamp(4, 10, node.size * 0.25);
@@ -95,12 +102,14 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 						updated.label = node.label; // Show labels for active node and neighbors
 						updated.highlighted = true;
 
-						if (hoveredNodeId !== props.entryNode) {
-							updated.color =
-								activeNode.color === defaultColor
-									? "#FA4F40"
-									: activeNode.color;
-						}
+						// Set color of all neighbors to the same color as the hovered node?
+						// if (hoveredNodeId !== props.entryNode) {
+						// const activeNode = graph.getNodeAttributes(hoveredNodeId);
+						// 	updated.color =
+						// 		activeNode.color === defaultColor
+						// 			? "#FA4F40"
+						// 			: activeNode.color;
+						// }
 					} else {
 						updated.color = defaultColor;
 						updated.highlighted = false;

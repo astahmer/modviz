@@ -1,4 +1,3 @@
-- display cluster names
 - leva configure layout settings
 - refresh graph button
 - save view url
