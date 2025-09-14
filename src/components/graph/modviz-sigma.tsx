@@ -243,7 +243,7 @@ const useClusterLabelLayer = (
 	clusterMap: Map<string, Cluster>,
 ) => {
 	const hideClusterLabels = levaStore.useStore(
-		(s) => s.data.hideClusterLabels.value,
+		(s) => (s.data.hideClusterLabels as any).value,
 	);
 
 	useEffect(() => {

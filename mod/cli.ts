@@ -19,7 +19,7 @@ const args = process.argv.slice(2);
 const entryFile = args.find((arg) => !arg.startsWith("--"));
 const flags = {
 	port: args.find((arg) => arg.startsWith("--port="))?.split("=")[1],
-	noUi: args.includes("--no-ui"),
+	ui: args.includes("--ui"),
 	outputFile:
 		args.find((arg) => arg.startsWith("--output-file="))?.split("=")[1] ??
 		"./modviz.json",
@@ -36,13 +36,13 @@ modviz - Interactive Dependency Graph Visualizer
 
 Usage:
   modviz <entryFile>                    Generate graph and launch web UI
-  modviz <entryFile> --no-ui      Generate graph data only
+  modviz <entryFile> --ui      Generate graph data only
   modviz --serve [dataFile]             Launch web UI with existing data
   modviz <entryFile> --port=4000        Use custom port
 
 Options:
   --port=<port>     Port for web server (default: 3000)
-  --no-ui     Generate JSON data only, don't launch UI
+  --ui     Generate JSON data only, don't launch UI
   --serve           Launch UI server (optionally with existing data file)
   --help, -h        Show this help message
 
@@ -111,7 +111,7 @@ const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile, packages);
 writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
 console.log(`📊 Graph data saved to: ${flags.outputFile}`);
 
-if (!flags.noUi) {
+if (flags.ui) {
 	await launchWebUI(flags.port, flags.outputFile);
 }
 

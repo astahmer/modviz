@@ -1,6 +1,5 @@
 - save view url
 - find chain from -> to
-- hide/show clusters
 - filter by regex (package name, folder etc)
 - filter by number of edges
 - click to collapse/expand selected node
