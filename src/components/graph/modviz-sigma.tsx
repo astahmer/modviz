@@ -169,7 +169,7 @@ interface Cluster {
 }
 
 const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
-	return useMemo(() => {
+	const clusterMap = useMemo(() => {
 		const map = new Map<string, Cluster>();
 		const graph = sigma.getGraph();
 		graph.forEachNode((nodeId, attrs) => {
@@ -190,15 +190,7 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 			});
 		});
 
-		// calculate the cluster's nodes barycenter to use this as cluster label position
 		map.forEach((cluster) => {
-			cluster.x =
-				cluster.positions.reduce((acc, p) => acc + p.x, 0) /
-				cluster.positions.length;
-			cluster.y =
-				cluster.positions.reduce((acc, p) => acc + p.y, 0) /
-				cluster.positions.length;
-
 			const pathsLabel = inferPathsLabel(
 				cluster.nodes.map((path) => path.replace(cluster.path, "")),
 			);
@@ -209,6 +201,28 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 
 		return map;
 	}, [sigma]);
+
+	useEffect(() => {
+		const listener = () => {
+			// calculate the cluster's nodes barycenter to use this as cluster label position
+			clusterMap.forEach((cluster) => {
+				cluster.x =
+					cluster.positions.reduce((acc, p) => acc + p.x, 0) /
+					cluster.positions.length;
+				cluster.y =
+					cluster.positions.reduce((acc, p) => acc + p.y, 0) /
+					cluster.positions.length;
+			});
+		};
+		sigma.addListener("afterProcess", listener);
+		// sigma.addListener("onControlsChange", listener);
+		return () => {
+			sigma.removeListener("afterProcess", listener);
+			// sigma.removeListener("onControlsChange", listener);
+		};
+	}, [clusterMap]);
+
+	return clusterMap;
 };
 
 const useClusterList = (clusterMap: Map<string, Cluster>) => {

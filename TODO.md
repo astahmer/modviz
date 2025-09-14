@@ -1,5 +1,3 @@
-- leva configure layout settings
-- refresh graph button
 - save view url
 - find chain from -> to
 - hide/show clusters
