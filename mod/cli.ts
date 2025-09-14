@@ -2,14 +2,13 @@ import { existsSync, writeFileSync } from "node:fs";
 import {
 	createModuleGraph,
 	type Module,
-	type Plugin,
-} from "@thepassle/module-graph";
-import type { ModuleGraph } from "@thepassle/module-graph/ModuleGraph.js";
-import { barrelFile } from "@thepassle/module-graph/plugins/barrel-file.js";
-import { exports } from "@thepassle/module-graph/plugins/exports.js";
-import { imports } from "@thepassle/module-graph/plugins/imports.js";
-import { typescript } from "@thepassle/module-graph/plugins/typescript.js";
-import { unusedExports } from "@thepassle/module-graph/plugins/unused-exports.js";
+	// } from "@astahmer/module-graph";
+} from "/Users/astahmer/dev/open-source/module-graph/index.js";
+import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
+import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
+import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
+import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
+import { unusedExports } from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
 import path from "node:path";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 // import { parse } from "tsconfck";
@@ -26,6 +25,9 @@ const flags = {
 		"./modviz.json",
 	serve: args.includes("--serve"),
 	help: args.includes("--help") || args.includes("-h"),
+	moduleLexer: args
+		.find((arg) => arg.startsWith("--module-lexer="))
+		?.split("=")[1],
 };
 
 if (flags.help || (!entryFile && !flags.serve)) {
@@ -72,39 +74,41 @@ if (!existsSync(entryFile)) {
 console.log(`🔍 Analyzing dependency graph for: ${entryFile}`);
 
 // const tsconfig = await parse(entryFile);
+const basePath = process.cwd();
 const workspaces = findWorkspaces(entryFile) ?? [];
+const workspaceList = (workspaces ?? []).map((workspace) => ({
+	relativePath: path.relative(basePath, workspace.location),
+	absolutePath: workspace.location,
+	name: workspace.package.name,
+	imports: workspace.package.imports,
+}));
 
 const moduleGraph = await createModuleGraph(entryFile, {
 	exclude: [(importee) => importee.includes("node_modules")], // TODO configurable flag to allow this
+	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 	plugins: [
-		typescript(),
 		imports,
 		exports,
 		unusedExports,
 		barrelFile({
 			amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
 		}),
+		{
+			name: "replace-import-type-to-import",
+			transformSource: ({ filename, source }) => {
+				return source.replace(/import type/g, "import");
+			},
+		},
 	],
 });
 
-const workspaceList = (workspaces ?? []).map((workspace) => ({
-	path: path.relative(moduleGraph.basePath, workspace.location),
-	name: workspace.package.name,
+const packages = workspaceList.map((workspace) => ({
+	name: workspace.name,
+	path: workspace.relativePath,
 }));
-const webGraphData = processModuleGraphForWeb(
-	moduleGraph,
-	entryFile,
-	workspaceList,
-);
+const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile, packages);
 
-writeFileSync(
-	flags.outputFile,
-	JSON.stringify(
-		webGraphData,
-		null,
-		2,
-	),
-);
+writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
 console.log(`📊 Graph data saved to: ${flags.outputFile}`);
 
 if (!flags.noUi) {
@@ -114,7 +118,10 @@ if (!flags.noUi) {
 function processModuleGraphForWeb(
 	moduleGraph: ModuleGraph,
 	entryFile: string,
-	workspaces: Array<{ path: string; name: string }>,
+	workspaces: Array<{
+		path: string;
+		name: string;
+	}>,
 ): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
@@ -151,20 +158,15 @@ function processModuleGraphForWeb(
 
 	return {
 		metadata: {
-			entryFile: entryFile,
-			// entrypoints: moduleGraph.entrypoints,
-			basePath: moduleGraph.basePath,
+			entrypoints: moduleGraph.entrypoints,
+			basePath: basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),
 			nodeModulesCount: nodeList.filter((n) => n.path.includes("node_modules"))
 				.length,
-			packages: workspaceList,
+			packages,
 		},
 		nodes: nodeList,
-		// edges: Array.from(edgeList).map((edge) => {
-		// 	const [source, target] = edge.split("->");
-		// 	return { source, target };
-		// }),
 		imports: uniqueModules,
 	};
 }

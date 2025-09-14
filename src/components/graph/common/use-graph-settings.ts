@@ -1,4 +1,5 @@
 import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
+import { useControls } from "leva";
 import { useEffect, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import type {
@@ -20,8 +21,12 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 	// Hide cluster labels when hovering node
 	useEffect(() => {
 		const clusterLabelLayer = document.getElementById("cluster-label-layers");
-		if (clusterLabelLayer) {
-			clusterLabelLayer.style.display = hoveredNodeId ? "none" : "initial";
+		if (!clusterLabelLayer) return;
+
+		if (hoveredNodeId) {
+			clusterLabelLayer.dataset.hovered = "true";
+		} else {
+			delete clusterLabelLayer.dataset.hovered;
 		}
 	}, [Boolean(hoveredNodeId)]);
 
@@ -62,6 +67,17 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 		});
 	}, [registerEvents, draggedNodeId]);
 
+	useControls({
+		renderLabels: {
+			value: Boolean(hoveredNodeId),
+			onChange: (value) => {
+				setSettings({
+					renderLabels: value,
+				});
+			},
+		},
+	});
+
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
@@ -69,7 +85,7 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			renderLabels: Boolean(hoveredNodeId),
+			// renderLabels: Boolean(hoveredNodeId),
 			// hideEdgesOnMove: true,
 			// hideLabelsOnMove: true,
 			// labelSize: 20,

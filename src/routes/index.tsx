@@ -37,7 +37,7 @@ function Home() {
 			<Suspense>
 				{/* <Sigma nodes={graphData.nodes} edges={graphData.edges} /> */}
 				<Sigma
-					entryNode={graphData.metadata.entryFile}
+					entryNode={graphData.metadata.entrypoints[0]}
 					packages={graphData.metadata.packages}
 					nodes={graphData.nodes}
 				/>

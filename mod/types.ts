@@ -46,7 +46,7 @@ interface VizPackage {
 	name: string;
 }
 interface VizMetadata {
-	entryFile: string;
+	entrypoints: string[];
 	basePath: string;
 	totalFiles: number;
 	generatedAt: string;

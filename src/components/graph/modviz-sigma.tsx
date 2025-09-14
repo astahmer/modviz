@@ -20,6 +20,7 @@ import type {
 import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
 import { FocusOnNode } from "./common/focus-on-node";
+import { levaStore } from "leva";
 
 export const ModvizSigma = (props: {
 	entryNode?: string;
@@ -241,27 +242,35 @@ const useClusterLabelLayer = (
 	sigma: Sigma<NodeType, EdgeType>,
 	clusterMap: Map<string, Cluster>,
 ) => {
+	const hideClusterLabels = levaStore.useStore(
+		(s) => s.data.hideClusterLabels.value,
+	);
+
 	useEffect(() => {
-		const clustersLayer =
+		const layer =
 			document.getElementById("cluster-label-layers") ??
 			document.createElement("div");
-		clustersLayer.id = "cluster-label-layers";
-		clustersLayer.className =
-			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden";
+		layer.id = "cluster-label-layers";
+		layer.dataset.hidden = hideClusterLabels ? "true" : undefined;
+		if (hideClusterLabels) {
+			layer.dataset.hidden = "true";
+		} else {
+			delete layer.dataset.hidden;
+		}
+
+		layer.className =
+			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden data-hovered:hidden data-hidden:hidden";
 		let clusterLabelsDoms = "";
 		clusterMap.forEach((cluster) => {
 			if (cluster.nodes.length < 5) return;
 			const viewportPos = sigma.graphToViewport(cluster as Coordinates);
 			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-sm text-2xl" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color}">${cluster.inferredName || cluster.name}</div>`;
 		});
-		clustersLayer.innerHTML = clusterLabelsDoms;
+		layer.innerHTML = clusterLabelsDoms;
 
 		// insert the layer underneath the hovers layer
 		const container = sigma.getContainer();
-		container.insertBefore(
-			clustersLayer,
-			container.querySelector(".sigma-hovers"),
-		);
+		container.insertBefore(layer, container.querySelector(".sigma-hovers"));
 
 		// Clusters labels position needs to be updated on each render
 		const listener = () => {
@@ -280,5 +289,5 @@ const useClusterLabelLayer = (
 		return () => {
 			sigma.off("afterRender", listener);
 		};
-	}, [clusterMap]);
+	}, [clusterMap, hideClusterLabels]);
 };
