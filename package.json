@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@astahmer/module-graph": "^0.13.0",
-    "@faker-js/faker": "^10.0.0",
     "@react-sigma/core": "^5.0.4",
     "@react-sigma/graph-search": "^5.0.4",
     "@react-sigma/layout-circlepack": "^5.0.4",
@@ -34,7 +33,6 @@
     "find-workspaces": "^0.3.1",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2",
-    "graphology-generators": "^0.11.2",
     "graphology-types": "^0.24.8",
     "iwanthue": "^2.0.0",
     "leva": "^0.10.0",
@@ -43,10 +41,8 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "resolve-pkg-maps": "^1.0.0",
-    "seedrandom": "^3.0.5",
     "sigma": "^3.0.2",
     "tailwind-merge": "^2.6.0",
-    "tsconfck": "^3.1.6",
     "vite": "^6.3.6",
     "zod": "^3.24.2"
   },

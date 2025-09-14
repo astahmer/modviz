@@ -1,20 +1,17 @@
 import { existsSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
 	createModuleGraph,
 	type Module,
-	// } from "@astahmer/module-graph";
 } from "/Users/astahmer/dev/open-source/module-graph/index.js";
 import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
 import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
 import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
 import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
 import { unusedExports } from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
-import path from "node:path";
-import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
-// import { parse } from "tsconfck";
-import { findWorkspaces, type Workspace } from "find-workspaces";
+import { findWorkspaces } from "find-workspaces";
 
-// Parse command line arguments
 const args = process.argv.slice(2);
 const entryFile = args.find((arg) => !arg.startsWith("--"));
 const flags = {
@@ -73,7 +70,6 @@ if (!existsSync(entryFile)) {
 
 console.log(`🔍 Analyzing dependency graph for: ${entryFile}`);
 
-// const tsconfig = await parse(entryFile);
 const basePath = process.cwd();
 const workspaces = findWorkspaces(entryFile) ?? [];
 const workspaceList = (workspaces ?? []).map((workspace) => ({
@@ -145,7 +141,7 @@ function processModuleGraphForWeb(
 			importees: Array.from(importees),
 			importedBy: module.importedBy,
 			isBarrelFile: module.isBarrelFile || false,
-			chain: findImportChains(moduleGraph, (path) => path === filePath),
+			chain: moduleGraph.findImportChains(filePath),
 		};
 		nodeList.push(node);
 
@@ -184,55 +180,9 @@ function getNodeType(
 
 async function launchWebUI(port: string | undefined, dataFile?: string) {
 	console.log(`🚀 Launching web UI...`);
-	// const { startServer: createServer } = await import("./server/dev-server.ts");
-	// await createServer(port ? Number.parseInt(port) : undefined, dataFile);
 	const { startServer } = await import("./vite-dev-server.ts");
 	await startServer({
 		port: port ? Number.parseInt(port) : undefined,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),
 	});
-}
-
-function findImportChains(
-	moduleGraph: ModuleGraph,
-	targetModule: string | string[] | ((module: string) => boolean),
-) {
-	/**
-	 * @type {string[][]}
-	 */
-	const chains: string[][] = [];
-	const seen = new Set<string>();
-
-	/**
-	 * @param {string} module
-	 * @param {string[]} path
-	 * @returns
-	 */
-	const dfs = (module: string, path: string[]) => {
-		const condition =
-			typeof targetModule === "function"
-				? targetModule(module)
-				: module === targetModule;
-
-		if (seen.has(module)) return;
-		seen.add(module);
-
-		if (condition) {
-			chains.push(path);
-			return;
-		}
-
-		const dependencies = moduleGraph.graph.get(module);
-		if (dependencies) {
-			for (const dependency of dependencies) {
-				dfs(dependency, [...path, dependency]);
-			}
-		}
-	};
-
-	for (const entrypoint of moduleGraph.entrypoints) {
-		dfs(entrypoint, [entrypoint]);
-	}
-
-	return chains;
 }

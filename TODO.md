@@ -3,5 +3,5 @@
 - filter by regex (package name, folder etc)
 - filter by number of edges
 - click to collapse/expand selected node
-- view mode (edge = imported by vs edge = importing)
+- view mode (edge = imported by vs edge = importing) -> multi directed graph with inward/outward/all edges
 - lasso selection https://github.com/pentamorfico/sigmajs-select-rectangle/blob/main/index.js
