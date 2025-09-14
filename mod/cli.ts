@@ -4,12 +4,17 @@ import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
 	createModuleGraph,
 	type Module,
+	type Plugin,
 } from "/Users/astahmer/dev/open-source/module-graph/index.js";
 import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
 import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
 import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
 import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
-import { unusedExports } from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
+import {
+	unusedExports,
+	type Export,
+	type Import,
+} from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
 
 const args = process.argv.slice(2);
@@ -79,6 +84,30 @@ const workspaceList = (workspaces ?? []).map((workspace) => ({
 	imports: workspace.package.imports,
 }));
 
+const replaceImportTypeToImport = (source: string) =>
+	source.replace(/import type/g, "import");
+// Needed so rs-module-lexer will resolve the import (it would ignore type-only imports otherwise)
+const replaceImportTypeToImportPlugin: Plugin = {
+	name: "replace-import-type-to-import",
+	transformSource: ({ source }) => {
+		return replaceImportTypeToImport(source);
+	},
+};
+
+const clusterizePlugin: Plugin = {
+	name: "cluster-plugin",
+	analyze(module) {
+		const parts = module.path.split("/");
+		const srcIndex = parts.indexOf("src");
+		if (srcIndex !== -1 && parts.length > srcIndex + 1) {
+			const cluster = parts[srcIndex + 1];
+			if (path.extname(cluster) === "") {
+				module.cluster = cluster;
+			}
+		}
+	},
+};
+
 const moduleGraph = await createModuleGraph(entryFile, {
 	exclude: [(importee) => importee.includes("node_modules")], // TODO configurable flag to allow this
 	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
@@ -89,12 +118,8 @@ const moduleGraph = await createModuleGraph(entryFile, {
 		barrelFile({
 			amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
 		}),
-		{
-			name: "replace-import-type-to-import",
-			transformSource: ({ filename, source }) => {
-				return source.replace(/import type/g, "import");
-			},
-		},
+		replaceImportTypeToImportPlugin,
+		clusterizePlugin,
 	],
 });
 
@@ -105,7 +130,9 @@ const packages = workspaceList.map((workspace) => ({
 const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile, packages);
 
 writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
-console.log(`📊 Graph data saved to: ${flags.outputFile}`);
+console.log(
+	`💾 Graph data saved to: ${flags.outputFile} (${webGraphData.nodes.length} nodes out of ${webGraphData.imports.length} imports)`,
+);
 
 if (flags.ui) {
 	await launchWebUI(flags.port, flags.outputFile);
@@ -123,7 +150,7 @@ function processModuleGraphForWeb(
 	const edgeList = new Set<string>();
 
 	for (const [filePath, importees] of moduleGraph.graph) {
-		const module = moduleGraph.modules.get(filePath)!;
+		const module = moduleGraph.modules.get(filePath)! as VizModule;
 		const imports = (module.imports ?? []) as VizImport[];
 		const exports = (module.exports ?? []) as VizExport[];
 		const unusedExports = (module.unusedExports ?? []) as VizExport[];
@@ -135,6 +162,7 @@ function processModuleGraphForWeb(
 			package: workspaces.find((workspace) =>
 				filePath.startsWith(workspace.path),
 			),
+			cluster: module.cluster,
 			imports,
 			exports,
 			unusedExports,
@@ -169,7 +197,7 @@ function processModuleGraphForWeb(
 
 function getNodeType(
 	filePath: string,
-	module: Module,
+	module: VizModule,
 	entryPoint: string,
 ): string {
 	if (filePath === entryPoint) return "entry";
@@ -185,4 +213,10 @@ async function launchWebUI(port: string | undefined, dataFile?: string) {
 		port: port ? Number.parseInt(port) : undefined,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),
 	});
+}
+
+interface VizModule extends Module {
+	cluster?: string;
+	imports: Import[];
+	exports: Export[];
 }

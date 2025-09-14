@@ -12,6 +12,7 @@ export interface VizNode {
 		path: string;
 		name: string;
 	};
+	cluster?: string;
 	imports: VizImport[];
 	exports: VizExport[];
 	unusedExports: any[];

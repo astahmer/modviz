@@ -2,12 +2,11 @@ import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
 import { useControls } from "leva";
 import { useEffect, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
+import { colors } from "~/components/graph/common/colors";
 import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
-
-const defaultColor = "#E2E2E2";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
 	const sigma = useSigma<NodeType, EdgeType>();
@@ -127,7 +126,7 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 						// 			: activeNode.color;
 						// }
 					} else {
-						updated.color = defaultColor;
+						updated.color = colors.default;
 						updated.highlighted = false;
 						updated.label = ""; // Hide labels for non-connected nodes
 					}

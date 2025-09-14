@@ -9,7 +9,7 @@ import { GraphSearch, GraphSearchOption } from "@react-sigma/graph-search";
 import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
 import { fitViewportToNodes } from "@sigma/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
@@ -170,43 +170,43 @@ interface Cluster {
 }
 
 const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
-	const clusterMap = useMemo(() => {
-		const map = new Map<string, Cluster>();
-		const graph = sigma.getGraph();
-		graph.forEachNode((nodeId, attrs) => {
-			if (!attrs.cluster) return;
-			const cluster = map.get(attrs.cluster);
-			if (cluster) {
-				cluster.nodes.push(nodeId);
-				cluster.positions.push({ x: attrs.x, y: attrs.y });
-				return;
-			}
-
-			map.set(attrs.cluster, {
-				name: attrs.cluster,
-				path: attrs.clusterPath ?? "",
-				nodes: [nodeId],
-				positions: [{ x: attrs.x, y: attrs.y }],
-				color: attrs.color,
-			});
-		});
-
-		map.forEach((cluster) => {
-			const pathsLabel = inferPathsLabel(
-				cluster.nodes.map((path) => path.replace(cluster.path, "")),
-			);
-			if (pathsLabel) {
-				cluster.inferredName = pathsLabel;
-			}
-		});
-
-		return map;
-	}, [sigma]);
+	const [clusterMap, setClusterMap] = useState<Map<string, Cluster>>(
+		() => new Map<string, Cluster>(),
+	);
 
 	useEffect(() => {
 		const listener = () => {
-			// calculate the cluster's nodes barycenter to use this as cluster label position
-			clusterMap.forEach((cluster) => {
+			const map = new Map<string, Cluster>();
+			map.clear();
+
+			const graph = sigma.getGraph();
+			graph.forEachNode((nodeId, attrs) => {
+				if (!attrs.cluster) return;
+				const cluster = map.get(attrs.cluster);
+				if (cluster) {
+					cluster.nodes.push(nodeId);
+					cluster.positions.push({ x: attrs.x, y: attrs.y });
+					return;
+				}
+
+				map.set(attrs.cluster, {
+					name: attrs.cluster,
+					path: attrs.clusterPath ?? "",
+					nodes: [nodeId],
+					positions: [{ x: attrs.x, y: attrs.y }],
+					color: attrs.color,
+				});
+			});
+
+			map.forEach((cluster) => {
+				const pathsLabel = inferPathsLabel(
+					cluster.nodes.map((path) => path.replace(cluster.path, "")),
+				);
+				if (pathsLabel) {
+					cluster.inferredName = pathsLabel;
+				}
+
+				// calculate the cluster's nodes barycenter to use this as cluster label position
 				cluster.x =
 					cluster.positions.reduce((acc, p) => acc + p.x, 0) /
 					cluster.positions.length;
@@ -214,14 +214,15 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 					cluster.positions.reduce((acc, p) => acc + p.y, 0) /
 					cluster.positions.length;
 			});
+
+			setClusterMap(map);
 		};
+
 		sigma.addListener("afterProcess", listener);
-		// sigma.addListener("onControlsChange", listener);
 		return () => {
 			sigma.removeListener("afterProcess", listener);
-			// sigma.removeListener("onControlsChange", listener);
 		};
-	}, [clusterMap]);
+	}, [sigma]);
 
 	return clusterMap;
 };

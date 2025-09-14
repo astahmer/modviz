@@ -25,24 +25,25 @@ export const SigmaGraph = (props: {
 			min: 100,
 			max: 1000,
 			step: 10,
-			value: 500,
+			value: props.layout?.iterations ?? 500,
 		},
 		gravity: {
 			min: 0,
 			max: 500,
 			step: 1,
-			value: 1,
+			value: props.layout?.settings?.gravity ?? 50,
 		},
 		scalingRatio: {
 			min: 1,
-			max: 5000,
+			max: 100,
 			step: 1,
-			value: props.nodes.length * 5, // 100?
+			value: props.layout?.settings?.scalingRatio ?? 5,
 		},
-		strongGravityMode: false, // true?
-		linLogMode: false,
-		adjustSizes: false,
-		outboundAttractionDistribution: false,
+		strongGravityMode: props.layout?.settings?.strongGravityMode ?? false, // true?
+		linLogMode: props.layout?.settings?.linLogMode ?? false,
+		adjustSizes: props.layout?.settings?.adjustSizes ?? false,
+		outboundAttractionDistribution:
+			props.layout?.settings?.outboundAttractionDistribution ?? true,
 		refresh: button(() => {
 			const graph = createGraph();
 			loadGraph(graph);
@@ -68,6 +69,12 @@ export const SigmaGraph = (props: {
 		settings: {
 			...settings,
 			...props.layout?.settings,
+			// gravity: 0.5, // Lower gravity to allow clusters to spread out
+			// scalingRatio: 30, // Higher scaling for better separation
+			// strongGravityMode: false, // Allow more natural clustering
+			// slowDown: 5, // Faster convergence
+			// outboundAttractionDistribution: true, // Better for clustered graphs
+			// linLogMode: true, // Better for clustered networks
 		},
 	});
 
