@@ -5,11 +5,12 @@ import {
 	ZoomControl,
 } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
-import { GraphSearch, GraphSearchOption } from "@react-sigma/graph-search";
 import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
 import { fitViewportToNodes } from "@sigma/utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Command } from "cmdk";
+import { Leva, levaStore } from "leva";
+import { useEffect, useMemo, useState } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
@@ -17,10 +18,23 @@ import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+import {
+	CommandDialog,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
+} from "~/components/ui/command";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
-import type { ModvizOutput } from "../../../mod/types";
+import type { ModvizOutput, VizNode } from "../../../mod/types";
 import { FocusOnNode } from "./common/focus-on-node";
-import { levaStore } from "leva";
+import { useAtom } from "@xstate/store/react";
+import {
+	hoveredNodeAtom,
+	selectedNodeAtom,
+} from "~/components/graph/common/use-graph-atoms";
 
 export const ModvizSigma = (props: {
 	entryNode?: string;
@@ -35,43 +49,17 @@ export const ModvizSigma = (props: {
 				packages={props.packages}
 				nodes={props.nodes}
 			/>
-			{sigma && <WithGraph sigma={sigma as never} />}
+			{sigma && <WithGraph sigma={sigma as never} nodes={props.nodes} />}
 		</SigmaContainer>
 	);
 };
 
-const WithGraph = (props: { sigma: Sigma<NodeType, EdgeType> }) => {
-	const [selectedNode, setSelectedNode] = useState<string | null>(null);
-	const [focusNode, setFocusNode] = useState<string | null>(null);
-
-	const onFocus = useCallback((value: GraphSearchOption | null) => {
-		if (value === null) setFocusNode(null);
-		else if (value.type === "nodes") setFocusNode(value.id);
-	}, []);
-
-	const onChange = useCallback((value: GraphSearchOption | null) => {
-		if (value === null) setSelectedNode(null);
-		else if (value.type === "nodes") setSelectedNode(value.id);
-	}, []);
-
-	const postSearchResult = useCallback(
-		(options: GraphSearchOption[]): GraphSearchOption[] => {
-			return options.length <= 10
-				? options
-				: [
-						...options.slice(0, 10),
-						{
-							type: "message",
-							message: (
-								<span className="text-center text-muted">
-									And {options.length - 10} others
-								</span>
-							),
-						},
-					];
-		},
-		[],
-	);
+const WithGraph = (props: {
+	sigma: Sigma<NodeType, EdgeType>;
+	nodes: ModvizOutput["nodes"];
+}) => {
+	const selectedNode = useAtom(selectedNodeAtom);
+	const hoveredNode = useAtom(hoveredNodeAtom);
 
 	const sigma = props.sigma;
 	const clusterMap = useClusterMap(sigma);
@@ -83,16 +71,16 @@ const WithGraph = (props: { sigma: Sigma<NodeType, EdgeType> }) => {
 
 	return (
 		<>
-			<FocusOnNode node={focusNode ?? selectedNode} />
+			<FocusOnNode node={hoveredNode ?? selectedNode} move />
 			<ControlsContainer position={"bottom-right"} className="mb-6">
 				<ZoomControl />
 				<FullScreenControl />
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
 			<ControlsContainer position={"top-left"}>
-				<div className="flex flex-col flex-wrap gap-2 text-xs p-2">
+				<div className="flex flex-col gap-2 text-xs p-2 overflow-auto max-h-[300px]">
 					<button
-						className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
+						className="sticky top-0 flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 bg-white"
 						onClick={() => {
 							fitViewportToNodes(sigma as never, nodes, {
 								animate: true,
@@ -141,22 +129,107 @@ const WithGraph = (props: { sigma: Sigma<NodeType, EdgeType> }) => {
 				</div>
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
-			<ControlsContainer position={"top-right"}>
-				<GraphSearch
-					type="nodes"
-					value={selectedNode ? { type: "nodes", id: selectedNode } : null}
-					onFocus={onFocus}
-					onChange={onChange}
-					postSearchResult={postSearchResult}
-				/>
-			</ControlsContainer>
+			<CommandMenu
+				nodes={props.nodes}
+				onHighlight={(value) => {
+					if (!value) return hoveredNodeAtom.set(null);
+					hoveredNodeAtom.set(value);
+				}}
+				onSelect={(value) => {
+					hoveredNodeAtom.set(null);
+
+					if (!value) {
+						return selectedNodeAtom.set(null);
+					}
+
+					selectedNodeAtom.set(value);
+				}}
+			/>
 
 			<ControlsContainer position={"bottom-left"}>
 				<MiniMap width="100px" height="100px" />
 			</ControlsContainer>
+			<Leva collapsed />
 		</>
 	);
 };
+
+function CommandMenu(props: {
+	nodes: ModvizOutput["nodes"];
+	onHighlight: (value: string | undefined) => void;
+	onSelect: (value: string | undefined) => void;
+}) {
+	const [open, setOpen] = useState(false);
+
+	useEffect(() => {
+		const down = (e: KeyboardEvent) => {
+			if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault();
+				setOpen((open) => !open);
+			}
+		};
+		document.addEventListener("keydown", down);
+		return () => document.removeEventListener("keydown", down);
+	}, []);
+
+	const byCluster = useMemo(() => {
+		const map = new Map<string, VizNode[]>();
+		props.nodes.forEach((node) => {
+			if (node.cluster) {
+				const nodes = map.get(node.cluster) ?? [];
+				nodes.push(node);
+				map.set(node.cluster, nodes);
+			}
+		});
+		return map;
+	}, [props.nodes]);
+
+	return (
+		<CommandDialog open={open} onOpenChange={setOpen}>
+			<Command loop>
+				<CommandInput
+					placeholder="Type a command or search..."
+					onKeyDown={(e) => {
+						if (!e.key.startsWith("Arrow")) return;
+						// item that is currently on focused (selected) either by mouse hover or keyboard navigation
+						const item = document.querySelector(
+							'[cmdk-item][data-selected="true"]',
+						) as HTMLElement | undefined;
+						if (!item) return;
+
+						props.onHighlight(item?.dataset.value);
+						// this will dispatch an event that the cmdk library will listen to (then onSelect) will be executed
+						// const event = new Event('cmdk-item-select');
+						// item.dispatchEvent(event);
+					}}
+				/>
+				<CommandList>
+					<CommandEmpty>No results found.</CommandEmpty>
+					{Array.from(byCluster.entries()).map(([cluster, nodeList]) => (
+						<CommandGroup key={cluster} heading={cluster}>
+							{nodeList.map((node) => (
+								<CommandItem
+									key={node.path}
+									value={node.path}
+									onMouseEnter={() => {
+										props.onHighlight(node.path);
+									}}
+									onSelect={(value) => {
+										props.onSelect(value);
+										setOpen(false);
+									}}
+								>
+									{node.name}
+								</CommandItem>
+							))}
+							<CommandSeparator />
+						</CommandGroup>
+					))}
+				</CommandList>
+			</Command>
+		</CommandDialog>
+	);
+}
 
 interface Cluster {
 	name: string;

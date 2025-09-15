@@ -7,6 +7,10 @@ import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+import {
+	hoveredNodeAtom,
+	selectedNodeAtom,
+} from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
 	const sigma = useSigma<NodeType, EdgeType>();
@@ -15,7 +19,6 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 	const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
-	// const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
 	// Hide cluster labels when hovering node
 	useEffect(() => {
@@ -34,13 +37,15 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 		registerEvents({
 			enterNode: (event) => setHoveredNodeId(event.node),
 			leaveNode: () => setHoveredNodeId(null),
-			// clickStage: () => setSelectedNodeId(null),
 			downNode: (event) => {
-				// setSelectedNodeId((current) =>
-				// 	current === event.node ? null : event.node,
-				// );
+				selectedNodeAtom.set(null);
 				setDraggedNodeId(event.node);
 				sigma.getGraph().setNodeAttribute(event.node, "highlighted", true);
+			},
+			// clickStage: () => setSelectedNodeId(null),
+			downStage: () => {
+				hoveredNodeAtom.set(null);
+				selectedNodeAtom.set(null);
 			},
 			mousemovebody: (e) => {
 				if (!draggedNodeId) return;
