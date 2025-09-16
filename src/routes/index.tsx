@@ -1,8 +1,17 @@
+import fs from "node:fs";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import fs from "node:fs";
 import { lazy, Suspense } from "react";
 import type { ModvizOutput } from "../../mod/types";
+import { Input } from "~/components/ui/input";
+import { GraphCommandMenu } from "~/components/graph/graph-command-menu";
+import {
+	focusedNodeIdAtom,
+	highlightedNodeIdAtom,
+} from "~/components/graph/common/use-graph-atoms";
+import { Button } from "~/components/ui/button";
+import { ChevronRight } from "lucide-react";
+import { useAtom } from "@xstate/store/react";
 
 const fetchGraphData = createServerFn().handler(async (ctx) => {
 	const data = fs.readFileSync(import.meta.env.modvizPath, "utf-8");
@@ -23,17 +32,57 @@ export const Route = createFileRoute("/")({
 	component: Home,
 });
 
-// network graph js
-// https://www.sigmajs.org/storybook/?path=/story/layouts--story&clusters=3&edges-renderer=edges-default&order=5000&size=10000
-// https://js.cytoscape.org/
-// https://d3-graph-gallery.com/network.html
-// https://sim51.github.io/react-sigma/docs/example/controls
-
 function Home() {
 	const graphData = Route.useLoaderData();
 	console.log(graphData);
+
+	const focusedValue = useAtom(focusedNodeIdAtom);
 	return (
-		<div className="p-2 h-[800px]">
+		<div className="h-full min-h-0 flex flex-col overflow-hidden">
+			<div className="p-2 flex gap-4 items-center">
+				<div className="flex gap-2 text-lg">Home</div>
+				<div className="flex gap-2 ml-auto">
+					{focusedValue && (
+						<div>
+							<Button variant="default" className="items-center gap-2 w-full">
+								<ChevronRight className="w-4 h-4" />
+								Open details panel
+							</Button>
+						</div>
+					)}
+					<div className="min-w-[200px]">
+						<GraphCommandMenu
+							nodes={graphData.nodes}
+							onHighlight={(value) => {
+								if (!value) return highlightedNodeIdAtom.set(null);
+
+								const node = graphData.nodes.find(
+									(node) => node.path === value,
+								);
+								if (!node) return;
+								highlightedNodeIdAtom.set(value);
+							}}
+							onSelect={(value) => {
+								highlightedNodeIdAtom.set(null);
+
+								if (!value) {
+									return focusedNodeIdAtom.set(null);
+								}
+
+								const node = graphData.nodes.find(
+									(node) => node.path === value,
+								);
+								if (!node) return;
+								console.log(focusedNodeIdAtom.get(), value);
+								if (focusedNodeIdAtom.get() === value)
+									return focusedNodeIdAtom.set(null);
+
+								focusedNodeIdAtom.set(value);
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 			<Suspense>
 				{/* <Sigma nodes={graphData.nodes} edges={graphData.edges} /> */}
 				<Sigma

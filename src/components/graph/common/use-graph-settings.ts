@@ -1,4 +1,10 @@
-import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
+import {
+	useCamera,
+	useRegisterEvents,
+	useSetSettings,
+	useSigma,
+} from "@react-sigma/core";
+import { useAtom } from "@xstate/store/react";
 import { useControls } from "leva";
 import { useEffect, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
@@ -7,10 +13,7 @@ import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
-import {
-	hoveredNodeAtom,
-	selectedNodeAtom,
-} from "~/components/graph/common/use-graph-atoms";
+import { highlightedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
 	const sigma = useSigma<NodeType, EdgeType>();
@@ -32,20 +35,23 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 		}
 	}, [Boolean(hoveredNodeId)]);
 
+	const { gotoNode } = useCamera();
+
 	// registerEvents
 	useEffect(() => {
 		registerEvents({
 			enterNode: (event) => setHoveredNodeId(event.node),
 			leaveNode: () => setHoveredNodeId(null),
 			downNode: (event) => {
-				selectedNodeAtom.set(null);
-				setDraggedNodeId(event.node);
-				sigma.getGraph().setNodeAttribute(event.node, "highlighted", true);
+				// setDraggedNodeId(event.node);
+			},
+			clickNode: (event) => {
+				// foundNodeIdAtom.set(event.node);
+				gotoNode(event.node);
 			},
 			// clickStage: () => setSelectedNodeId(null),
 			downStage: () => {
-				hoveredNodeAtom.set(null);
-				selectedNodeAtom.set(null);
+				highlightedNodeIdAtom.set(null);
 			},
 			mousemovebody: (e) => {
 				if (!draggedNodeId) return;
@@ -85,23 +91,14 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
-			allowInvalidContainer: true,
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
 			// renderLabels: Boolean(hoveredNodeId),
-			// hideEdgesOnMove: true,
 			// hideLabelsOnMove: true,
-			// labelSize: 20,
-			// labelDensity: 0.07,
-			// labelGridCellSize: 60,s
 			labelRenderedSizeThreshold: 8,
 			// This function tells sigma to grow sizes linearly with the zoom, instead
 			// of relatively to the zoom ratio's square root:
-			// zoomToSizeRatioFunction: (x) => x,
-			// labelFont: "Lato, sans-serif",
-			// zIndex: true,
-			// stagePadding: 0,
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
 				const updated = {
@@ -119,21 +116,14 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 						nodeId === hoveredNodeId ||
 						graph.neighbors(hoveredNodeId).includes(nodeId)
 					) {
-						updated.label = node.label; // Show labels for active node and neighbors
+						// Show labels for active node and neighbors
+						updated.label = node.label;
 						updated.highlighted = true;
-
-						// Set color of all neighbors to the same color as the hovered node?
-						// if (hoveredNodeId !== props.entryNode) {
-						// const activeNode = graph.getNodeAttributes(hoveredNodeId);
-						// 	updated.color =
-						// 		activeNode.color === defaultColor
-						// 			? "#FA4F40"
-						// 			: activeNode.color;
-						// }
 					} else {
+						// Hide labels for non-connected nodes
 						updated.color = colors.default;
 						updated.highlighted = false;
-						updated.label = ""; // Hide labels for non-connected nodes
+						updated.label = "";
 					}
 				}
 				return updated;

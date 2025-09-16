@@ -182,7 +182,9 @@ function processModuleGraphForWeb(
 
 	return {
 		metadata: {
-			entrypoints: moduleGraph.entrypoints,
+			entrypoints: moduleGraph.entrypoints.map((entrypoint) =>
+				path.relative(basePath, entrypoint),
+			),
 			basePath: basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),

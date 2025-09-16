@@ -48,8 +48,11 @@ export const useCreateGraph = (props: {
 	const edges = useMemo(() => {
 		const ids = new Set<string>();
 		props.nodes.forEach((node) => {
-			node.importees.forEach((importee) => {
-				ids.add(`${node.path}->${importee}`);
+			// node.importees.forEach((importee) => {
+			// 	ids.add(`${node.path}->${importee}`);
+			// });
+			node.importedBy.forEach((importee) => {
+				ids.add(`${importee}->${node.path}`);
 			});
 		});
 		return {
@@ -88,7 +91,7 @@ export const useCreateGraph = (props: {
 				color:
 					clusterColors.get(node.cluster ?? node.package?.name ?? "") ??
 					colors.default,
-				size: clamp(4, 15, node.importees.length),
+				size: clamp(4, 15, node.importedBy.length),
 				highlighted: false,
 			});
 		});

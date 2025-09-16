@@ -1,11 +1,5 @@
 /// <reference types="vite/client" />
-import {
-	HeadContent,
-	Link,
-	Scripts,
-	createRootRoute,
-} from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import * as React from "react";
 import appCss from "~/styles/app.css?url";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
@@ -54,21 +48,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<head>
 				<HeadContent />
 			</head>
-			<body>
-				<div className="p-2 flex gap-2 text-lg">
-					<Link
-						to="/"
-						activeProps={{
-							className: "font-bold",
-						}}
-						activeOptions={{ exact: true }}
-					>
-						Home
-					</Link>
-				</div>
-				<hr />
+			<body className="h-[100vh] flex flex-col">
 				{children}
-				<TanStackRouterDevtools position="bottom-right" />
+				{/* <TanStackRouterDevtools position="bottom-center" /> */}
 				<Scripts />
 			</body>
 		</html>
