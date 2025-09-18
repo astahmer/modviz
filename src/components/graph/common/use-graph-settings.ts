@@ -13,7 +13,11 @@ import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
-import { highlightedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import {
+	focusedNodeIdAtom,
+	highlightedNodeIdAtom,
+	isFocusedModalOpenedAtom,
+} from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
 	const sigma = useSigma<NodeType, EdgeType>();
@@ -46,8 +50,12 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 				// setDraggedNodeId(event.node);
 			},
 			clickNode: (event) => {
-				// foundNodeIdAtom.set(event.node);
 				gotoNode(event.node);
+				focusedNodeIdAtom.set(event.node);
+				// if (focusedNodeIdAtom.get() === event.node) {
+				isFocusedModalOpenedAtom.set(true);
+				// }
+				// focusedNodeIdAtom.set(event.node);
 			},
 			// clickStage: () => setSelectedNodeId(null),
 			downStage: () => {
@@ -75,7 +83,7 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 				if (!sigma.getCustomBBox()) sigma.setCustomBBox(sigma.getBBox());
 			},
 		});
-	}, [registerEvents, draggedNodeId]);
+	}, [registerEvents, draggedNodeId, sigma, focusedNodeIdAtom]);
 
 	useControls({
 		renderLabels: {

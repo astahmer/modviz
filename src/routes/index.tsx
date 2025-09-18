@@ -3,15 +3,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { lazy, Suspense } from "react";
 import type { ModvizOutput } from "../../mod/types";
-import { Input } from "~/components/ui/input";
 import { GraphCommandMenu } from "~/components/graph/graph-command-menu";
 import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
+	isFocusedModalOpenedAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { Button } from "~/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAtom } from "@xstate/store/react";
+import { LuCross, LuX } from "react-icons/lu";
 
 const fetchGraphData = createServerFn().handler(async (ctx) => {
 	const data = fs.readFileSync(import.meta.env.modvizPath, "utf-8");
@@ -37,6 +38,8 @@ function Home() {
 	console.log(graphData);
 
 	const focusedValue = useAtom(focusedNodeIdAtom);
+	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
+
 	return (
 		<div className="h-full min-h-0 flex flex-col overflow-hidden">
 			<div className="p-2 flex gap-4 items-center">
@@ -44,9 +47,14 @@ function Home() {
 				<div className="flex gap-2 ml-auto">
 					{focusedValue && (
 						<div>
-							<Button variant="default" className="items-center gap-2 w-full">
-								<ChevronRight className="w-4 h-4" />
-								Open details panel
+							{/* TODO <NotesPanel chain /> */}
+							<Button
+								variant="default"
+								className="items-center gap-2 w-full"
+								onClick={() => isFocusedModalOpenedAtom.set((get) => !get)}
+							>
+								{isFocusedModalOpened ? <LuX /> : <ChevronRight />}
+								{isFocusedModalOpened ? "Close" : "Open"} details panel
 							</Button>
 						</div>
 					)}

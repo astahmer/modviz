@@ -14,7 +14,7 @@ import { Leva, levaStore } from "leva";
 import { useEffect, useMemo, useState } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
-import { NotesPanel } from "~/components/floating-panel/notes-panel";
+import { NodeDetailsModal } from "~/components/dialog/dialog";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
 import type {
 	EdgeType,
@@ -175,7 +175,8 @@ const WithGraph = (props: {
 				<MiniMap width="100px" height="100px" />
 			</ControlsContainer>
 			<Leva collapsed hidden />
-			<NotesPanel />
+
+			<NodeDetailsModal />
 			<MoveToHighlightedNode />
 		</>
 	);

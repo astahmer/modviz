@@ -66,11 +66,12 @@ export function NotesPanel(props: PropsWithChildren) {
 	return (
 		<FloatingPanel.Root
 			open={isOpened}
-			defaultSize={{ width: 700, height: 500 }}
+			defaultSize={{ width: 1024, height: 500 }}
 			minSize={{ width: 400, height: 450 }}
+			resizable={false}
+			lazyMount
+			persistRect
 		>
-			{props.children}
-
 			<Portal>
 				<FloatingPanel.Positioner className="z-50">
 					<FloatingPanel.Content className="flex flex-col bg-white dark:bg-gray-900 rounded-lg data-maximized:rounded-none border border-gray-200 dark:border-gray-700 w-full shadow-md">
@@ -101,7 +102,10 @@ export function NotesPanel(props: PropsWithChildren) {
 									>
 										<ArrowDownLeft className="w-3 h-3" />
 									</FloatingPanel.StageTrigger>
-									<FloatingPanel.CloseTrigger className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+									<FloatingPanel.CloseTrigger
+										className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+										onClick={() => isFocusedModalOpenedAtom.set(false)}
+									>
 										<X className="w-3 h-3" />
 									</FloatingPanel.CloseTrigger>
 								</FloatingPanel.Control>
@@ -110,7 +114,7 @@ export function NotesPanel(props: PropsWithChildren) {
 
 						<FloatingPanel.Body className="flex h-full overflow-hidden">
 							{/* Notes Sidebar */}
-							<div className="w-56 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-800/50">
+							<div className="w-72 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-800/50">
 								{/* Search & Add */}
 								<div className="p-4 space-y-3">
 									<div className="relative">
@@ -133,30 +137,7 @@ export function NotesPanel(props: PropsWithChildren) {
 								</div>
 
 								{/* Notes List */}
-								<div className="flex-1 overflow-y-auto">
-									{filteredNotes.map((note) => (
-										<button
-											key={note.id}
-											onClick={() => setActiveNote(note)}
-											className={`w-full p-4 text-left border-b border-gray-200 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-700/50 transition-colors ${
-												activeNote.id === note.id
-													? "bg-white dark:bg-gray-700 shadow-xs border-l-4 border-l-yellow-500"
-													: ""
-											}`}
-										>
-											<div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate mb-1">
-												{note.title}
-											</div>
-											<div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2">
-												{note.content}
-											</div>
-											<div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-												<Calendar className="w-3 h-3" />
-												{note.date}
-											</div>
-										</button>
-									))}
-								</div>
+								{props.children}
 							</div>
 
 							{/* Note Editor */}
