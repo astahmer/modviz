@@ -53,9 +53,11 @@ export function mapModvizOutputToTreeCollection(
 		);
 	}
 
-	return createTreeCollection<TreeNodeData>({
+	const collection = createTreeCollection<TreeNodeData>({
 		nodeToValue: (node) => node.id,
 		nodeToString: (node) => node.name,
 		rootNode: root,
 	});
+
+	return { visited, collection };
 }

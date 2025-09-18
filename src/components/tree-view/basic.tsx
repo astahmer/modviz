@@ -6,16 +6,18 @@ import {
 	useTreeView,
 	type TreeCollection,
 } from "@ark-ui/react/tree-view";
-import { useLoaderData } from "@tanstack/react-router";
-import { ChevronRight, File } from "lucide-react";
-import { useMemo, useState } from "react";
-import {
-	mapModvizOutputToTreeCollection,
-	type TreeNodeData,
-} from "~/components/tree-view/map-modviz-output-to-tree-collection";
+import { ChevronRight, File, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { type TreeNodeData } from "~/components/tree-view/map-modviz-output-to-tree-collection";
 import { Input } from "~/components/ui/input";
 
-const TreeNode = (props: TreeView.NodeProviderProps<TreeNodeData>) => {
+const TreeNode = (
+	props: TreeView.NodeProviderProps<TreeNodeData> & {
+		visited: Set<string>;
+		maxDepth: number;
+		currentDepth: number;
+	},
+) => {
 	const { node, indexPath } = props;
 
 	return (
@@ -32,13 +34,32 @@ const TreeNode = (props: TreeView.NodeProviderProps<TreeNodeData>) => {
 					</TreeView.BranchControl>
 					<TreeView.BranchContent className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-4 dark:border-slate-700/60">
 						<TreeView.BranchIndentGuide />
-						{node.children.map((child, index) => (
-							<TreeNode
-								key={child.id}
-								node={child}
-								indexPath={[...indexPath, index]}
-							/>
-						))}
+						{node.children.map((child, index) =>
+							props.visited.has(child.id) ||
+							props.currentDepth >= props.maxDepth ? (
+								<TreeView.Item
+									onClick={() => console.log([...indexPath, index], child)}
+									className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
+								>
+									<div className="flex h-4 w-4 shrink-0 items-center justify-center">
+										<div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600 group-data-[selected]:bg-blue-500" />
+									</div>
+									<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
+										<File className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
+										<span>{child.name}</span>
+									</TreeView.ItemText>
+								</TreeView.Item>
+							) : (
+								<TreeNode
+									key={child.id}
+									node={child}
+									indexPath={[...indexPath, index]}
+									visited={new Set([...props.visited, child.id])}
+									currentDepth={props.currentDepth + 1}
+									maxDepth={props.maxDepth}
+								/>
+							),
+						)}
 					</TreeView.BranchContent>
 				</TreeView.Branch>
 			) : (
@@ -90,7 +111,14 @@ export function TreeViewBasic(props: {
 			> */}
 				<TreeView.Tree>
 					{collection.rootNode.children?.map((node, index) => (
-						<TreeNode key={node.id} node={node} indexPath={[index]} />
+						<TreeNode
+							key={node.id}
+							node={node}
+							indexPath={[index]}
+							visited={new Set([node.id])}
+							currentDepth={0}
+							maxDepth={50}
+						/>
 					))}
 				</TreeView.Tree>
 			</TreeView.RootProvider>

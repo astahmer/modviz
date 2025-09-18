@@ -47,12 +47,10 @@ const Content = (props: { node: VizNode }) => {
 
 	if (!initialCollection) return;
 
-	const transitiveImports = new Set(
-		initialCollection.flatten().map((node) => node.id),
-	);
+	const transitiveImports = initialCollection?.visited;
 
-    // TODO tabs: Transitive imports from path, Import chain to entrypoint
-    // TODO button: show
+	// TODO tabs: Transitive imports from path, Import chain to entrypoint
+	// TODO button: show
 
 	return (
 		<Dialog.Content className="data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out relative w-full max-w-4xl h-[70vh] rounded-lg bg-white dark:bg-gray-900 shadow-lg flex flex-col">
@@ -77,7 +75,7 @@ const Content = (props: { node: VizNode }) => {
 				<TreeViewBasic
 					key={props.node.path}
 					entryNodeId={props.node.path}
-					initialCollection={initialCollection}
+					initialCollection={initialCollection.collection}
 				/>
 			</div>
 
