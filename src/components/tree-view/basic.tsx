@@ -6,17 +6,13 @@ import {
 	useTreeView,
 	type TreeCollection,
 } from "@ark-ui/react/tree-view";
-import { ChevronRight, File, RotateCcw } from "lucide-react";
+import { ChevronRight, File } from "lucide-react";
 import { useState } from "react";
 import {
 	LuArrowDownFromLine,
-	LuArrowUpDown,
 	LuArrowUpToLine,
-	LuBan,
-	LuCopyMinus,
-	LuExpand,
+	LuBug,
 	LuInfinity,
-	LuListCollapse,
 	LuOctagonMinus,
 } from "react-icons/lu";
 import { type TreeNodeData } from "~/components/tree-view/map-modviz-output-to-tree-collection";
@@ -33,15 +29,13 @@ const TreeNode = (
 ) => {
 	const { node, indexPath } = props;
 
-	// TODO 1 button to log the node
-	// TODO 1 button to go to the node details modal
 	// TODO bind node details modal to url ?
 
 	return (
 		<TreeView.NodeProvider key={node.id} node={node} indexPath={indexPath}>
 			{node.children?.length ? (
 				<TreeView.Branch onClick={() => console.log(indexPath, node)}>
-					<TreeView.BranchControl className="group flex w-full items-center gap-2 rounded-lg py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[state=open]:text-slate-900 dark:data-[state=open]:text-slate-100">
+					<TreeView.BranchControl className="group flex w-full items-center gap-2 rounded-lg py-0.5 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[state=open]:text-slate-900 dark:data-[state=open]:text-slate-100">
 						<TreeView.BranchIndicator className="flex h-4 w-4 shrink-0 items-center justify-center">
 							<ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-90 group-data-[state=open]:text-slate-600" />
 						</TreeView.BranchIndicator>
@@ -49,20 +43,42 @@ const TreeNode = (
 							<span
 								className={cn(
 									"font-medium whitespace-nowrap",
-									node.isBarrel && "text-yellow-500",
+									node.isBarrel && "text-amber-600",
 								)}
 							>
 								{node.name}
+								{node.isBarrel && " (barrel file)"}
 							</span>
+							<Button
+								className="ml-auto"
+								variant="ghost"
+								size="icon"
+								onClickCapture={(e) => {
+									e.stopPropagation();
+									console.log(node);
+								}}
+							>
+								<LuBug className="h-4 w-4 text-slate-400" />
+							</Button>
+							{/* <Button
+								className="ml-auto"
+								variant="ghost"
+								size="icon"
+								// TODO go to the node details modal
+								onClick={() => console.log(node)}
+							>
+								<LuEye className="h-4 w-4 text-slate-400" />
+							</Button> */}
 						</TreeView.BranchText>
 					</TreeView.BranchControl>
-					<TreeView.BranchContent className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-2 dark:border-slate-700/60">
+					<TreeView.BranchContent className="ml-6 border-l border-slate-200 pl-2 dark:border-slate-700/60">
 						<TreeView.BranchIndentGuide />
 						{node.children.map((child, index) =>
 							props.visited.has(child.id) ? (
 								<TreeView.Item
+									key={child.id}
 									onClick={() => console.log([...indexPath, index], child)}
-									className="group flex w-full items-center gap-2 rounded-lg py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
+									className="group flex w-full items-center gap-2 rounded-lg py-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
 								>
 									<div className="flex h-4 w-4 shrink-0 items-center justify-center">
 										<div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600 group-data-[selected]:bg-blue-500" />
@@ -72,14 +88,15 @@ const TreeNode = (
 										<LuInfinity className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
 										<span className="text-red-400">
 											⚠️ {child.name} (circular)
-											{(node.isBarrel && " — barrel file") || ""}
+											{(node.isBarrel && " (barrel file)") || ""}
 										</span>
 									</TreeView.ItemText>
 								</TreeView.Item>
 							) : props.currentDepth >= props.maxDepth ? (
 								<TreeView.Item
+									key={child.id}
 									onClick={() => console.log([...indexPath, index], child)}
-									className="group flex w-full items-center gap-2 rounded-lg py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
+									className="group flex w-full items-center gap-2 rounded-lg py-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
 								>
 									<div className="flex h-4 w-4 shrink-0 items-center justify-center">
 										<div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600 group-data-[selected]:bg-blue-500" />
@@ -105,7 +122,7 @@ const TreeNode = (
 			) : (
 				<TreeView.Item
 					onClick={() => console.log(indexPath, node)}
-					className="group flex w-full items-center gap-2 rounded-lg py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
+					className="group flex w-full items-center gap-2 rounded-lg py-1 text-sm font-medium whitespace-nowrap transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 data-[selected]:bg-blue-50 dark:data-[selected]:bg-blue-900/30 data-[selected]:text-blue-700 dark:data-[selected]:text-blue-300 data-[selected]:shadow-sm data-[selected]:ring-1 data-[selected]:ring-blue-200 dark:data-[selected]:ring-blue-800/30"
 				>
 					<div className="flex h-4 w-4 shrink-0 items-center justify-center">
 						<div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600 group-data-[selected]:bg-blue-500" />
@@ -115,7 +132,7 @@ const TreeNode = (
 						<span
 							className={cn(
 								"font-medium whitespace-nowrap",
-								node.isBarrel && "text-yellow-500",
+								node.isBarrel && "text-amber-600",
 							)}
 						>
 							{node.name}
@@ -150,8 +167,13 @@ export function TreeViewBasic(props: {
 		selectedValue: [], // prevent selection
 	});
 
-	const flattenedUniqueNodeIds = new Set(
-		treeView.collection.flatten().map((node) => node.id),
+	const flattened = treeView.collection.flatten();
+	const visible = treeView.getVisibleNodes().map((node) => node.id);
+	const flattenedUniqueNodeIds = new Set(flattened.map((node) => node.id));
+	console.log(
+		flattened.length,
+		treeView.getVisibleNodes().map((node) => node.id).length,
+		flattenedUniqueNodeIds.size,
 	);
 	const isAllExpanded =
 		treeView.expandedValue.length === flattenedUniqueNodeIds.size;
@@ -175,7 +197,13 @@ export function TreeViewBasic(props: {
 						<Button
 							variant="outline"
 							className="px-2 py-1"
-							onClick={() => treeView.expand()}
+							onClick={() =>
+								flattened.length <= 500
+									? treeView.expand()
+									: visible.length <= 500
+										? treeView.expand(visible)
+										: treeView.expand(visible.slice(0, 250))
+							}
 						>
 							<LuArrowDownFromLine className="h-4 w-4 text-slate-400">
 								<span className="sr-only">Expand all</span>

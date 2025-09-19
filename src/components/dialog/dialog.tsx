@@ -6,6 +6,7 @@ import { Tabs } from "@ark-ui/react/tabs";
 import { useLoaderData } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
 import { useMemo, useState } from "react";
+import { LuMaximize, LuMinimize } from "react-icons/lu";
 import {
 	focusedNodeIdAtom,
 	isFocusedModalOpenedAtom,
@@ -16,20 +17,18 @@ import {
 	mapModvizOutputToImportsChainTreeCollection,
 	type ImportsChainDirection,
 } from "~/components/tree-view/map-modviz-output-to-tree-collection";
+import { Button } from "~/components/ui/button";
 import {
 	Select,
 	SelectContent,
 	SelectControl,
 	SelectIndicator,
 	SelectItem,
-	SelectLabel,
 	SelectTrigger,
 	SelectValueText,
 	createListCollection,
 } from "~/components/ui/select";
 import type { VizNode } from "../../../mod/types";
-import { Button } from "~/components/ui/button";
-import { LuMaximize, LuMinimize } from "react-icons/lu";
 
 export function NodeDetailsModal() {
 	const isOpened = useAtom(isFocusedModalOpenedAtom);

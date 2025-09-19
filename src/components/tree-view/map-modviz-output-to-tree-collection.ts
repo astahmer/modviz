@@ -43,7 +43,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 			id: node.path,
 			name: node.path.split("/").slice(-2).join("/"),
 			children: [],
-			isBarrel: entryNode.isBarrelFile,
+			isBarrel: node.isBarrelFile,
 		};
 
 		if (parent.children) {
@@ -61,7 +61,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 					id: importeeNode.path,
 					name: importeeNode.path.split("/").slice(-2).join("/"),
 					children: [],
-					isBarrel: entryNode.isBarrelFile,
+					isBarrel: importeeNode.isBarrelFile,
 				};
 				currentTreeNode.children.push(importeeTreeNode);
 				return;
@@ -110,7 +110,7 @@ export function mapModvizOutputToImportsChainTreeCollection(
 		id: rootId,
 		name: root.path.split("/").slice(-2).join("/"),
 		children: [],
-		isBarrel: entryNode.isBarrelFile,
+		isBarrel: root.isBarrelFile,
 	};
 	let currentParent = rootNode;
 	for (const nodePath of importChain) {
@@ -121,7 +121,7 @@ export function mapModvizOutputToImportsChainTreeCollection(
 			id: node.path,
 			name: node.path.split("/").slice(-2).join("/"),
 			children: [],
-			isBarrel: entryNode.isBarrelFile,
+			isBarrel: node.isBarrelFile,
 		};
 		currentParent.children.push(treeNode);
 		currentParent = treeNode;
