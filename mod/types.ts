@@ -1,3 +1,6 @@
+// TODO flame graph / show "hot spots" = problematic files (= introducing too many transitive imports)
+// TODO a way to show files that trigger transitive imports going through another package
+
 export interface ModvizOutput {
 	metadata: VizMetadata;
 	nodes: VizNode[];

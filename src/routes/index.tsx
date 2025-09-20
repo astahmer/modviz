@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import type { ModvizOutput } from "../../mod/types";
 import { GraphCommandMenu } from "~/components/graph/graph-command-menu";
 import {
@@ -13,6 +13,7 @@ import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAtom } from "@xstate/store/react";
 import { LuCross, LuX } from "react-icons/lu";
+import { z } from "zod/v4";
 
 const fetchGraphData = createServerFn().handler(async (ctx) => {
 	const data = fs.readFileSync(import.meta.env.modvizPath, "utf-8");
@@ -27,6 +28,9 @@ const Sigma = lazy(() =>
 
 export const Route = createFileRoute("/")({
 	ssr: false,
+	validateSearch: z.object({
+		nodePath: z.string().optional(),
+	}),
 	loader: () => {
 		return fetchGraphData();
 	},
@@ -39,6 +43,17 @@ function Home() {
 
 	const focusedValue = useAtom(focusedNodeIdAtom);
 	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
+
+	// const navigate = Route.useNavigate();
+	// useEffect(() => {
+	// 	if (!focusedValue) return;
+	// 	navigate({
+	// 		to: ".",
+	// 		search: {
+	// 			nodePath: focusedValue,
+	// 		},
+	// 	});
+	// }, [focusedValue]);
 
 	return (
 		<div className="h-full min-h-0 flex flex-col overflow-hidden">
