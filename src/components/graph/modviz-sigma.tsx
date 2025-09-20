@@ -27,8 +27,6 @@ import {
 import { GraphCommandMenuDialog } from "~/components/graph/graph-command-menu";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
-import { FlamegraphControl } from "~/components/graph/flamegraph";
-import { useLoaderData } from "@tanstack/react-router";
 
 export const ModvizSigma = (props: {
 	entryNode?: string;
@@ -71,17 +69,12 @@ const WithGraph = (props: {
 	const graph = sigma.getGraph();
 	const nodes = graph.nodes();
 
-	const output = useLoaderData({ from: "/" });
-
 	return (
 		<>
 			<ControlsContainer position={"bottom-right"} className="mb-6">
 				<ZoomControl />
 				<FullScreenControl />
 				{/* <LayoutsControl /> */}
-			</ControlsContainer>
-			<ControlsContainer position={"top-right"} className="z-10!">
-				<FlamegraphControl output={output} />
 			</ControlsContainer>
 			<ControlsContainer position={"top-left"} className="z-10!">
 				<div className="flex flex-col gap-2 text-xs p-2">

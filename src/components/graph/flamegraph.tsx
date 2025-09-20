@@ -134,18 +134,45 @@ function convertToHierarchyData(modvizOutput: ModvizOutput): {
 export function renderFlamegraph(data: ModvizOutput) {
 	const structuredData = convertToHierarchyData(data);
 
-	// Assuming an SVG setup with margins
-	const svg = d3.select("#flamegraph-container svg");
+	// Get the container and create/select SVG
+	const container = d3.select("#flamegraph-container");
+	const containerNode = container.node() as HTMLElement;
+	if (!containerNode) return;
 
-	// Clear any existing content to prevent accumulation
-	svg.selectAll("*").remove();
+	const containerWidth = containerNode.clientWidth || 1000;
+	const containerHeight = containerNode.clientHeight || 600;
 
-	const width = +svg.attr("width");
-	const height = +svg.attr("height");
+	// Clear any existing content
+	container.selectAll("*").remove();
+
+	// Create SVG with full container size
+	const svg = container
+		.append("svg")
+		.attr("width", containerWidth)
+		.attr("height", containerHeight)
+		.style("border", "1px solid #ddd")
+		.style("background", "#fafafa");
+
+	// Create main group for zoom/pan transformations
+	const mainGroup = svg.append("g").attr("class", "main-group");
+
+	// Set up zoom behavior
+	const zoom = d3
+		.zoom<SVGSVGElement, unknown>()
+		.scaleExtent([0.1, 10])
+		.on("zoom", (event) => {
+			mainGroup.attr("transform", event.transform);
+		});
+
+	// Apply zoom behavior to SVG
+	svg.call(zoom);
+
+	// Calculate layout dimensions (larger than container for better zoom experience)
+	const layoutWidth = Math.max(containerWidth * 2, 2000);
+	const layoutHeight = Math.max(containerHeight * 1.5, 1000);
 
 	const hierarchyNode = d3.hierarchy(structuredData as TreeNode).sum((d) => 1);
-	// const layout = d3.partition<typeof structuredData>().size([height, width]);
-	const layout = d3.partition<TreeNode>().size([height, width]);
+	const layout = d3.partition<TreeNode>().size([layoutHeight, layoutWidth]);
 	const root = layout(hierarchyNode);
 
 	// Color scale based on depth
@@ -155,7 +182,7 @@ export function renderFlamegraph(data: ModvizOutput) {
 		.range(["#f7f7f7", "#d1e7dd", "#a3cfbb", "#6ab04c", "#3d8b37", "#2c5232"]);
 
 	// Create groups for each node to hold both rect and text
-	const node = svg
+	const node = mainGroup
 		.selectAll("g.node")
 		.data(root.descendants())
 		.enter()
@@ -184,6 +211,9 @@ export function renderFlamegraph(data: ModvizOutput) {
 		})
 		.on("mouseover", function (event, d) {
 			d3.select(this).attr("opacity", 0.8);
+
+			// Remove any existing tooltips
+			d3.selectAll(".flamegraph-tooltip").remove();
 
 			// Create tooltip
 			const tooltip = d3
@@ -223,6 +253,9 @@ export function renderFlamegraph(data: ModvizOutput) {
 			d3.select(this).attr("opacity", 1);
 			d3.selectAll(".flamegraph-tooltip").remove();
 		});
+
+	// Store zoom object for external access
+	(svg.node() as any).__zoom__ = zoom;
 
 	// Add text labels
 	node
@@ -270,26 +303,167 @@ export function renderFlamegraph(data: ModvizOutput) {
 				d3.select(this).style("display", "none");
 			}
 		});
+
+	// Add zoom controls
+	const controls = container
+		.append("div")
+		.style("position", "absolute")
+		.style("top", "10px")
+		.style("right", "10px")
+		.style("z-index", "1001")
+		.style("display", "flex")
+		.style("flex-direction", "column")
+		.style("gap", "5px");
+
+	// Zoom in button
+	controls
+		.append("button")
+		.style("padding", "8px 12px")
+		.style("background", "#4CAF50")
+		.style("color", "white")
+		.style("border", "none")
+		.style("border-radius", "4px")
+		.style("cursor", "pointer")
+		.style("font-size", "14px")
+		.text("Zoom In")
+		.on("click", () => {
+			svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+		});
+
+	// Zoom out button
+	controls
+		.append("button")
+		.style("padding", "8px 12px")
+		.style("background", "#f44336")
+		.style("color", "white")
+		.style("border", "none")
+		.style("border-radius", "4px")
+		.style("cursor", "pointer")
+		.style("font-size", "14px")
+		.text("Zoom Out")
+		.on("click", () => {
+			svg.transition().duration(300).call(zoom.scaleBy, 0.67);
+		});
+
+	// Reset zoom button
+	controls
+		.append("button")
+		.style("padding", "8px 12px")
+		.style("background", "#2196F3")
+		.style("color", "white")
+		.style("border", "none")
+		.style("border-radius", "4px")
+		.style("cursor", "pointer")
+		.style("font-size", "14px")
+		.text("Reset")
+		.on("click", () => {
+			svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+		});
+
+	// Fit to content button
+	controls
+		.append("button")
+		.style("padding", "8px 12px")
+		.style("background", "#FF9800")
+		.style("color", "white")
+		.style("border", "none")
+		.style("border-radius", "4px")
+		.style("cursor", "pointer")
+		.style("font-size", "14px")
+		.text("Fit")
+		.on("click", () => {
+			const bounds = mainGroup.node()?.getBBox();
+			if (bounds) {
+				const fullWidth = bounds.width;
+				const fullHeight = bounds.height;
+				const width = containerWidth;
+				const height = containerHeight;
+				const midX = bounds.x + fullWidth / 2;
+				const midY = bounds.y + fullHeight / 2;
+				const scale = Math.min(width / fullWidth, height / fullHeight) * 0.9;
+				const translate = [width / 2 - scale * midX, height / 2 - scale * midY];
+
+				svg
+					.transition()
+					.duration(750)
+					.call(
+						zoom.transform,
+						d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale),
+					);
+			}
+		});
+
+	// Add keyboard shortcuts
+	d3.select("body").on("keydown.flamegraph", (event) => {
+		if (event.target !== document.body) return; // Only when body is focused
+
+		switch (event.key) {
+			case "+":
+			case "=":
+				event.preventDefault();
+				svg.transition().duration(300).call(zoom.scaleBy, 1.5);
+				break;
+			case "-":
+				event.preventDefault();
+				svg.transition().duration(300).call(zoom.scaleBy, 0.67);
+				break;
+			case "0":
+				event.preventDefault();
+				svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+				break;
+			case "f":
+			case "F":
+				event.preventDefault();
+				// Fit to content
+				const bounds = mainGroup.node()?.getBBox();
+				if (bounds) {
+					const fullWidth = bounds.width;
+					const fullHeight = bounds.height;
+					const width = containerWidth;
+					const height = containerHeight;
+					const midX = bounds.x + fullWidth / 2;
+					const midY = bounds.y + fullHeight / 2;
+					const scale = Math.min(width / fullWidth, height / fullHeight) * 0.9;
+					const translate = [
+						width / 2 - scale * midX,
+						height / 2 - scale * midY,
+					];
+
+					svg
+						.transition()
+						.duration(750)
+						.call(
+							zoom.transform,
+							d3.zoomIdentity
+								.translate(translate[0], translate[1])
+								.scale(scale),
+						);
+				}
+				break;
+		}
+	});
+
+	// Add instructions
+	container
+		.append("div")
+		.style("position", "absolute")
+		.style("bottom", "10px")
+		.style("left", "10px")
+		.style("background", "rgba(0, 0, 0, 0.7)")
+		.style("color", "white")
+		.style("padding", "8px 12px")
+		.style("border-radius", "4px")
+		.style("font-size", "12px")
+		.style("font-family", "monospace")
+		.style("z-index", "1001")
+		.html(`
+			<div style="font-weight: bold; margin-bottom: 4px;">Controls:</div>
+			<div>Mouse: Pan & Zoom</div>
+			<div>+/- : Zoom In/Out</div>
+			<div>0 : Reset Zoom</div>
+			<div>F : Fit to Content</div>
+		`);
 }
-
-export function setupSvg(divId: string, width: number, height: number) {
-	const margin = { top: 20, right: 30, bottom: 20, left: 30 };
-	const svgWidth = width - margin.left - margin.right;
-	const svgHeight = height - margin.top - margin.bottom;
-
-	const svg = d3
-		.select(`#${divId}`)
-		.append("svg")
-		.attr("width", svgWidth + margin.left + margin.right)
-		.attr("height", svgHeight + margin.top + margin.bottom)
-		.append("g")
-		.attr("transform", `translate(${margin.left},${margin.top})`);
-
-	return svg;
-}
-
-// Then call renderFlamegraph with your data
-// renderFlamegraph(yourModvizOutputData);
 
 export const FlamegraphControl = (props: { output: ModvizOutput }) => {
 	return (
@@ -297,19 +471,14 @@ export const FlamegraphControl = (props: { output: ModvizOutput }) => {
 			id="flamegraph-container"
 			ref={(el) => {
 				if (el) {
-					// Clear any existing SVG to prevent duplicates
-					d3.select(el).selectAll("svg").remove();
+					// Clear any existing content to prevent duplicates
+					d3.select(el).selectAll("*").remove();
 
-					const svg = setupSvg(
-						"flamegraph-container",
-						window.innerWidth,
-						window.innerHeight,
-					);
-					console.log(svg, props);
+					// Render the flamegraph
 					renderFlamegraph(props.output);
 				}
 			}}
-			className="h-full min-h-0 flex flex-col gap-2"
+			className="relative overflow-hidden top-0 left-0 w-full h-full min-h-0 flex flex-col gap-2"
 		/>
 	);
 };
