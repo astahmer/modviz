@@ -17,6 +17,7 @@
   "dependencies": {
     "@ark-ui/react": "^5.25.0",
     "@astahmer/module-graph": "^0.13.0",
+    "@nivo/icicle": "^0.99.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.3",
@@ -38,7 +39,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "d3": "^7.9.0",
     "find-workspaces": "^0.3.1",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2",
@@ -59,7 +59,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
     "@tailwindcss/vite": "^4.1.13",
-    "@types/d3": "^7.4.3",
     "@types/node": "^22.5.4",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
