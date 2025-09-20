@@ -74,6 +74,29 @@ const NodeDetailsModalContent = (props: {
 				maxHeight: isMaximized ? "95vh" : undefined,
 			}}
 		>
+			<Dialog.Title className="relative flex gap-2 items-center text-lg font-semibold text-gray-900 dark:text-white p-4 border-b border-gray-200 dark:border-gray-700">
+				<span>Current node:</span>
+				<span>{props.node.path}</span>
+				<div className="ml-auto">
+					<Button
+						variant="outline"
+						className="px-2 py-1"
+						onClick={() => setIsMaximized((isMaximized) => !isMaximized)}
+					>
+						{isMaximized ? (
+							<>
+								<LuMinimize className="h-4 w-4 text-slate-400" />
+								<span className="sr-only">Minimize</span>
+							</>
+						) : (
+							<>
+								<LuMaximize className="h-4 w-4 text-slate-400" />
+								<span className="sr-only">Maximize</span>
+							</>
+						)}
+					</Button>
+				</div>
+			</Dialog.Title>
 			<div className="bg-white dark:bg-gray-800 w-full h-full min-h-0 px-4 py-6 rounded-xl flex flex-col">
 				<Tabs.Root
 					className="w-full h-full min-h-0 overflow-hidden flex flex-col"
@@ -93,25 +116,6 @@ const NodeDetailsModalContent = (props: {
 							Imports chains
 						</Tabs.Trigger>
 					</Tabs.List>
-					<div className="absolute right-6 top-6">
-						<Button
-							variant="outline"
-							className="px-2 py-1"
-							onClick={() => setIsMaximized((isMaximized) => !isMaximized)}
-						>
-							{isMaximized ? (
-								<>
-									<LuMinimize className="h-4 w-4 text-slate-400" />
-									<span className="sr-only">Minimize</span>
-								</>
-							) : (
-								<>
-									<LuMaximize className="h-4 w-4 text-slate-400" />
-									<span className="sr-only">Maximize</span>
-								</>
-							)}
-						</Button>
-					</div>
 
 					<Tabs.Content
 						value="transitive-imports"

@@ -10,6 +10,7 @@ import { ChevronRight, File } from "lucide-react";
 import { useState } from "react";
 import {
 	LuArrowDownFromLine,
+	LuArrowRight,
 	LuArrowUpToLine,
 	LuBug,
 	LuInfinity,
@@ -24,37 +25,91 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
 
 const TreeNodeName = (props: {
 	node: TreeNodeData;
 	isCircular?: boolean;
 	hasReachedMaxDepth?: boolean;
+	visited?: Set<string>;
+	focusedNodeId?: string;
 }) => {
 	const { node } = props;
+
+	const Trigger = (
+		<span
+			className={cn(
+				"font-medium whitespace-nowrap",
+				node.original.isBarrelFile &&
+					"underline decoration-amber-600 decoration-2",
+				// node.original.isBarrelFile && "outline-2 outline-amber-600",
+				props.isCircular && "text-red-400",
+			)}
+		>
+			{/* TODO tooltip full path here and other node.name place */}
+			{(node.original.isBarrelFile || props.isCircular) && "⚠️ "}
+			{node.name}
+			{node.original.isBarrelFile &&
+				` (barrel ${node.original.exports.length} exports)`}
+			{props.isCircular && " (circular)"}
+			{props.hasReachedMaxDepth && " (max depth reached)"}
+		</span>
+	);
+
+	const Name =
+		// props.hasReachedMaxDepth ||
+		// props.isCircular ||
+		// props.node.original.isBarrelFile ? (
+		true ? (
+			<Tooltip lazyMount>
+				<TooltipTrigger>{Trigger}</TooltipTrigger>
+				<TooltipContent className="max-w-[auto]">
+					{props.visited?.size ? (
+						<div className="flex flex-col gap-2">
+							<span>Imported by:</span>
+							{[...props.visited].map((nodeId, index) => (
+								<span
+									key={nodeId}
+									className={cn(nodeId === node.id && "text-red-400")}
+									style={{ paddingLeft: `${index * 10}px` }}
+								>
+									{"->"} {nodeId}
+								</span>
+							))}
+							<span
+								className="text-red-400"
+								style={{
+									paddingLeft: `${[...props.visited].length * 10}px`,
+								}}
+							>
+								{"->"} {node.id}
+							</span>
+						</div>
+					) : (
+						node.id
+					)}
+				</TooltipContent>
+			</Tooltip>
+		) : (
+			Trigger
+		);
+
 	return (
 		<>
-			<Tooltip lazyMount>
-				<TooltipTrigger>
-					<span
-						className={cn(
-							"font-medium whitespace-nowrap",
-							node.original.isBarrelFile &&
-								"underline decoration-amber-600 decoration-2",
-							// node.original.isBarrelFile && "outline-2 outline-amber-600",
-							props.isCircular && "text-red-400",
-						)}
-					>
-						{/* TODO tooltip full path here and other node.name place */}
-						{(node.original.isBarrelFile || props.isCircular) && "⚠️ "}
-						{node.name}
-						{node.original.isBarrelFile &&
-							` (barrel ${node.original.exports.length} exports)`}
-						{props.isCircular && " (circular)"}
-						{props.hasReachedMaxDepth && " (max depth reached)"}
-					</span>
-				</TooltipTrigger>
-				<TooltipContent>{node.id}</TooltipContent>
-			</Tooltip>
+			{Name}
+			{props.focusedNodeId !== node.id && (
+				<Button
+					className="ml-auto"
+					variant="ghost"
+					size="icon"
+					onClickCapture={(e) => {
+						e.stopPropagation();
+						focusedNodeIdAtom.set(node.id);
+					}}
+				>
+					<LuArrowRight className="text-slate-400" />
+				</Button>
+			)}
 			<Button
 				className="ml-auto"
 				variant="ghost"
@@ -64,17 +119,8 @@ const TreeNodeName = (props: {
 					console.log(node);
 				}}
 			>
-				<LuBug className="h-4 w-4 text-slate-400" />
+				<LuBug className="text-slate-400" />
 			</Button>
-			{/* <Button
-								className="ml-auto"
-								variant="ghost"
-								size="icon"
-								// TODO go to the node details modal
-								onClick={() => console.log(node)}
-							>
-								<LuEye className="h-4 w-4 text-slate-400" />
-							</Button> */}
 		</>
 	);
 };
@@ -84,6 +130,7 @@ const TreeNode = (
 		visited: Set<string>;
 		maxDepth: number;
 		currentDepth: number;
+		focusedNodeId?: string;
 	},
 ) => {
 	const { node, indexPath } = props;
@@ -99,7 +146,7 @@ const TreeNode = (
 							<ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-90 group-data-[state=open]:text-slate-600" />
 						</TreeView.BranchIndicator>
 						<TreeView.BranchText className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300 group-data-[state=open]:text-slate-900 dark:group-data-[state=open]:text-slate-100">
-							<TreeNodeName node={node} />
+							<TreeNodeName node={node} focusedNodeId={props.focusedNodeId} />
 						</TreeView.BranchText>
 					</TreeView.BranchControl>
 					<TreeView.BranchContent className="ml-6 border-l border-slate-200 pl-2 dark:border-slate-700/60">
@@ -117,7 +164,12 @@ const TreeNode = (
 									<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 										{/* TODO tooltip stack list */}
 										<LuInfinity className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-										<TreeNodeName node={child} isCircular />
+										<TreeNodeName
+											node={child}
+											isCircular
+											visited={props.visited}
+											focusedNodeId={props.focusedNodeId}
+										/>
 									</TreeView.ItemText>
 								</TreeView.Item>
 							) : props.currentDepth >= props.maxDepth ? (
@@ -131,7 +183,11 @@ const TreeNode = (
 									</div>
 									<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 										<LuOctagonMinus className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-										<TreeNodeName node={child} hasReachedMaxDepth />
+										<TreeNodeName
+											node={child}
+											hasReachedMaxDepth
+											focusedNodeId={props.focusedNodeId}
+										/>
 									</TreeView.ItemText>
 								</TreeView.Item>
 							) : (
@@ -142,6 +198,7 @@ const TreeNode = (
 									visited={new Set([...props.visited, child.id])}
 									currentDepth={props.currentDepth + 1}
 									maxDepth={props.maxDepth}
+									focusedNodeId={props.focusedNodeId}
 								/>
 							),
 						)}
@@ -157,7 +214,7 @@ const TreeNode = (
 					</div>
 					<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 						<File className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-						<TreeNodeName node={node} />
+						<TreeNodeName node={node} focusedNodeId={props.focusedNodeId} />
 					</TreeView.ItemText>
 				</TreeView.Item>
 			)}
@@ -244,6 +301,7 @@ export function TreeViewBasic(props: {
 								visited={new Set([node.id])}
 								currentDepth={0}
 								maxDepth={100}
+								focusedNodeId={props.entryNodeId}
 							/>
 						))}
 					</TreeView.Tree>

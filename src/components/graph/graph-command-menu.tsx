@@ -1,7 +1,11 @@
 import "@react-sigma/core/lib/style.css";
 import "@react-sigma/graph-search/lib/style.css";
+import { useAtom } from "@xstate/store/react";
 import { Command } from "cmdk";
+import { ChevronsUpDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import { Button } from "~/components/ui/button";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -11,16 +15,12 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "~/components/ui/command";
-import type { ModvizOutput, VizNode } from "../../../mod/types";
-import { ChevronRightIcon, ChevronsUpDown } from "lucide-react";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "~/components/ui/popover";
-import { Button } from "~/components/ui/button";
-import { useAtom } from "@xstate/store/react";
-import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import type { ModvizOutput, VizNode } from "../../../mod/types";
 
 export function GraphCommandMenuDialog(props: {
 	nodes: ModvizOutput["nodes"];
@@ -85,10 +85,6 @@ export function GraphCommandMenuDialog(props: {
 							</CommandGroup>
 						),
 					)}
-					{/* TODO a way to find the chain from path X to Y  */}
-					{/* https://github.com/pacocoursey/cmdk/blob/d6fde235386414196bf80d9b9fa91e2cf89a72ea/cmdk/src/command-score.ts */}
-					<CommandItem value="@chain">Chain</CommandItem>
-					<CommandItem value="@imported-by">Imported-by</CommandItem>
 				</CommandList>
 			</Command>
 		</CommandDialog>
@@ -161,10 +157,6 @@ export function GraphCommandMenu(props: {
 								</CommandGroup>
 							),
 						)}
-						{/* TODO a way to find the chain from path X to Y  */}
-						{/* https://github.com/pacocoursey/cmdk/blob/d6fde235386414196bf80d9b9fa91e2cf89a72ea/cmdk/src/command-score.ts */}
-						<CommandItem value="@chain">Chain</CommandItem>
-						<CommandItem value="@imported-by">Imported-by</CommandItem>
 					</CommandList>
 				</Command>
 			</PopoverContent>
