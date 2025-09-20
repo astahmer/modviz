@@ -1,5 +1,6 @@
 import { ResponsiveIcicle } from "@nivo/icicle";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { mapModvizOutputToImporteesTreeCollection } from "~/components/tree-view/map-modviz-output-to-tree-collection";
 
 interface TreeNode {
 	id: string;
@@ -119,8 +120,17 @@ function convertToNivoHierarchyData(modvizOutput: ModvizOutput): TreeNode {
 	};
 }
 
-export const FlamegraphControl = (props: { output: ModvizOutput }) => {
-	const data = convertToNivoHierarchyData(props.output);
+export const Flamegraph = (props: {
+	output: ModvizOutput;
+	entryNodeId?: string;
+}) => {
+	const mapped = mapModvizOutputToImporteesTreeCollection(
+		props.output,
+		props.entryNodeId ?? props.output.metadata.entrypoints[0],
+	);
+	const data = mapped?.collection.rootNode!;
+	// const data = convertToNivoHierarchyData(props.output);
+	// console.log(data, mapped);
 
 	return (
 		<div className="relative w-full h-full min-h-0 flex flex-col">
@@ -146,45 +156,53 @@ export const FlamegraphControl = (props: { output: ModvizOutput }) => {
 						modifiers: [["brighter", 0.5]],
 					}}
 					// colors={{ scheme: "nivo" }}
-					tooltip={(node) => (
-						<div className="bg-black bg-opacity-70 text-white p-3 rounded text-xs font-mono">
-							<div className="font-bold mb-2" style={{ color: "#4CAF50" }}>
-								{node.data.name || "root"}
-							</div>
-							{node.data.path && (
-								<div className="text-xs mb-1" style={{ color: "#ddd" }}>
-									{node.data.path}
-								</div>
-							)}
-							<div className="mb-1">
-								Value: <span style={{ color: "#FFD700" }}>{node.value}</span>
-							</div>
-							{node.data.type && (
-								<div className="mb-1">
-									Type:{" "}
-									<span style={{ color: "#87CEEB" }}>{node.data.type}</span>
-								</div>
-							)}
-							{node.data.package && (
-								<div className="mb-1">
-									Package:{" "}
-									<span style={{ color: "#DDA0DD" }}>{node.data.package}</span>
-								</div>
-							)}
-							{node.data.imports !== undefined && (
-								<div className="mb-1">
-									Imports:{" "}
-									<span style={{ color: "#F0E68C" }}>{node.data.imports}</span>
-								</div>
-							)}
-							{node.data.exports !== undefined && (
-								<div>
-									Exports:{" "}
-									<span style={{ color: "#F0E68C" }}>{node.data.exports}</span>
-								</div>
-							)}
-						</div>
-					)}
+					// tooltip={(node) => (
+					// 	<div className="bg-black bg-opacity-70 text-white p-3 rounded text-xs font-mono">
+					// 		<div className="font-bold mb-2" style={{ color: "#4CAF50" }}>
+					// 			{node.data.original.name || "root"}
+					// 		</div>
+					// 		{node.data.original.path && (
+					// 			<div className="text-xs mb-1" style={{ color: "#ddd" }}>
+					// 				{node.data.original.path}
+					// 			</div>
+					// 		)}
+					// 		<div className="mb-1">
+					// 			Value: <span style={{ color: "#FFD700" }}>{node.value}</span>
+					// 		</div>
+					// 		{node.data.original.type && (
+					// 			<div className="mb-1">
+					// 				Type:{" "}
+					// 				<span style={{ color: "#87CEEB" }}>
+					// 					{node.data.original.type}
+					// 				</span>
+					// 			</div>
+					// 		)}
+					// 		{node.data.original.package && (
+					// 			<div className="mb-1">
+					// 				Package:{" "}
+					// 				<span style={{ color: "#DDA0DD" }}>
+					// 					{node.data.original.package.name}
+					// 				</span>
+					// 			</div>
+					// 		)}
+					// 		{node.data.original.imports !== undefined && (
+					// 			<div className="mb-1">
+					// 				Imports:{" "}
+					// 				<span style={{ color: "#F0E68C" }}>
+					// 					{node.data.original.imports.length}
+					// 				</span>
+					// 			</div>
+					// 		)}
+					// 		{node.data.original.exports !== undefined && (
+					// 			<div>
+					// 				Exports:{" "}
+					// 				<span style={{ color: "#F0E68C" }}>
+					// 					{node.data.original.exports.length}
+					// 				</span>
+					// 			</div>
+					// 		)}
+					// 	</div>
+					// )}
 					onClick={(node) => {
 						console.log("Node details:", {
 							name: node.data.name,

@@ -5,3 +5,4 @@
 - click to collapse/expand selected node
 - view mode (edge = imported by vs edge = importing) -> multi directed graph with inward/outward/all edges
 - lasso selection https://github.com/pentamorfico/sigmajs-select-rectangle/blob/main/index.js
+- handle paths that are not in output.nodes but still exist

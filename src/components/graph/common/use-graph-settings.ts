@@ -51,11 +51,9 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 			},
 			clickNode: (event) => {
 				gotoNode(event.node);
-				focusedNodeIdAtom.set(event.node);
-				// if (focusedNodeIdAtom.get() === event.node) {
-				isFocusedModalOpenedAtom.set(true);
-				// }
-				// focusedNodeIdAtom.set(event.node);
+				focusedNodeIdAtom.set((prev) =>
+					prev === event.node ? null : event.node,
+				);
 			},
 			// clickStage: () => setSelectedNodeId(null),
 			downStage: () => {

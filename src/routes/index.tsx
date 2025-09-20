@@ -14,7 +14,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAtom } from "@xstate/store/react";
 import { LuCross, LuX } from "react-icons/lu";
 import { z } from "zod/v4";
-import { FlamegraphControl } from "~/components/graph/flamegraph";
+import { Flamegraph } from "~/components/graph/flamegraph";
 
 const fetchGraphData = createServerFn().handler(async (ctx) => {
 	const data = fs.readFileSync(import.meta.env.modvizPath, "utf-8");
@@ -60,9 +60,11 @@ function Home() {
 		<div className="h-full min-h-0 flex flex-col overflow-hidden">
 			<div className="p-2 flex gap-4 items-center">
 				<div className="flex gap-2 text-lg">Home</div>
-				<div className="fixed inset-0 z-50">
-					<FlamegraphControl output={graphData} />
-				</div>
+				{false && focusedValue && (
+					<div className="fixed inset-0 z-50">
+						<Flamegraph output={graphData} entryNodeId={focusedValue} />
+					</div>
+				)}
 				<div className="flex gap-2 ml-auto">
 					{focusedValue && (
 						<div>
@@ -70,7 +72,7 @@ function Home() {
 							<Button
 								variant="default"
 								className="items-center gap-2 w-full"
-								onClick={() => isFocusedModalOpenedAtom.set((get) => !get)}
+								onClick={() => focusedNodeIdAtom.set(null)}
 							>
 								{isFocusedModalOpened ? <LuX /> : <ChevronRight />}
 								{isFocusedModalOpened ? "Close" : "Open"} details panel

@@ -104,7 +104,10 @@ export function NotesPanel(props: PropsWithChildren) {
 									</FloatingPanel.StageTrigger>
 									<FloatingPanel.CloseTrigger
 										className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-										onClick={() => isFocusedModalOpenedAtom.set(false)}
+										onClick={() => {
+											// isFocusedModalOpenedAtom.set(false)
+											focusedNodeIdAtom.set(null);
+										}}
 									>
 										<X className="w-3 h-3" />
 									</FloatingPanel.CloseTrigger>

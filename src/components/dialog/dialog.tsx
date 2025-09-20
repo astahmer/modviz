@@ -11,6 +11,7 @@ import {
 	focusedNodeIdAtom,
 	isFocusedModalOpenedAtom,
 } from "~/components/graph/common/use-graph-atoms";
+import { Flamegraph } from "~/components/graph/flamegraph";
 import { TreeViewBasic } from "~/components/tree-view/basic";
 import {
 	mapModvizOutputToImporteesTreeCollection,
@@ -41,7 +42,9 @@ export function NodeDetailsModal() {
 	return (
 		<Dialog.Root
 			open={isOpened}
-			onOpenChange={(details) => isFocusedModalOpenedAtom.set(details.open)}
+			onOpenChange={(details) => {
+				if (!details.open) focusedNodeIdAtom.set(null);
+			}}
 			lazyMount
 		>
 			<Portal>
@@ -64,6 +67,11 @@ const NodeDetailsModalContent = (props: {
 	entryNodeId: string;
 }) => {
 	const [isMaximized, setIsMaximized] = useState(false);
+
+	const output = useLoaderData({ from: "/" });
+	const [viewMode, setViewMode] =
+		useState<(typeof viewModeCollection)["items"][0]["value"]>("tree-search");
+
 	return (
 		<Dialog.Content
 			className="data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out relative w-full max-w-4xl h-[80vh] rounded-lg bg-white dark:bg-gray-900 shadow-lg flex flex-col"
@@ -102,26 +110,56 @@ const NodeDetailsModalContent = (props: {
 					className="w-full h-full min-h-0 overflow-hidden flex flex-col"
 					defaultValue="transitive-imports"
 				>
-					<Tabs.List className="flex gap-1 p-1 bg-gray-100 rounded-lg dark:bg-gray-700 w-fit mb-2">
-						<Tabs.Trigger
-							value="transitive-imports"
-							className="px-4 py-2 text-sm font-medium text-gray-600 rounded-md transition-all data-selected:bg-white data-selected:text-gray-900 data-selected:shadow-sm dark:text-gray-300 dark:data-selected:bg-gray-800 dark:data-selected:text-gray-100"
-						>
-							Transitive imports
-						</Tabs.Trigger>
-						<Tabs.Trigger
-							value="imports-chain"
-							className="px-4 py-2 text-sm font-medium text-gray-600 rounded-md transition-all data-selected:bg-white data-selected:text-gray-900 data-selected:shadow-sm dark:text-gray-300 dark:data-selected:bg-gray-800 dark:data-selected:text-gray-100"
-						>
-							Imports chains
-						</Tabs.Trigger>
-					</Tabs.List>
+					<div className="flex w-full">
+						<Tabs.List className="flex gap-1 p-1 bg-gray-100 rounded-lg dark:bg-gray-700 mb-2">
+							<Tabs.Trigger
+								value="transitive-imports"
+								className="w-fit px-4 py-2 text-sm font-medium text-gray-600 rounded-md transition-all data-selected:bg-white data-selected:text-gray-900 data-selected:shadow-sm dark:text-gray-300 dark:data-selected:bg-gray-800 dark:data-selected:text-gray-100"
+							>
+								Transitive imports
+							</Tabs.Trigger>
+							<Tabs.Trigger
+								value="imports-chain"
+								className="w-fit px-4 py-2 text-sm font-medium text-gray-600 rounded-md transition-all data-selected:bg-white data-selected:text-gray-900 data-selected:shadow-sm dark:text-gray-300 dark:data-selected:bg-gray-800 dark:data-selected:text-gray-100"
+							>
+								Imports chains
+							</Tabs.Trigger>
+						</Tabs.List>
+						<div className="relative z-50 ml-auto px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+							<Select
+								className="min-w-64 *:not-first:mt-2"
+								value={[viewMode]}
+								onValueChange={(details) => setViewMode(details.value.at(0)!)}
+								collection={viewModeCollection}
+								positioning={{ sameWidth: true }}
+							>
+								<SelectControl>
+									<SelectTrigger>
+										<SelectValueText placeholder="View mode" />
+										<SelectIndicator />
+									</SelectTrigger>
+								</SelectControl>
+								<SelectContent>
+									{viewModeCollection.items.map((item) => (
+										<SelectItem key={item.value} item={item}>
+											{item.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
 
 					<Tabs.Content
 						value="transitive-imports"
 						className="w-full h-full min-h-0 text-gray-600 dark:text-gray-300"
 					>
-						<TransitiveImportsTab node={props.node} />
+						{viewMode === "tree-search" && (
+							<TransitiveImportsTab node={props.node} />
+						)}
+						{viewMode === "flamegraph" && (
+							<Flamegraph output={output} entryNodeId={props.node.path} />
+						)}
 					</Tabs.Content>
 
 					<Tabs.Content
@@ -238,7 +276,20 @@ const ImportsChainTab = (props: { node: VizNode }) => {
 	);
 };
 
-const collection = createListCollection({
+const viewModeCollection = createListCollection({
+	items: [
+		{
+			value: "tree-search",
+			label: "Tree search",
+		},
+		{
+			value: "flamegraph",
+			label: "Flamegraph",
+		},
+	],
+});
+
+const directionCollection = createListCollection({
 	items: [
 		{
 			value: "from-entrypoint-to-current-node",
@@ -250,6 +301,7 @@ const collection = createListCollection({
 		},
 	],
 });
+
 function ImportsChainDirection(props: {
 	value: ImportsChainDirection;
 	onValueChange: (value: ImportsChainDirection) => void;
@@ -261,7 +313,7 @@ function ImportsChainDirection(props: {
 			onValueChange={(details) =>
 				props.onValueChange(details.value.at(0) as ImportsChainDirection)
 			}
-			collection={collection}
+			collection={directionCollection}
 			positioning={{ sameWidth: true }}
 		>
 			<SelectControl>
@@ -271,7 +323,7 @@ function ImportsChainDirection(props: {
 				</SelectTrigger>
 			</SelectControl>
 			<SelectContent>
-				{collection.items.map((item) => (
+				{directionCollection.items.map((item) => (
 					<SelectItem key={item.value} item={item}>
 						{item.label}
 					</SelectItem>

@@ -26,6 +26,7 @@ import {
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import { Flamegraph } from "~/components/graph/flamegraph";
 
 const TreeNodeName = (props: {
 	node: TreeNodeData;
@@ -134,8 +135,6 @@ const TreeNode = (
 	},
 ) => {
 	const { node, indexPath } = props;
-
-	// TODO bind node details modal to url ?
 
 	return (
 		<TreeView.NodeProvider key={node.id} node={node} indexPath={indexPath}>
@@ -248,11 +247,6 @@ export function TreeViewBasic(props: {
 	const flattened = treeView.collection.flatten();
 	const visible = treeView.getVisibleNodes().map((node) => node.id);
 	const flattenedUniqueNodeIds = new Set(flattened.map((node) => node.id));
-	console.log(
-		flattened.length,
-		treeView.getVisibleNodes().map((node) => node.id).length,
-		flattenedUniqueNodeIds.size,
-	);
 	const isAllExpanded =
 		treeView.expandedValue.length === flattenedUniqueNodeIds.size;
 
