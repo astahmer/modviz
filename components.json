@@ -17,5 +17,9 @@
     "lib": "~/lib",
     "hooks": "~/hooks"
   },
-  "iconLibrary": "lucide"
+  "iconLibrary": "lucide",
+  "registries": {
+    "@shipbase": "https://ui.shipbase.xyz/r/react/{name}.json",
+    "@tarkui": "https://tarkui.com/r/r/{name}.json"
+  }
 }

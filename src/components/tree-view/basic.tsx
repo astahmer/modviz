@@ -19,6 +19,65 @@ import { type TreeNodeData } from "~/components/tree-view/map-modviz-output-to-t
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "~/components/ui/tooltip";
+
+const TreeNodeName = (props: {
+	node: TreeNodeData;
+	isCircular?: boolean;
+	hasReachedMaxDepth?: boolean;
+}) => {
+	const { node } = props;
+	return (
+		<>
+			<Tooltip lazyMount>
+				<TooltipTrigger>
+					<span
+						className={cn(
+							"font-medium whitespace-nowrap",
+							node.original.isBarrelFile &&
+								"underline decoration-amber-600 decoration-2",
+							// node.original.isBarrelFile && "outline-2 outline-amber-600",
+							props.isCircular && "text-red-400",
+						)}
+					>
+						{/* TODO tooltip full path here and other node.name place */}
+						{(node.original.isBarrelFile || props.isCircular) && "⚠️ "}
+						{node.name}
+						{node.original.isBarrelFile &&
+							` (barrel ${node.original.exports.length} exports)`}
+						{props.isCircular && " (circular)"}
+						{props.hasReachedMaxDepth && " (max depth reached)"}
+					</span>
+				</TooltipTrigger>
+				<TooltipContent>{node.id}</TooltipContent>
+			</Tooltip>
+			<Button
+				className="ml-auto"
+				variant="ghost"
+				size="icon"
+				onClickCapture={(e) => {
+					e.stopPropagation();
+					console.log(node);
+				}}
+			>
+				<LuBug className="h-4 w-4 text-slate-400" />
+			</Button>
+			{/* <Button
+								className="ml-auto"
+								variant="ghost"
+								size="icon"
+								// TODO go to the node details modal
+								onClick={() => console.log(node)}
+							>
+								<LuEye className="h-4 w-4 text-slate-400" />
+							</Button> */}
+		</>
+	);
+};
 
 const TreeNode = (
 	props: TreeView.NodeProviderProps<TreeNodeData> & {
@@ -40,35 +99,7 @@ const TreeNode = (
 							<ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-90 group-data-[state=open]:text-slate-600" />
 						</TreeView.BranchIndicator>
 						<TreeView.BranchText className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300 group-data-[state=open]:text-slate-900 dark:group-data-[state=open]:text-slate-100">
-							<span
-								className={cn(
-									"font-medium whitespace-nowrap",
-									node.isBarrel && "text-amber-600",
-								)}
-							>
-								{node.name}
-								{node.isBarrel && " (barrel file)"}
-							</span>
-							<Button
-								className="ml-auto"
-								variant="ghost"
-								size="icon"
-								onClickCapture={(e) => {
-									e.stopPropagation();
-									console.log(node);
-								}}
-							>
-								<LuBug className="h-4 w-4 text-slate-400" />
-							</Button>
-							{/* <Button
-								className="ml-auto"
-								variant="ghost"
-								size="icon"
-								// TODO go to the node details modal
-								onClick={() => console.log(node)}
-							>
-								<LuEye className="h-4 w-4 text-slate-400" />
-							</Button> */}
+							<TreeNodeName node={node} />
 						</TreeView.BranchText>
 					</TreeView.BranchControl>
 					<TreeView.BranchContent className="ml-6 border-l border-slate-200 pl-2 dark:border-slate-700/60">
@@ -86,10 +117,7 @@ const TreeNode = (
 									<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 										{/* TODO tooltip stack list */}
 										<LuInfinity className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-										<span className="text-red-400">
-											⚠️ {child.name} (circular)
-											{(node.isBarrel && " (barrel file)") || ""}
-										</span>
+										<TreeNodeName node={child} isCircular />
 									</TreeView.ItemText>
 								</TreeView.Item>
 							) : props.currentDepth >= props.maxDepth ? (
@@ -103,7 +131,7 @@ const TreeNode = (
 									</div>
 									<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 										<LuOctagonMinus className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-										<span>{child.name} (max depth reached)</span>
+										<TreeNodeName node={child} hasReachedMaxDepth />
 									</TreeView.ItemText>
 								</TreeView.Item>
 							) : (
@@ -129,14 +157,7 @@ const TreeNode = (
 					</div>
 					<TreeView.ItemText className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 group-data-[selected]:text-blue-700 dark:group-data-[selected]:text-blue-300">
 						<File className="h-4 w-4 text-slate-400 group-data-[selected]:text-blue-500" />
-						<span
-							className={cn(
-								"font-medium whitespace-nowrap",
-								node.isBarrel && "text-amber-600",
-							)}
-						>
-							{node.name}
-						</span>
+						<TreeNodeName node={node} />
 					</TreeView.ItemText>
 				</TreeView.Item>
 			)}

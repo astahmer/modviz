@@ -1,11 +1,11 @@
 import { createTreeCollection } from "@ark-ui/react/tree-view";
-import type { ModvizOutput } from "../../../mod/types";
+import type { ModvizOutput, VizNode } from "../../../mod/types";
 
 export interface TreeNodeData {
 	id: string;
 	name: string;
 	children: TreeNodeData[];
-	isBarrel: boolean;
+	original: VizNode;
 }
 
 export function mapModvizOutputToImporteesTreeCollection(
@@ -19,7 +19,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 		id: entryNodeId,
 		name: entryNode.name,
 		children: [],
-		isBarrel: entryNode.isBarrelFile,
+		original: entryNode,
 	};
 
 	const allVisited = new Set<string>();
@@ -43,7 +43,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 			id: node.path,
 			name: node.path.split("/").slice(-2).join("/"),
 			children: [],
-			isBarrel: node.isBarrelFile,
+			original: node,
 		};
 
 		if (parent.children) {
@@ -61,7 +61,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 					id: importeeNode.path,
 					name: importeeNode.path.split("/").slice(-2).join("/"),
 					children: [],
-					isBarrel: importeeNode.isBarrelFile,
+					original: importeeNode,
 				};
 				currentTreeNode.children.push(importeeTreeNode);
 				return;
@@ -110,7 +110,7 @@ export function mapModvizOutputToImportsChainTreeCollection(
 		id: rootId,
 		name: root.path.split("/").slice(-2).join("/"),
 		children: [],
-		isBarrel: root.isBarrelFile,
+		original: root,
 	};
 	let currentParent = rootNode;
 	for (const nodePath of importChain) {
@@ -121,7 +121,7 @@ export function mapModvizOutputToImportsChainTreeCollection(
 			id: node.path,
 			name: node.path.split("/").slice(-2).join("/"),
 			children: [],
-			isBarrel: node.isBarrelFile,
+			original: node,
 		};
 		currentParent.children.push(treeNode);
 		currentParent = treeNode;
