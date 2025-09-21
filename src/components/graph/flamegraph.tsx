@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Flamegraph as AntfuFlamegraph, normalizeTreeNode } from "nanovis";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
 import { mapModvizOutputToImporteesTreeCollection } from "~/components/tree-view/map-modviz-output-to-tree-collection";
+import { getTransitiveImportsSizeByPath } from "~/components/graph/calculate-node-sizes";
 
 interface NanovisTreeNode {
 	id: string;
@@ -14,6 +15,7 @@ interface NanovisTreeNode {
 		path: string;
 		type?: string;
 		package?: string;
+		importees: string[];
 		imports: number;
 		exports: number;
 		originalNode: VizNode;
@@ -31,12 +33,13 @@ function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
 			id: node.path,
 			text: node.path.split("/").slice(-2).join("/"),
 			subtext: node.package?.name,
-			sizeSelf: Math.max(1, node.imports.length + node.exports.length),
+			sizeSelf: node.importees.length + 1,
 			children: [],
 			meta: {
 				path: node.path,
 				type: node.type,
 				package: node.package?.name,
+				importees: node.importees,
 				imports: node.imports.length,
 				exports: node.exports.length,
 				originalNode: node,
@@ -53,6 +56,7 @@ function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
 			children: [],
 			meta: {
 				path: "",
+				importees: [],
 				imports: 0,
 				exports: 0,
 				originalNode: {} as VizNode,
@@ -60,22 +64,11 @@ function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
 		} as NanovisTreeNode;
 	}
 
-	const rootNode: NanovisTreeNode = {
-		id: entryNode.path,
-		text: entryNode.name,
-		subtext: entryNode.package?.name,
-		sizeSelf: Math.max(1, entryNode.imports.length + entryNode.exports.length),
-		children: [],
-		meta: {
-			path: entryNode.path,
-			type: entryNode.type,
-			package: entryNode.package?.name,
-			imports: entryNode.imports.length,
-			exports: entryNode.exports.length,
-			originalNode: entryNode,
-		},
-	};
-
+	const rootNode: NanovisTreeNode = Object.assign(
+		{},
+		nodeMap.get(entryNodeId)!,
+		{ children: [] },
+	);
 	const allVisited = new Set<string>();
 	const stack = [
 		{
@@ -85,58 +78,32 @@ function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
 		},
 	];
 
+	let stackSize = 0;
 	while (stack.length > 0) {
+		stackSize++;
 		const { nodePath, parent, visited } = stack.pop()!;
 		allVisited.add(nodePath);
 
-		const node = output.nodes.find((node) => node.path === nodePath);
+		const node = nodeMap.get(nodePath)!;
 		if (!node) continue;
 
-		const currentTreeNode: NanovisTreeNode = {
-			id: node.path,
-			text: node.path.split("/").slice(-2).join("/"),
-			subtext: node.package?.name,
-			sizeSelf: Math.max(1, node.imports.length + node.exports.length),
+		const currentTreeNode: NanovisTreeNode = Object.assign({}, node, {
 			children: [],
-			meta: {
-				path: node.path,
-				type: node.type,
-				package: node.package?.name,
-				imports: node.imports.length,
-				exports: node.exports.length,
-				originalNode: node,
-			},
-		};
+		});
 
 		if (parent.children) {
 			parent.children.push(currentTreeNode);
 		}
 
-		node.importees.forEach((importee) => {
+		currentTreeNode.meta.importees?.forEach((importee) => {
 			if (visited.has(importee)) {
-				const importeeNode = output.nodes.find(
-					(node) => node.path === importee,
-				);
+				const importeeNode = nodeMap.get(importee)!;
 				if (!importeeNode) return;
-
-				const importeeTreeNode: NanovisTreeNode = {
-					id: importeeNode.path,
-					text: importeeNode.path.split("/").slice(-2).join("/"),
-					subtext: importeeNode.package?.name,
-					sizeSelf: Math.max(
-						1,
-						importeeNode.imports.length + importeeNode.exports.length,
-					),
-					children: [],
-					meta: {
-						path: importeeNode.path,
-						type: importeeNode.type,
-						package: importeeNode.package?.name,
-						imports: importeeNode.imports.length,
-						exports: importeeNode.exports.length,
-						originalNode: importeeNode,
-					},
-				};
+				const importeeTreeNode: NanovisTreeNode = Object.assign(
+					{},
+					importeeNode,
+					{ children: [] },
+				);
 				currentTreeNode.children?.push(importeeTreeNode);
 				return;
 			}
@@ -149,6 +116,19 @@ function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
 			});
 		});
 	}
+	console.timeEnd("buildTree");
+	console.log({ stackSize });
+
+	// Calculate node sizes using a while loop (bottom-up traversal)
+	console.time("calculateNodeSizes");
+	const sizes = getTransitiveImportsSizeByPath(output);
+	sizes.forEach((size, path) => {
+		const node = nodeMap.get(path);
+		if (!node) return;
+
+		node.size = size + 1;
+	});
+	console.timeEnd("calculateNodeSizes");
 
 	return rootNode;
 }
@@ -163,6 +143,7 @@ export const Flamegraph = (props: {
 
 	useEffect(() => {
 		if (!containerRef.current) return;
+		if (flamegraphRef.current) return;
 
 		// Convert data to nanovis format
 		console.time("convertToNanovisHierarchyData");
@@ -176,7 +157,9 @@ export const Flamegraph = (props: {
 		// const data = mapped?.collection.rootNode!;
 
 		// Normalize the tree data for nanovis
+		console.time("normalizeTreeNode");
 		const normalizedTree = normalizeTreeNode(data as any);
+		console.timeEnd("normalizeTreeNode");
 
 		// Create flamegraph instance
 		const flamegraph = new AntfuFlamegraph(normalizedTree);
@@ -218,6 +201,26 @@ export const Flamegraph = (props: {
 					${node.meta.imports !== undefined ? `<div style="margin-bottom: 4px;">Imports: <span style="color: #F0E68C;">${node.meta.imports}</span></div>` : ""}
 					${node.meta.exports !== undefined ? `<div>Exports: <span style="color: #F0E68C;">${node.meta.exports}</span></div>` : ""}
 				`;
+				// ${
+				// 		node.meta.importPaths && node.meta.importPaths.length > 1
+				// 			? `
+				// 		<div style="margin-top: 8px; margin-bottom: 4px; font-weight: bold; color: #FF6B6B;">
+				// 			Import Paths (${node.meta.importPaths.length}):
+				// 		</div>
+				// 		${node.meta.importPaths
+				// 			.slice(0, 5)
+				// 			.map(
+				// 				(path: string[], i: number) => `
+				// 			<div style="margin-bottom: 2px; font-size: 10px; color: #FFA500;">
+				// 				${i + 1}. ${path.map((p: string) => p.split("/").slice(-1)[0]).join(" → ")}
+				// 			</div>
+				// 		`,
+				// 			)
+				// 			.join("")}
+				// 		${node.meta.importPaths.length > 5 ? `<div style="font-size: 10px; color: #888;">...and ${node.meta.importPaths.length - 5} more</div>` : ""}
+				// 	`
+				// 			: ""
+				// 	}
 			} else {
 				// Hide tooltip
 				tooltipRef.current.style.display = "none";
