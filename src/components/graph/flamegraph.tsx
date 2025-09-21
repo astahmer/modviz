@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Flamegraph as AntfuFlamegraph, normalizeTreeNode } from "nanovis";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { mapModvizOutputToImporteesTreeCollection } from "~/components/tree-view/map-modviz-output-to-tree-collection";
 
 interface NanovisTreeNode {
-	id?: string;
-	text?: string;
-	subtext?: string;
+	id: string;
+	text: string;
+	subtext: string | undefined;
 	sizeSelf?: number;
 	size?: number;
-	children?: NanovisTreeNode[];
-	meta?: {
+	children: NanovisTreeNode[];
+	meta: {
 		path: string;
 		type?: string;
 		package?: string;
@@ -20,40 +21,80 @@ interface NanovisTreeNode {
 }
 
 // Convert ModvizOutput to hierarchical data compatible with nanovis
-function convertToNanovisHierarchyData(
-	modvizOutput: ModvizOutput,
-): NanovisTreeNode {
-	const nodesMap = new Map<string, VizNode>();
-	const visitedPaths = new Set<string>();
+function convertToNanovisHierarchyData(output: ModvizOutput): NanovisTreeNode {
+	const entryNodeId = output.metadata.entrypoints[0]!;
+	const entryNode = output.nodes.find((node) => node.path === entryNodeId);
 
-	// First pass: create all nodes
-	modvizOutput.nodes.forEach((node) => {
-		nodesMap.set(node.path, node);
+	const nodeMap = new Map<string, NanovisTreeNode>();
+	output.nodes.forEach((node) => {
+		nodeMap.set(node.path, {
+			id: node.path,
+			text: node.path.split("/").slice(-2).join("/"),
+			subtext: node.package?.name,
+			sizeSelf: Math.max(1, node.imports.length + node.exports.length),
+			children: [],
+			meta: {
+				path: node.path,
+				type: node.type,
+				package: node.package?.name,
+				imports: node.imports.length,
+				exports: node.exports.length,
+				originalNode: node,
+			},
+		});
 	});
 
-	// Helper function to build tree recursively with cycle detection
-	function buildTreeForNode(
-		nodePath: string,
-		ancestors: Set<string> = new Set(),
-	): NanovisTreeNode | null {
-		// Prevent infinite recursion by checking for cycles
-		if (ancestors.has(nodePath) || visitedPaths.has(nodePath)) {
-			return null;
-		}
+	if (!entryNode) {
+		return {
+			id: "module-graph-root",
+			text: "Module Graph",
+			subtext: "No entrypoints found",
+			sizeSelf: 1,
+			children: [],
+			meta: {
+				path: "",
+				imports: 0,
+				exports: 0,
+				originalNode: {} as VizNode,
+			},
+		} as NanovisTreeNode;
+	}
 
-		const node = nodesMap.get(nodePath);
-		if (!node) return null;
+	const rootNode: NanovisTreeNode = {
+		id: entryNode.path,
+		text: entryNode.name,
+		subtext: entryNode.package?.name,
+		sizeSelf: Math.max(1, entryNode.imports.length + entryNode.exports.length),
+		children: [],
+		meta: {
+			path: entryNode.path,
+			type: entryNode.type,
+			package: entryNode.package?.name,
+			imports: entryNode.imports.length,
+			exports: entryNode.exports.length,
+			originalNode: entryNode,
+		},
+	};
 
-		// Mark this node as visited to prevent revisiting
-		visitedPaths.add(nodePath);
+	const allVisited = new Set<string>();
+	const stack = [
+		{
+			nodePath: entryNodeId,
+			parent: rootNode,
+			visited: new Set([entryNodeId]),
+		},
+	];
 
-		// Add current node to ancestors to detect immediate cycles
-		const newAncestors = new Set([...ancestors, nodePath]);
+	while (stack.length > 0) {
+		const { nodePath, parent, visited } = stack.pop()!;
+		allVisited.add(nodePath);
 
-		// Create a new node object to avoid circular references
-		const treeNode: NanovisTreeNode = {
+		const node = output.nodes.find((node) => node.path === nodePath);
+		if (!node) continue;
+
+		const currentTreeNode: NanovisTreeNode = {
 			id: node.path,
-			text: node.name,
+			text: node.path.split("/").slice(-2).join("/"),
 			subtext: node.package?.name,
 			sizeSelf: Math.max(1, node.imports.length + node.exports.length),
 			children: [],
@@ -67,147 +108,50 @@ function convertToNanovisHierarchyData(
 			},
 		};
 
-		// Add children (importees) recursively
-		node.importees.forEach((importedPath) => {
-			const childNode = buildTreeForNode(importedPath, newAncestors);
-			if (childNode) {
-				treeNode.children!.push(childNode);
+		if (parent.children) {
+			parent.children.push(currentTreeNode);
+		}
+
+		node.importees.forEach((importee) => {
+			if (visited.has(importee)) {
+				const importeeNode = output.nodes.find(
+					(node) => node.path === importee,
+				);
+				if (!importeeNode) return;
+
+				const importeeTreeNode: NanovisTreeNode = {
+					id: importeeNode.path,
+					text: importeeNode.path.split("/").slice(-2).join("/"),
+					subtext: importeeNode.package?.name,
+					sizeSelf: Math.max(
+						1,
+						importeeNode.imports.length + importeeNode.exports.length,
+					),
+					children: [],
+					meta: {
+						path: importeeNode.path,
+						type: importeeNode.type,
+						package: importeeNode.package?.name,
+						imports: importeeNode.imports.length,
+						exports: importeeNode.exports.length,
+						originalNode: importeeNode,
+					},
+				};
+				currentTreeNode.children?.push(importeeTreeNode);
+				return;
 			}
-		});
+			visited.add(importee);
 
-		return treeNode;
-	}
-
-	// Find entry points or root nodes
-	const entryPoints = modvizOutput.metadata.entrypoints;
-	const rootNodes: NanovisTreeNode[] = [];
-
-	// Start with entry points if available
-	if (entryPoints && entryPoints.length > 0) {
-		entryPoints.forEach((entryPath) => {
-			visitedPaths.clear(); // Reset for each entry point
-			const rootNode = buildTreeForNode(entryPath);
-			if (rootNode) {
-				rootNodes.push(rootNode);
-			}
+			stack.push({
+				nodePath: importee,
+				parent: currentTreeNode,
+				visited: new Set([...visited, importee]),
+			});
 		});
 	}
 
-	// If no entry points or no valid trees, find nodes that aren't imported by others
-	if (rootNodes.length === 0) {
-		const allImportedPaths = new Set<string>();
-		modvizOutput.nodes.forEach((node) => {
-			node.importees.forEach((path) => allImportedPaths.add(path));
-		});
-
-		modvizOutput.nodes.forEach((node) => {
-			if (!allImportedPaths.has(node.path)) {
-				visitedPaths.clear(); // Reset for each potential root
-				const rootNode = buildTreeForNode(node.path);
-				if (rootNode && rootNodes.length < 10) {
-					// Limit to 10 root nodes
-					rootNodes.push(rootNode);
-				}
-			}
-		});
-	}
-
-	if (rootNodes.length === 1) {
-		return rootNodes[0];
-	}
-
-	return {
-		id: "module-graph-root",
-		text: "Module Graph",
-		sizeSelf: 1,
-		children: rootNodes,
-		meta: {
-			path: "",
-			imports: 0,
-			exports: 0,
-			originalNode: {} as VizNode,
-		},
-	};
+	return rootNode;
 }
-
-// tooltip={(node) => (
-// 	<div className="bg-black bg-opacity-70 text-white p-3 rounded text-xs font-mono">
-// 		<div className="font-bold mb-2" style={{ color: "#4CAF50" }}>
-// 			{node.data.original.name || "root"}
-// 		</div>
-// 		{node.data.original.path && (
-// 			<div className="text-xs mb-1" style={{ color: "#ddd" }}>
-// 				{node.data.original.path}
-// 			</div>
-// 		)}
-// 		<div className="mb-1">
-// 			Value: <span style={{ color: "#FFD700" }}>{node.value}</span>
-// 		</div>
-// 		{node.data.original.type && (
-// 			<div className="mb-1">
-// 				Type:{" "}
-// 				<span style={{ color: "#87CEEB" }}>
-// 					{node.data.original.type}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.package && (
-// 			<div className="mb-1">
-// 				Package:{" "}
-// 				<span style={{ color: "#DDA0DD" }}>
-// 					{node.data.original.package.name}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.imports !== undefined && (
-// 			<div className="mb-1">
-// 				Imports:{" "}
-// 				<span style={{ color: "#F0E68C" }}>
-// 					{node.data.original.imports.length}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.exports !== undefined && (
-// 			<div>
-// 				Exports:{" "}
-// 				<span style={{ color: "#F0E68C" }}>
-// 					{node.data.original.exports.length}
-// 				</span>
-// 			</div>
-// 		)}
-// 	</div>
-// )}" "}
-// 				<span style={{ color: "#87CEEB" }}>
-// 					{node.data.original.type}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.package && (
-// 			<div className="mb-1">
-// 				Package:{" "}
-// 				<span style={{ color: "#DDA0DD" }}>
-// 					{node.data.original.package.name}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.imports !== undefined && (
-// 			<div className="mb-1">
-// 				Imports:{" "}
-// 				<span style={{ color: "#F0E68C" }}>
-// 					{node.data.original.imports.length}
-// 				</span>
-// 			</div>
-// 		)}
-// 		{node.data.original.exports !== undefined && (
-// 			<div>
-// 				Exports:{" "}
-// 				<span style={{ color: "#F0E68C" }}>
-// 					{node.data.original.exports.length}
-// 				</span>
-// 			</div>
-// 		)}
-// 	</div>
-// )}
 
 export const Flamegraph = (props: {
 	output: ModvizOutput;
@@ -221,7 +165,15 @@ export const Flamegraph = (props: {
 		if (!containerRef.current) return;
 
 		// Convert data to nanovis format
+		console.time("convertToNanovisHierarchyData");
 		const data = convertToNanovisHierarchyData(props.output);
+		console.timeEnd("convertToNanovisHierarchyData");
+		console.log(data);
+		// const mapped = mapModvizOutputToImporteesTreeCollection(
+		// 	props.output,
+		// 	props.entryNodeId ?? props.output.metadata.entrypoints[0],
+		// );
+		// const data = mapped?.collection.rootNode!;
 
 		// Normalize the tree data for nanovis
 		const normalizedTree = normalizeTreeNode(data as any);
@@ -241,17 +193,17 @@ export const Flamegraph = (props: {
 
 		flamegraph.events.on("hover", (node: any, event?: MouseEvent) => {
 			if (!tooltipRef.current) return;
-			
+
 			if (node && node.meta) {
 				// Show tooltip
 				tooltipRef.current.style.display = "block";
-				
+
 				// Position tooltip based on mouse position if available
 				if (event) {
 					tooltipRef.current.style.left = `${event.clientX + 10}px`;
 					tooltipRef.current.style.top = `${event.clientY - 10}px`;
 				}
-				
+
 				// Update tooltip content
 				tooltipRef.current.innerHTML = `
 					<div style="font-weight: bold; margin-bottom: 8px; color: #4CAF50;">
@@ -292,7 +244,7 @@ export const Flamegraph = (props: {
 				className="flex-1 min-h-0"
 				style={{ minHeight: "400px" }}
 			/>
-			
+
 			{/* Custom tooltip */}
 			<div
 				ref={tooltipRef}
@@ -311,7 +263,7 @@ export const Flamegraph = (props: {
 					display: "none",
 				}}
 			/>
-			
+
 			<div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded text-xs font-mono z-10">
 				<div className="font-bold mb-2">Module Graph Flamegraph</div>
 				<div>Click: Select node</div>
@@ -320,5 +272,3 @@ export const Flamegraph = (props: {
 		</div>
 	);
 };
-
-
