@@ -6,3 +6,10 @@
 - view mode (edge = imported by vs edge = importing) -> multi directed graph with inward/outward/all edges
 - lasso selection https://github.com/pentamorfico/sigmajs-select-rectangle/blob/main/index.js
 - handle paths that are not in output.nodes but still exist
+
+https://everything.antfu.dev/report#selected=nuxt@4.0.3
+tables for:
+- Most transitive imports
+- Most imported by
+
+- flamegraph + tremap

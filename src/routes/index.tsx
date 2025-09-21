@@ -60,11 +60,13 @@ function Home() {
 		<div className="h-full min-h-0 flex flex-col overflow-hidden">
 			<div className="p-2 flex gap-4 items-center">
 				<div className="flex gap-2 text-lg">Home</div>
-				{false && focusedValue && (
-					<div className="fixed inset-0 z-50">
-						<Flamegraph output={graphData} entryNodeId={focusedValue} />
-					</div>
-				)}
+				<Suspense>
+					{false && focusedValue && (
+						<div className="fixed inset-0 z-50">
+							<Flamegraph output={graphData} entryNodeId={focusedValue} />
+						</div>
+					)}
+				</Suspense>
 				<div className="flex gap-2 ml-auto">
 					{focusedValue && (
 						<div>
