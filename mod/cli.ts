@@ -25,6 +25,7 @@ const flags = {
 	outputFile:
 		args.find((arg) => arg.startsWith("--output-file="))?.split("=")[1] ??
 		"./modviz.json",
+	nodeModules: args.includes("--node-modules"),
 	serve: args.includes("--serve"),
 	help: args.includes("--help") || args.includes("-h"),
 	moduleLexer: args
@@ -109,7 +110,8 @@ const clusterizePlugin: Plugin = {
 };
 
 const moduleGraph = await createModuleGraph(entryFile, {
-	exclude: [(importee) => importee.includes("node_modules")], // TODO configurable flag to allow this
+	// TODO configurable flag to allow this
+	exclude:flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 	plugins: [
 		imports,
