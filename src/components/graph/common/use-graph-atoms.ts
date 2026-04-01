@@ -5,3 +5,4 @@ export const isFocusedModalOpenedAtom = createAtom<boolean>((get) =>
 	Boolean(get(focusedNodeIdAtom)),
 );
 export const highlightedNodeIdAtom = createAtom<string | null>(null);
+export const hoveredClusterNameAtom = createAtom<string | null>(null);

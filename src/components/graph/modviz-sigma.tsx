@@ -26,6 +26,7 @@ import { LoadingState } from "~/components/ui/loading-state";
 import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
+	hoveredClusterNameAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { GraphCommandMenuDialog } from "~/components/graph/graph-command-menu";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
@@ -176,16 +177,10 @@ const WithGraph = (props: {
 											);
 										}}
 										onMouseEnter={() => {
-											graph.forEachNode((nodeId) => {
-												if (cluster.nodes.includes(nodeId)) {
-													graph.setNodeAttribute(nodeId, "highlighted", true);
-												}
-											});
+											hoveredClusterNameAtom.set(cluster.name);
 										}}
 										onMouseLeave={() => {
-											graph.forEachNode((nodeId) => {
-												graph.setNodeAttribute(nodeId, "highlighted", false);
-											});
+											hoveredClusterNameAtom.set(null);
 										}}
 									>
 										<div
@@ -363,7 +358,7 @@ const useClusterLabelLayer = (
 		}
 
 		layer.className =
-			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden data-hovered:hidden data-hidden:hidden";
+			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden data-hidden:hidden";
 		let clusterLabelsDoms = "";
 		visibleClusters.forEach((cluster) => {
 			const viewportPos = sigma.graphToViewport(cluster as Coordinates);

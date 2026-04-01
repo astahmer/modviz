@@ -15,28 +15,17 @@ import type {
 import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
-	isFocusedModalOpenedAtom,
+	hoveredClusterNameAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = (props: { entryNode?: string }) => {
 	const sigma = useSigma<NodeType, EdgeType>();
 	const setSettings = useSetSettings<NodeType, EdgeType>();
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
+	const hoveredClusterName = useAtom(hoveredClusterNameAtom);
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 	const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
-
-	// Hide cluster labels when hovering node
-	useEffect(() => {
-		const clusterLabelLayer = document.getElementById("cluster-label-layers");
-		if (!clusterLabelLayer) return;
-
-		if (hoveredNodeId) {
-			clusterLabelLayer.dataset.hovered = "true";
-		} else {
-			delete clusterLabelLayer.dataset.hovered;
-		}
-	}, [Boolean(hoveredNodeId)]);
 
 	const { gotoNode } = useCamera();
 
@@ -88,7 +77,7 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			renderLabels: Boolean(hoveredNodeId),
+			renderLabels: Boolean(hoveredNodeId || hoveredClusterName),
 			// hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
 			// This function tells sigma to grow sizes linearly with the zoom, instead
@@ -119,6 +108,15 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 						updated.highlighted = false;
 						updated.label = "";
 					}
+				} else if (hoveredClusterName) {
+					if (node.cluster === hoveredClusterName) {
+						updated.label = node.label;
+						updated.highlighted = true;
+					} else {
+						updated.color = colors.default;
+						updated.highlighted = false;
+						updated.label = "";
+					}
 				}
 				return updated;
 			},
@@ -134,10 +132,22 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 					const activeNode = graph.getNodeAttributes(hoveredNodeId);
 					updated.hidden = false;
 					updated.color = activeNode.color;
+				} else if (hoveredClusterName) {
+					const [source, target] = graph.extremities(edgeId);
+					const sourceNode = graph.getNodeAttributes(source);
+					const targetNode = graph.getNodeAttributes(target);
+
+					if (
+						sourceNode.cluster === hoveredClusterName &&
+						targetNode.cluster === hoveredClusterName
+					) {
+						updated.hidden = false;
+						updated.color = sourceNode.color;
+					}
 				}
 
 				return updated;
 			},
 		});
-	}, [setSettings, hoveredNodeId, sigma, props.entryNode]);
+	}, [setSettings, hoveredClusterName, hoveredNodeId, sigma, props.entryNode]);
 };
