@@ -1,8 +1,10 @@
-import { startTransition, useMemo } from "react";
+import { startTransition, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { ModvizDataBundle } from "~/utils/modviz-data";
 import type { VizImport, VizNode } from "../../../mod/types";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
+import { ImportDisplay } from "~/components/modviz/import-display";
 
 const formatNumber = new Intl.NumberFormat("en-US");
 
@@ -90,6 +92,7 @@ export function ImportSearchView(props: {
 	) => void;
 }) {
 	const { graph } = props.bundle;
+	const [showFilters, setShowFilters] = useState(true);
 	const {
 		exclude: excludeSources,
 		include: includeSources,
@@ -226,8 +229,26 @@ export function ImportSearchView(props: {
 
 	return (
 		<div className="space-y-6">
-			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-				<div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+			<section className="sticky top-0 z-10 rounded-[24px] border border-slate-200/70 bg-white/90 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition-all dark:border-slate-800 dark:bg-slate-950/70">
+				<div className="flex items-center justify-between p-5">
+					<h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+						Filter options
+					</h3>
+					<button
+						type="button"
+						onClick={() => setShowFilters(!showFilters)}
+						className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+						aria-label={showFilters ? "Collapse filters" : "Expand filters"}
+					>
+						<ChevronDown
+							className="size-4 transition-transform"
+							style={{ transform: showFilters ? "rotate(0deg)" : "rotate(-90deg)" }}
+						/>
+					</button>
+				</div>
+				{showFilters && (
+					<div className="border-t border-slate-200/70 px-5 py-4 dark:border-slate-800">
+						<div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
 							Imported module
@@ -353,6 +374,8 @@ export function ImportSearchView(props: {
 						Try: module = lodash-es, symbol = omit, include = @weliihq/backend and routers/organization.
 					</span>
 				</div>
+					</div>
+				)}
 			</section>
 
 			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -396,17 +419,8 @@ export function ImportSearchView(props: {
 									{formatNumber.format(result.matches.length)} matching import(s)
 								</div>
 							</div>
-							<div className="mt-3 space-y-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-								{formatImportBlocks(result.matches).map((block) => (
-									<div key={block.module} className="rounded-2xl bg-slate-50/90 p-3 dark:bg-slate-900/90">
-										<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-											{block.module}
-										</p>
-										<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
-											<code>{block.code}</code>
-										</pre>
-									</div>
-								))}
+							<div className="mt-3">
+								<ImportDisplay imports={result.matches} showViewToggle={false} />
 							</div>
 						</article>
 					))}
@@ -421,50 +435,3 @@ export function ImportSearchView(props: {
 	);
 }
 
-function formatImportBlocks(matches: VizImport[]) {
-	const grouped = new Map<
-		string,
-		{ names: Set<string>; hasBareImport: boolean }
-	>();
-
-	for (const match of matches) {
-		const current = grouped.get(match.module) ?? {
-			names: new Set<string>(),
-			hasBareImport: false,
-		};
-
-		const importName = match.name || match.declaration;
-		if (importName) {
-			current.names.add(importName);
-		} else {
-			current.hasBareImport = true;
-		}
-
-		grouped.set(match.module, current);
-	}
-
-	return Array.from(grouped.entries()).map(([module, details]) => {
-		const names = Array.from(details.names).sort((left, right) =>
-			left.localeCompare(right),
-		);
-
-		if (!names.length) {
-			return {
-				module,
-				code: `import ${JSON.stringify(module)};`,
-			};
-		}
-
-		const importBody =
-			names.length === 1
-				? `{ ${names[0]} }`
-				: `{
-	${names.join(",\n\t")}
-}`;
-
-		return {
-			module,
-			code: `import ${importBody} from ${JSON.stringify(module)};${details.hasBareImport ? "\nimport \"" + module + "\";" : ""}`,
-		};
-	});
-}

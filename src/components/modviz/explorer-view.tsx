@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { VizImport, VizNode } from "../../../mod/types";
+import type { VizNode } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { ImportDisplay } from "~/components/modviz/import-display";
 import {
 	filterNodesByScope,
 	getWorkspacePackageNames,
@@ -95,8 +96,8 @@ export function ExplorerView(props: {
 	);
 
 	return (
-		<div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+		<div className="flex flex-col gap-6 lg:flex-row">
+			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[35%]">
 				<div className="flex flex-wrap gap-2">
 					{([
 						["all", "All files"],
@@ -167,36 +168,35 @@ export function ExplorerView(props: {
 				</div>
 			</section>
 
-			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[65%] lg:overflow-y-auto">
 				{selectedNode ? (
 					<div className="space-y-6">
-						<div className="flex flex-wrap items-start justify-between gap-4">
-							<div>
-								<p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-300">
-									Selected file
-								</p>
-								<h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
-									{selectedNode.path}
-								</h2>
-								<p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-									{selectedNode.package?.name
-										? `${selectedNode.package.name} • `
-										: ""}
-									{selectedNode.cluster ?? selectedNode.type}
-								</p>
-							</div>
-							<div className="flex flex-wrap gap-2">
-								<Link
-									to="/graph"
-									search={{
-										...defaultGraphSearch,
-										focus: selectedNode.path,
-										scope: selectedNode.path.includes("node_modules")
-											? "external"
-											: "workspace",
-									}}
-									className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-								>
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-300">
+								Selected file
+							</p>
+							<h2 className="mt-2 break-words text-lg font-semibold text-slate-900 dark:text-slate-100 sm:text-xl">
+								{selectedNode.path}
+							</h2>
+							<p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+								{selectedNode.package?.name
+									? `${selectedNode.package.name} • `
+									: ""}
+								{selectedNode.cluster ?? selectedNode.type}
+							</p>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							<Link
+								to="/graph"
+								search={{
+									...defaultGraphSearch,
+									focus: selectedNode.path,
+									scope: selectedNode.path.includes("node_modules")
+										? "external"
+										: "workspace",
+								}}
+								className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+							>
 									<ExternalLink className="size-4" />
 									Open in graph
 								</Link>
@@ -215,7 +215,6 @@ export function ExplorerView(props: {
 									Use as importer filter
 								</Link>
 							</div>
-						</div>
 
 						<div className="grid gap-4 md:grid-cols-3">
 							<Metric label="Direct imports" value={selectedNode.imports.length} />
@@ -224,11 +223,17 @@ export function ExplorerView(props: {
 						</div>
 
 						<div className="grid gap-4 xl:grid-cols-2">
-							<CodeBlockCard
-								title="Imports"
-								description="Grouped into import statements so scanning looks closer to the source file."
-								blocks={formatImportBlocks(selectedNode.imports)}
-							/>
+							<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+								<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+									Imports
+								</h3>
+								<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+									Grouped into import statements so scanning looks closer to the source file.
+								</p>
+								<div className="mt-4">
+									<ImportDisplay imports={selectedNode.imports} emptyMessage="No direct imports recorded for this file." showViewToggle />
+								</div>
+							</div>
 							<ListCard
 								title="Imported by"
 								description="Direct inbound edges into this file."
@@ -256,41 +261,6 @@ function Metric(props: { label: string; value: number }) {
 			<p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">
 				{props.value}
 			</p>
-		</div>
-	);
-}
-
-function CodeBlockCard(props: {
-	title: string;
-	description: string;
-	blocks: Array<{ module: string; code: string }>;
-}) {
-	return (
-		<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-			<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-				{props.title}
-			</h3>
-			<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-				{props.description}
-			</p>
-			<div className="mt-4 space-y-3">
-				{props.blocks.length ? (
-					props.blocks.map((block) => (
-						<div key={block.module} className="rounded-2xl bg-white p-3 dark:bg-slate-950/80">
-							<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								{block.module}
-							</p>
-							<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
-								<code>{block.code}</code>
-							</pre>
-						</div>
-					))
-				) : (
-					<p className="rounded-2xl bg-white px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/80 dark:text-slate-400">
-						No direct imports recorded for this file.
-					</p>
-				)}
-			</div>
 		</div>
 	);
 }
@@ -463,52 +433,4 @@ function flattenFolderPaths(node: TreeNode): string[] {
 function getAncestorPaths(path: string) {
 	const segments = path.split("/").filter(Boolean);
 	return segments.map((_, index) => segments.slice(0, index + 1).join("/"));
-}
-
-function formatImportBlocks(matches: VizImport[]) {
-	const grouped = new Map<
-		string,
-		{ names: Set<string>; hasBareImport: boolean }
-	>();
-
-	for (const match of matches) {
-		const current = grouped.get(match.module) ?? {
-			names: new Set<string>(),
-			hasBareImport: false,
-		};
-
-		const importName = match.name || match.declaration;
-		if (importName) {
-			current.names.add(importName);
-		} else {
-			current.hasBareImport = true;
-		}
-
-		grouped.set(match.module, current);
-	}
-
-	return Array.from(grouped.entries()).map(([module, details]) => {
-		const names = Array.from(details.names).sort((left, right) =>
-			left.localeCompare(right),
-		);
-
-		if (!names.length) {
-			return {
-				module,
-				code: `import ${JSON.stringify(module)};`,
-			};
-		}
-
-		const importBody =
-			names.length === 1
-				? `{ ${names[0]} }`
-				: `{
-	${names.join(",\n\t")}
-}`;
-
-		return {
-			module,
-			code: `import ${importBody} from ${JSON.stringify(module)};${details.hasBareImport ? `\nimport ${JSON.stringify(module)};` : ""}`,
-		};
-	});
 }

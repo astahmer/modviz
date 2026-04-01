@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import { createServerFn } from "@tanstack/react-start";
 import type { ModvizLlmOutput, ModvizOutput, VizNode } from "../../mod/types";
 
@@ -37,8 +36,9 @@ export type ModvizDataBundle = {
 	summary: ModvizDerivedSummary;
 };
 
-const getLlmOutputPath = (graphPath: string) => {
+const getLlmOutputPath = async (graphPath: string) => {
 	if (graphPath.endsWith(".llm.json")) return graphPath;
+	const path = await import("node:path")
 	const parsed = path.parse(graphPath);
 	return path.join(parsed.dir, `${parsed.name}.llm.json`);
 };
@@ -73,15 +73,15 @@ export const getExternalPackageName = (node: VizNode) => {
 		return node.package.name;
 	}
 
-	const marker = `${path.sep}node_modules${path.sep}`;
-	const normalizedPath = node.path.split("\\").join(path.sep);
-	const nodeModulesIndex = normalizedPath.lastIndexOf(marker);
+	// Normalize path to use / as separator for browser compatibility
+	const normalizedPath = node.path.split("\\").join("/");
+	const nodeModulesIndex = normalizedPath.lastIndexOf("/node_modules/");
 	if (nodeModulesIndex === -1) {
 		return "node_modules";
 	}
 
-	const remainder = normalizedPath.slice(nodeModulesIndex + marker.length);
-	const segments = remainder.split(path.sep).filter(Boolean);
+	const remainder = normalizedPath.slice(nodeModulesIndex + "/node_modules/".length);
+	const segments = remainder.split("/").filter(Boolean);
 	const scopeOrName = segments[0];
 	const maybeName = segments[1];
 
@@ -224,7 +224,7 @@ export const buildModvizSummary = (
 export const fetchModvizBundle = createServerFn().handler(async () => {
 	const graphPath = import.meta.env.modvizPath;
 	const graph = readJsonFile<ModvizOutput>(graphPath);
-	const llmPath = getLlmOutputPath(graphPath);
+	const llmPath = await getLlmOutputPath(graphPath);
 	const llm = fs.existsSync(llmPath)
 		? readJsonFile<ModvizLlmOutput>(llmPath)
 		: null;
