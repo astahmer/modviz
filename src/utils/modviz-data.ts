@@ -1,3 +1,4 @@
+import { getRouteApi } from "@tanstack/react-router";
 import type { ModvizLlmOutput, ModvizOutput, VizNode } from "../../mod/types";
 
 export type ModvizScope = "all" | "workspace" | "external";
@@ -289,6 +290,10 @@ const fetchJson = async <T>(pathname: string): Promise<T> => {
 
 export const fetchModvizBundle = () =>
 	fetchJson<ModvizDataBundle>("/api/modviz-bundle");
+
+const rootRouteApi = getRouteApi("__root__");
+
+export const useModvizBundle = () => rootRouteApi.useLoaderData();
 
 export const fetchModvizJsonStatus = () =>
 	fetchJson<ModvizJsonStatus>("/api/json-status");

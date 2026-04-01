@@ -18,12 +18,12 @@ import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/loading-state";
 import {
-	fetchModvizBundle,
 	filterNodesByScope,
 	getNodeGroupingLabel,
 	getWorkspacePackageNames,
 	type ExternalGroupingMode,
 	type ModvizScope,
+	useModvizBundle,
 } from "~/utils/modviz-data";
 import { parseSearchParam } from "~/utils/search-params";
 
@@ -77,12 +77,11 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 export const Route = createFileRoute("/graph")({
 	ssr: false,
 	validateSearch: validateGraphSearch,
-	loader: () => fetchModvizBundle(),
 	component: GraphRoute,
 });
 
 function GraphRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const [settingsOpen, setSettingsOpen] = useState(false);
@@ -259,7 +258,10 @@ function GraphRoute() {
 				settings={layoutSettings}
 				onOpenChange={setSettingsOpen}
 				onSettingsChange={(nextSettings) => updateSearch(nextSettings)}
-				onReset={() => updateSearch(defaultLayoutSettings)}
+				onReset={() => {
+					void updateSearch(defaultLayoutSettings);
+					return defaultLayoutSettings;
+				}}
 			/>
 		</ModvizLayout>
 	);

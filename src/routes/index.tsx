@@ -1,18 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardView } from "~/components/modviz/dashboard-view";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 export const Route = createFileRoute("/")({
 	ssr: false,
-	loader: () => {
-		return fetchModvizBundle();
-	},
 	component: Home,
 });
 
 function Home() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 
 	return (
 		<ModvizLayout

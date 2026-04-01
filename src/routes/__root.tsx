@@ -2,11 +2,14 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import * as React from "react";
 import appCss from "~/styles/app.css?url";
+import { fetchModvizBundle } from "~/utils/modviz-data";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
 import { seo } from "../utils/seo";
 
 export const Route = createRootRoute({
+	ssr: false,
+	loader: () => fetchModvizBundle(),
 	head: () => ({
 		meta: [
 			{

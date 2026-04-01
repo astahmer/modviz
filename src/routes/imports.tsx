@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { ImportSearchView } from "~/components/modviz/import-search-view";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 const importSearchSchema = z.object({
 	module: z.string().catch(""),
@@ -17,12 +17,11 @@ const importSearchSchema = z.object({
 export const Route = createFileRoute("/imports")({
 	ssr: false,
 	validateSearch: (search) => importSearchSchema.parse(search),
-	loader: () => fetchModvizBundle(),
 	component: ImportsRoute,
 });
 
 function ImportsRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 

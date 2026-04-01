@@ -1,16 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CompareView } from "~/components/modviz/compare-view";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 export const Route = createFileRoute("/compare")({
 	ssr: false,
-	loader: () => fetchModvizBundle(),
 	component: CompareRoute,
 });
 
 function CompareRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 
 	return (
 		<ModvizLayout

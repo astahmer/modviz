@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { ExplorerView } from "~/components/modviz/explorer-view";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 const explorerSearchSchema = z.object({
 	q: z.string().catch(""),
@@ -13,12 +13,11 @@ const explorerSearchSchema = z.object({
 export const Route = createFileRoute("/explorer")({
 	ssr: false,
 	validateSearch: (search) => explorerSearchSchema.parse(search),
-	loader: () => fetchModvizBundle(),
 	component: ExplorerRoute,
 });
 
 function ExplorerRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 

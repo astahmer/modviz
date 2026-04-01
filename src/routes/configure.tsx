@@ -4,16 +4,15 @@ import { Copy, Play, LoaderCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 export const Route = createFileRoute("/configure")({
 	ssr: false,
-	loader: () => fetchModvizBundle(),
 	component: ConfigureRoute,
 });
 
 function ConfigureRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 	const [isRunning, setIsRunning] = useState(false);
 

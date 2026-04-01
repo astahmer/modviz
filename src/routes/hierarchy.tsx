@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { LoadingState } from "~/components/ui/loading-state";
-import { fetchModvizBundle } from "~/utils/modviz-data";
+import { useModvizBundle } from "~/utils/modviz-data";
 
 const Flamegraph = lazy(() =>
 	import("~/components/graph/flamegraph").then((module) => ({
@@ -34,12 +34,11 @@ const validateHierarchySearch = (search: Record<string, unknown>): HierarchySear
 export const Route = createFileRoute("/hierarchy")({
 	ssr: false,
 	validateSearch: validateHierarchySearch,
-	loader: () => fetchModvizBundle(),
 	component: HierarchyRoute,
 });
 
 function HierarchyRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const entryNodeId =

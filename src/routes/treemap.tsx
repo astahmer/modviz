@@ -6,7 +6,7 @@ import { colors } from "~/components/graph/common/colors";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { fetchModvizBundle, getWorkspacePackageNames } from "~/utils/modviz-data";
+import { getWorkspacePackageNames, useModvizBundle } from "~/utils/modviz-data";
 import { parseSearchParam } from "~/utils/search-params";
 import {
 	buildTreemapModel,
@@ -34,7 +34,6 @@ const validateTreemapSearch = (search: Record<string, unknown>): TreemapSearch =
 export const Route = createFileRoute("/treemap")({
 	ssr: false,
 	validateSearch: validateTreemapSearch,
-	loader: () => fetchModvizBundle(),
 	component: TreemapRoute,
 });
 
@@ -250,7 +249,7 @@ const getExplorerSearchForNode = (
 };
 
 function TreemapRoute() {
-	const bundle = Route.useLoaderData();
+	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
