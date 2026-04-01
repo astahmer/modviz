@@ -14,6 +14,7 @@ function SummaryRoute() {
 
 	return (
 		<ModvizLayout
+			projectTitle={bundle.projectTitle}
 			title="Summary"
 			description="Tabular views for hotspots, direct import fan-in and fan-out, cluster sizes, and package-level distribution."
 		>

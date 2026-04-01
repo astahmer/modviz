@@ -30,9 +30,11 @@ export function ModvizLayout(props: PropsWithChildren<{
 	title?: string;
 	description?: string;
 	actions?: ReactNode;
+	projectTitle?: string | null;
 }>) {
 	const { isRefreshing, status } = useJsonUpdates();
 	const graphFileName = status?.graphPath.split(/[\\/]/).at(-1) ?? "modviz.json";
+	const projectTitle = props.projectTitle ?? "Project";
 	const liveSyncLabel = isRefreshing ? "Refreshing graph data" : "Live JSON sync";
 	const liveSyncTone = isRefreshing
 		? "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200"
@@ -46,7 +48,7 @@ export function ModvizLayout(props: PropsWithChildren<{
 						<div className="space-y-2">
 							<div>
 								<h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-									Modviz - {"Project Title"}
+									Modviz - {projectTitle}
 								</h1>
 								<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
 									{props.description}

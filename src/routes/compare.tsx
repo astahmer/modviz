@@ -14,6 +14,7 @@ function CompareRoute() {
 
 	return (
 		<ModvizLayout
+			projectTitle={bundle.projectTitle}
 			title="Snapshot Compare"
 			description="Compare the currently served graph with another modviz JSON snapshot to see which modules, edges, and packages changed."
 		>

@@ -85,11 +85,11 @@ export function SummaryView(props: { bundle: ModvizDataBundle }) {
 				<MetricCard label="Total nodes" value={summary.overview.totalNodes} note={`${formatNumber.format(summary.overview.workspaceNodes)} workspace nodes and ${formatNumber.format(summary.overview.externalNodes)} external nodes are available in the loaded graph.`} />
 				<MetricCard label="Entrypoints" value={summary.overview.entrypoints} note={graph.metadata.entrypoints.join(" • ") || "No entrypoint metadata present."} />
 				<MetricCard label="Workspace packages" value={summary.overview.workspacePackages} note="Monorepo packages discovered in metadata and reused by the filters in the import-search view." />
-				<MetricCard label="Barrel files" value={summary.overview.barrelFiles} note={summary.hasLlm ? "The LLM companion report is available, so hotspot tables use reachable-module counts." : "No LLM companion report was found, so hotspot tables fall back to direct graph counts."} />
+				<MetricCard label="Barrel files" value={summary.overview.barrelFiles} note={summary.hasLlm ? "The LLM companion report is available, so hotspot tables use companion-report reachability." : "No LLM companion report was found, so hotspot tables use graph-derived reachable-module counts."} />
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-2">
-				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Fallback ranking based on direct outgoing import count."} rows={summary.hotspots} valueLabel={summary.hasLlm ? "Reachable" : "Outgoing"} getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Graph-derived ranking based on how many unique modules each file can reach through its import chain."} rows={summary.hotspots} valueLabel="Reachable" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
 				<SummaryTable title="Most imported by" description="Files or modules with the highest number of direct importers." rows={summary.topImportedBy} valueLabel="Inbound" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
 			</section>
 

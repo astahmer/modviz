@@ -24,6 +24,7 @@ function ExplorerRoute() {
 
 	return (
 		<ModvizLayout
+			projectTitle={bundle.projectTitle}
 			title="File Explorer"
 			description="Browse the monorepo or node_modules tree, select any file, then inspect its direct imports and importers without opening the force-directed graph."
 		>

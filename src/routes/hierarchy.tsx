@@ -55,6 +55,7 @@ function HierarchyRoute() {
 
 	return (
 		<ModvizLayout
+			projectTitle={bundle.projectTitle}
 			title="Hierarchy"
 			description="Pruned flamegraph for reading dependency hierarchy without freezing the browser. Depth and child limits are URL-backed so you can tune them per investigation."
 		>

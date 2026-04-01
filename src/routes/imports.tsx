@@ -28,6 +28,7 @@ function ImportsRoute() {
 
 	return (
 		<ModvizLayout
+			projectTitle={bundle.projectTitle}
 			title="Import Search"
 			description="Search by imported module or symbol, then scope the results to monorepo packages, folders, or specific files with include and exclude filters."
 		>

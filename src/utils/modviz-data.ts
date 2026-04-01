@@ -31,6 +31,7 @@ export type ModvizDerivedSummary = {
 export type ModvizDataBundle = {
 	graph: ModvizOutput;
 	llm: ModvizLlmOutput | null;
+	projectTitle: string | null;
 	summary: ModvizDerivedSummary;
 };
 
@@ -135,6 +136,39 @@ const sortSummaryItems = (items: SummaryListItem[]) =>
 		})
 		.slice(0, 8);
 
+const buildReachableCountByPath = (nodes: VizNode[]) => {
+	const adjacency = new Map(nodes.map((node) => [node.path, node.importees]));
+	const reachableCountByPath = new Map<string, number>();
+
+	for (const node of nodes) {
+		const visited = new Set<string>();
+		const stack = [...node.importees];
+
+		while (stack.length > 0) {
+			const nextPath = stack.pop();
+			if (!nextPath || visited.has(nextPath)) {
+				continue;
+			}
+
+			visited.add(nextPath);
+			const importees = adjacency.get(nextPath);
+			if (!importees) {
+				continue;
+			}
+
+			for (const importeePath of importees) {
+				if (importeePath !== node.path && !visited.has(importeePath)) {
+					stack.push(importeePath);
+				}
+			}
+		}
+
+		reachableCountByPath.set(node.path, visited.size);
+	}
+
+	return reachableCountByPath;
+};
+
 export const buildModvizSummary = (
 	graph: ModvizOutput,
 	llm: ModvizLlmOutput | null,
@@ -151,6 +185,7 @@ export const buildModvizSummary = (
 	const externalPackageCounts = countBy(externalNodes, (node) =>
 		getExternalPackageName(node),
 	);
+	const reachableCountByPath = buildReachableCountByPath(graph.nodes);
 	const clusterCounts = countBy(graph.nodes, (node) => {
 		return node.cluster ?? node.package?.name ?? node.type ?? "unclassified";
 	});
@@ -192,10 +227,17 @@ export const buildModvizSummary = (
 					label: hotspot.displayPath,
 					path: hotspot.path,
 					value: hotspot.reachableModulesCount,
-					description: `${hotspot.directImporterCount} direct importers`,
+					description: `${hotspot.reachableModulesCount} transitive imports • ${hotspot.directImporterCount} direct importers`,
 				})),
 			)
-		: topImporters;
+		: sortSummaryItems(
+				[...graph.nodes].map((node) => ({
+					label: node.name,
+					path: node.path,
+					value: reachableCountByPath.get(node.path) ?? 0,
+					description: `${reachableCountByPath.get(node.path) ?? 0} transitive imports • ${node.importees.length} direct imports • ${node.importedBy.length} inbound imports`,
+				})),
+			);
 
 	return {
 		overview: {

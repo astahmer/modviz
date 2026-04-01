@@ -70,7 +70,7 @@ function ConfigureRoute() {
 	const cmd = buildCommand();
 
 	return (
-		<ModvizLayout>
+		<ModvizLayout projectTitle={bundle.projectTitle}>
 			<div className="max-w-3xl space-y-6">
 				<div>
 					<h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">

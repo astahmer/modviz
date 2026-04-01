@@ -170,7 +170,7 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 
 			{/* Data-driven rankings - actionable insights */}
 			<section className="grid gap-4 xl:grid-cols-3">
-				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Fallback ranking based on direct outgoing imports."} items={summary.hotspots.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Graph-derived hotspots ranked by transitive reach."} items={summary.hotspots.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
 				<RankingList title="Most imported by" description="Files or modules with the most inbound edges." items={summary.topImportedBy.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
 				<RankingList title="Top clusters" description="Largest package or cluster groupings in the loaded graph." items={summary.topClusters.slice(0, 6)} getLink={(item) => ({ to: "/graph", search: { cluster: item.label, externalGrouping: "package" } })} />
 			</section>

@@ -45,6 +45,46 @@ const readJsonFile = <T>(filePath: string): T => {
 	}
 };
 
+const findClosestPackageJson = (startPath: string) => {
+	let currentPath = startPath;
+
+	while (true) {
+		const packageJsonPath = path.join(currentPath, "package.json");
+		if (fs.existsSync(packageJsonPath)) {
+			return packageJsonPath;
+		}
+
+		const parentPath = path.dirname(currentPath);
+		if (parentPath === currentPath) {
+			return null;
+		}
+
+		currentPath = parentPath;
+	}
+};
+
+const resolveProjectTitle = (graph: ModvizOutput) => {
+	const firstEntrypoint = graph.metadata.entrypoints[0];
+	if (!firstEntrypoint) {
+		return graph.metadata.packages[0]?.name ?? null;
+	}
+
+	const entrypointPath = path.isAbsolute(firstEntrypoint)
+		? firstEntrypoint
+		: path.resolve(graph.metadata.basePath, firstEntrypoint);
+	const packageJsonPath = findClosestPackageJson(path.dirname(entrypointPath));
+	if (!packageJsonPath) {
+		return graph.metadata.packages[0]?.name ?? null;
+	}
+
+	try {
+		const packageJson = readJsonFile<{ name?: string; title?: string }>(packageJsonPath);
+		return packageJson.title ?? packageJson.name ?? graph.metadata.packages[0]?.name ?? null;
+	} catch {
+		return graph.metadata.packages[0]?.name ?? null;
+	}
+};
+
 export const loadModvizBundle = (): ModvizDataBundle => {
 	const graphPath = resolveGraphPath();
 	const graph = readJsonFile<ModvizOutput>(graphPath);
@@ -56,9 +96,12 @@ export const loadModvizBundle = (): ModvizDataBundle => {
 	return {
 		graph,
 		llm,
+		projectTitle: resolveProjectTitle(graph),
 		summary: buildModvizSummary(graph, llm),
 	};
 };
+
+export { resolveProjectTitle };
 
 export const getModvizJsonStatus = (): ModvizJsonStatus => {
 	const graphPath = resolveGraphPath();
