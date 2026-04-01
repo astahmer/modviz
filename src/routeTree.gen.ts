@@ -11,16 +11,23 @@
 import { createServerRootRoute } from '@tanstack/react-start/server'
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TreemapRouteImport } from './routes/treemap'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as ImportsRouteImport } from './routes/imports'
 import { Route as HierarchyRouteImport } from './routes/hierarchy'
 import { Route as GraphRouteImport } from './routes/graph'
 import { Route as ExplorerRouteImport } from './routes/explorer'
+import { Route as ConfigureRouteImport } from './routes/configure'
 import { Route as IndexRouteImport } from './routes/index'
 import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
 
 const rootServerRouteImport = createServerRootRoute()
 
+const TreemapRoute = TreemapRouteImport.update({
+  id: '/treemap',
+  path: '/treemap',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SummaryRoute = SummaryRouteImport.update({
   id: '/summary',
   path: '/summary',
@@ -46,6 +53,11 @@ const ExplorerRoute = ExplorerRouteImport.update({
   path: '/explorer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfigureRoute = ConfigureRouteImport.update({
+  id: '/configure',
+  path: '/configure',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -59,57 +71,77 @@ const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
   '/summary': typeof SummaryRoute
+  '/treemap': typeof TreemapRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
   '/summary': typeof SummaryRoute
+  '/treemap': typeof TreemapRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
   '/summary': typeof SummaryRoute
+  '/treemap': typeof TreemapRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/configure'
     | '/explorer'
     | '/graph'
     | '/hierarchy'
     | '/imports'
     | '/summary'
+    | '/treemap'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explorer' | '/graph' | '/hierarchy' | '/imports' | '/summary'
+  to:
+    | '/'
+    | '/configure'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
+    | '/treemap'
   id:
     | '__root__'
     | '/'
+    | '/configure'
     | '/explorer'
     | '/graph'
     | '/hierarchy'
     | '/imports'
     | '/summary'
+    | '/treemap'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConfigureRoute: typeof ConfigureRoute
   ExplorerRoute: typeof ExplorerRoute
   GraphRoute: typeof GraphRoute
   HierarchyRoute: typeof HierarchyRoute
   ImportsRoute: typeof ImportsRoute
   SummaryRoute: typeof SummaryRoute
+  TreemapRoute: typeof TreemapRoute
 }
 export interface FileServerRoutesByFullPath {
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
@@ -135,6 +167,13 @@ export interface RootServerRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/treemap': {
+      id: '/treemap'
+      path: '/treemap'
+      fullPath: '/treemap'
+      preLoaderRoute: typeof TreemapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/summary': {
       id: '/summary'
       path: '/summary'
@@ -170,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExplorerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configure': {
+      id: '/configure'
+      path: '/configure'
+      fullPath: '/configure'
+      preLoaderRoute: typeof ConfigureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -193,11 +239,13 @@ declare module '@tanstack/react-start/server' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConfigureRoute: ConfigureRoute,
   ExplorerRoute: ExplorerRoute,
   GraphRoute: GraphRoute,
   HierarchyRoute: HierarchyRoute,
   ImportsRoute: ImportsRoute,
   SummaryRoute: SummaryRoute,
+  TreemapRoute: TreemapRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

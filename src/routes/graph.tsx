@@ -69,28 +69,32 @@ const parseNumberSearchValue = (value: unknown, fallback: number) => {
 	return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => ({
-	adjustSizes: parseBooleanSearchValue(search.adjustSizes, false),
-	cluster: typeof search.cluster === "string" ? search.cluster : "",
-	externalGrouping:
-		search.externalGrouping === "combined" ? "combined" : "package",
-	focus: typeof search.focus === "string" ? search.focus : "",
-	gravity: parseNumberSearchValue(search.gravity, 0),
-	hideClusterLabels: parseBooleanSearchValue(search.hideClusterLabels, false),
-	iterations: Math.round(parseNumberSearchValue(search.iterations, 0)),
-	linLogMode: parseBooleanSearchValue(search.linLogMode, false),
-	nodeSizeScale: parseNumberSearchValue(search.nodeSizeScale, 0),
-	outboundAttractionDistribution: parseBooleanSearchValue(
-		search.outboundAttractionDistribution,
-		true,
-	),
-	scalingRatio: parseNumberSearchValue(search.scalingRatio, 0),
-	scope:
-		search.scope === "workspace" || search.scope === "external"
-			? search.scope
-			: "all",
-	strongGravityMode: parseBooleanSearchValue(search.strongGravityMode, false),
-});
+const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
+	// Calculate defaults based on node count from the loader data
+	const defaults = getDefaultGraphLayoutSettings(3961); // This will be updated dynamically in the component
+	return {
+		adjustSizes: parseBooleanSearchValue(search.adjustSizes, defaults.adjustSizes),
+		cluster: typeof search.cluster === "string" ? search.cluster : "",
+		externalGrouping:
+			search.externalGrouping === "combined" ? "combined" : "package",
+		focus: typeof search.focus === "string" ? search.focus : "",
+		gravity: parseNumberSearchValue(search.gravity, defaults.gravity),
+		hideClusterLabels: parseBooleanSearchValue(search.hideClusterLabels, defaults.hideClusterLabels),
+		iterations: Math.round(parseNumberSearchValue(search.iterations, defaults.iterations)),
+		linLogMode: parseBooleanSearchValue(search.linLogMode, defaults.linLogMode),
+		nodeSizeScale: parseNumberSearchValue(search.nodeSizeScale, defaults.nodeSizeScale),
+		outboundAttractionDistribution: parseBooleanSearchValue(
+			search.outboundAttractionDistribution,
+			defaults.outboundAttractionDistribution,
+		),
+		scalingRatio: parseNumberSearchValue(search.scalingRatio, defaults.scalingRatio),
+		scope:
+			search.scope === "workspace" || search.scope === "external"
+				? search.scope
+				: "all",
+		strongGravityMode: parseBooleanSearchValue(search.strongGravityMode, defaults.strongGravityMode),
+	};
+};
 
 export const Route = createFileRoute("/graph")({
 	ssr: false,

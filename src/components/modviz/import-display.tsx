@@ -69,17 +69,10 @@ export function ImportDisplay(props: ImportDisplayProps) {
 			)}
 
 			{viewMode === "code" ? (
-				<div className="space-y-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-					{blocks.map((block) => (
-						<div key={block.module} className="rounded-2xl bg-slate-50/90 p-3 dark:bg-slate-900/90">
-							<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								{block.module}
-							</p>
-							<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
-								<code>{block.code}</code>
-							</pre>
-						</div>
-					))}
+				<div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+					<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
+						<code>{blocks[0]?.code}</code>
+					</pre>
 				</div>
 			) : (
 				<div className="overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-slate-800">
@@ -131,30 +124,39 @@ function formatImportBlocks(matches: VizImport[]) {
 		grouped.set(match.module, current);
 	}
 
-	return Array.from(grouped.entries()).map(([module, details]) => {
-		const names = Array.from(details.names).sort((left, right) =>
-			left.localeCompare(right),
-		);
+	const importLines: string[] = [];
 
-		if (!names.length) {
-			return {
-				module,
-				code: `import ${JSON.stringify(module)};`,
-			};
-		}
+	Array.from(grouped.entries())
+		.sort(([a], [b]) => a.localeCompare(b))
+		.forEach(([module, details]) => {
+			const names = Array.from(details.names).sort((left, right) =>
+				left.localeCompare(right),
+			);
 
-		const importBody =
-			names.length === 1
-				? `{ ${names[0]} }`
-				: `{
+			if (!names.length) {
+				importLines.push(`import ${JSON.stringify(module)};`);
+				return;
+			}
+
+			const importBody =
+				names.length === 1
+					? `{ ${names[0]} }`
+					: `{
 	${names.join(",\n\t")}
 }`;
 
-		return {
-			module,
-			code: `import ${importBody} from ${JSON.stringify(module)};${details.hasBareImport ? "\nimport \"" + module + "\";" : ""}`,
-		};
-	});
+			importLines.push(`import ${importBody} from ${JSON.stringify(module)};`);
+			if (details.hasBareImport) {
+				importLines.push(`import ${JSON.stringify(module)};`);
+			}
+		});
+
+	return [
+		{
+			module: "imports",
+			code: importLines.join("\n"),
+		},
+	];
 }
 
 function extractNamesFromCode(code: string): string[] {

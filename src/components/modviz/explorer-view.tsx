@@ -96,8 +96,8 @@ export function ExplorerView(props: {
 	);
 
 	return (
-		<div className="flex flex-col gap-6 lg:flex-row">
-			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[35%]">
+		<div className="flex h-screen flex-col gap-6 lg:flex-row lg:h-auto">
+			<section className="flex flex-col rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[35%]">
 				<div className="flex flex-wrap gap-2">
 					{([
 						["all", "All files"],
@@ -137,8 +137,8 @@ export function ExplorerView(props: {
 						Expand
 					</Button>
 				</div>
-				<div className="mt-4 max-h-[65vh] overflow-auto pr-1">
-					<div className="space-y-1">
+				<div className="mt-4 flex-1 overflow-auto">
+					<div className="space-y-1 pr-2">
 						{visibleTree.children.map((child) => (
 							<FileTreeItem
 								key={child.id}
@@ -168,7 +168,7 @@ export function ExplorerView(props: {
 				</div>
 			</section>
 
-			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[65%] lg:overflow-y-auto">
+			<section className="flex flex-col rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[65%] lg:overflow-y-auto">
 				{selectedNode ? (
 					<div className="space-y-6">
 						<div>
@@ -222,25 +222,16 @@ export function ExplorerView(props: {
 							<Metric label="Exports" value={selectedNode.exports.length} />
 						</div>
 
-						<div className="grid gap-4 xl:grid-cols-2">
-							<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-								<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-									Imports
-								</h3>
-								<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-									Grouped into import statements so scanning looks closer to the source file.
-								</p>
-								<div className="mt-4">
-									<ImportDisplay imports={selectedNode.imports} emptyMessage="No direct imports recorded for this file." showViewToggle />
-								</div>
-							</div>
-							<ListCard
-								title="Imported by"
-								description="Direct inbound edges into this file."
+						<CollapsibleSection title="Imports" description="Grouped into import statements so scanning looks closer to the source file.">
+							<ImportDisplay imports={selectedNode.imports} emptyMessage="No direct imports recorded for this file." showViewToggle />
+						</CollapsibleSection>
+
+						<CollapsibleSection title="Imported by" description="Direct inbound edges into this file.">
+							<ImportedByCard
 								items={selectedNode.importedBy}
 								onSelect={(path) => props.onSearchChange({ selected: path })}
 							/>
-						</div>
+						</CollapsibleSection>
 					</div>
 				) : (
 					<div className="flex min-h-[24rem] items-center justify-center text-sm text-slate-500 dark:text-slate-400">
@@ -265,39 +256,58 @@ function Metric(props: { label: string; value: number }) {
 	);
 }
 
-function ListCard(props: {
+function CollapsibleSection(props: {
 	title: string;
 	description: string;
+	children: React.ReactNode;
+}) {
+	const [isOpen, setIsOpen] = useState(true);
+	return (
+		<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+			<button
+				onClick={() => setIsOpen(!isOpen)}
+				className="flex w-full items-center gap-3 text-left"
+			>
+				<ChevronDown
+					className={`size-5 shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`}
+				/>
+				<div className="flex-1">
+					<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+						{props.title}
+					</h3>
+					<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+						{props.description}
+					</p>
+				</div>
+			</button>
+			{isOpen && <div className="mt-4">{props.children}</div>}
+		</div>
+	);
+}
+
+function ImportedByCard(props: {
 	items: string[];
 	onSelect: (path: string) => void;
 }) {
 	return (
-		<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-			<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-				{props.title}
-			</h3>
-			<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-				{props.description}
-			</p>
-			<div className="mt-4 max-h-[28rem] space-y-2 overflow-auto pr-1">
-				{props.items.length ? (
-					props.items.map((item) => (
-						<button
-							key={item}
-							type="button"
-							onClick={() => props.onSelect(item)}
-							className="flex w-full items-center gap-2 rounded-2xl bg-white px-3 py-3 text-left text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-sky-500/10 dark:hover:text-sky-200"
-						>
-							<FileCode2 className="size-4 shrink-0" />
-							<span className="truncate">{item}</span>
-						</button>
-					))
-				) : (
-					<p className="rounded-2xl bg-white px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/80 dark:text-slate-400">
-						No inbound importers recorded for this file.
-					</p>
-				)}
-			</div>
+		<div className="max-h-[28rem] space-y-2 overflow-auto pr-1">
+			{props.items.length ? (
+				props.items.map((item) => (
+					<button
+						key={item}
+						type="button"
+						onClick={() => props.onSelect(item)}
+						className="flex w-full items-center gap-2 rounded-2xl bg-white px-3 py-3 text-left text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-sky-500/10 dark:hover:text-sky-200"
+					>
+						<FileCode2 className="size-4 shrink-0" />
+						<span className="truncate">{item}</span>
+					</button>
+				))
+			) : (
+				<p className="rounded-2xl bg-white px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/80 dark:text-slate-400">
+					No inbound importers recorded for this file.
+				</p>
+			)}
 		</div>
 	);
 }
