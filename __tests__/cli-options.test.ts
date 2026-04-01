@@ -50,6 +50,26 @@ test("parseCliArgs supports report subcommand and named snapshot flags", () => {
 	expect(report.flags.packageQuery).toBe("zod");
 });
 
+test("parseCliArgs supports space-separated option values and no-open", () => {
+	const parsed = parseCliArgs([
+		"analyze",
+		"src/index.ts",
+		"--port",
+		"4010",
+		"--output-file",
+		"out/modviz.json",
+		"--package",
+		"@scope/pkg",
+		"--no-open",
+	]);
+
+	expect(parsed.entryFile).toBe("src/index.ts");
+	expect(parsed.flags.port).toBe("4010");
+	expect(parsed.flags.outputFile).toBe("out/modviz.json");
+	expect(parsed.flags.packageQuery).toBe("@scope/pkg");
+	expect(parsed.flags.open).toBe(false);
+});
+
 test("validateCliArgs rejects invalid numeric options", () => {
 	const invalidPort = parseCliArgs(["src/index.ts", "--port=nope"]);
 	expect(validateCliArgs(invalidPort)).toBe("Invalid --port value: nope");

@@ -1,4 +1,4 @@
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import type { ModvizDataBundle } from "~/utils/modviz-data";
 import type { VizImport, VizNode } from "../../../mod/types";
@@ -96,7 +96,6 @@ export function ImportSearchView(props: {
 	) => void;
 }) {
 	const { graph } = props.bundle;
-	const [showFilters, setShowFilters] = useState(true);
 	const {
 		exclude: excludeSources,
 		include: includeSources,
@@ -233,154 +232,147 @@ export function ImportSearchView(props: {
 
 	return (
 		<div className="space-y-6">
-			<section className="sticky top-0 z-10 rounded-[24px] border border-slate-200/70 bg-white/90 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition-all dark:border-slate-800 dark:bg-slate-950/70">
-				<div className="flex items-center justify-between p-5">
+			<details
+				open
+				className="group sticky top-0 z-10 rounded-[24px] border border-slate-200/70 bg-white/90 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition-all dark:border-slate-800 dark:bg-slate-950/70"
+			>
+				<summary className="flex cursor-pointer list-none items-center justify-between p-5">
 					<h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
 						Filter options
 					</h3>
-					<button
-						type="button"
-						onClick={() => setShowFilters(!showFilters)}
-						className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-						aria-label={showFilters ? "Collapse filters" : "Expand filters"}
-					>
-						<ChevronDown
-							className="size-4 transition-transform"
-							style={{ transform: showFilters ? "rotate(0deg)" : "rotate(-90deg)" }}
-						/>
-					</button>
-				</div>
-				{showFilters && (
-					<div className="border-t border-slate-200/70 px-5 py-4 dark:border-slate-800">
-						<div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Imported module
-						</label>
-						<Input
-							placeholder="lodash-es, ./router, @weliihq/backend..."
-							value={moduleQuery}
-							onChange={(event) =>
-								updateSearch({ module: event.currentTarget.value, preset: "" })
-							}
-						/>
-					</div>
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Imported symbol
-						</label>
-						<Input
-							placeholder="omit, mapValues, OrganizationRouter..."
-							value={symbolQuery}
-							onChange={(event) =>
-								updateSearch({ symbol: event.currentTarget.value, preset: "" })
-							}
-						/>
-					</div>
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Match mode
-						</label>
-						<select
-							className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-							value={matchMode}
-							onChange={(event) =>
-								updateSearch({
-									mode: event.currentTarget.value as MatchMode,
-									preset: "",
-								})
-							}
-						>
-							<option value="contains">contains</option>
-							<option value="exact">exact</option>
-							<option value="regex">regex</option>
-						</select>
-					</div>
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Target scope
-						</label>
-						<select
-							className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-							value={targetScope}
-							onChange={(event) =>
-								updateSearch({
-									scope: event.currentTarget.value as TargetScope,
-									preset: "",
-								})
-							}
-						>
-							<option value="all">all imports</option>
-							<option value="workspace">workspace or monorepo imports</option>
-							<option value="external">external package imports</option>
-						</select>
-					</div>
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Only imported from
-						</label>
-						<textarea
-							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-							placeholder="@weliihq/backend\nrouters/organization"
-							value={includeSources}
-							onChange={(event) =>
-								updateSearch({ include: event.currentTarget.value, preset: "" })
-							}
-						/>
-						<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-							Regex helpers: use <code>routers/organization</code>, <code>(router|service)</code>, or <code>^apps/backend/</code> when match mode is regex.
-						</p>
-					</div>
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
-							Exclude imported from
-						</label>
-						<textarea
-							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-							placeholder="test, stories, generated"
-							value={excludeSources}
-							onChange={(event) =>
-								updateSearch({ exclude: event.currentTarget.value, preset: "" })
-							}
-						/>
-					</div>
-				</div>
-				<div className="mt-4 flex flex-wrap gap-2">
-					{presets.map((presetItem) => (
-						<Button
-							key={presetItem.id}
-							variant={preset === presetItem.id ? "default" : "outline"}
-							size="sm"
-							onClick={presetItem.apply}
-						>
-							{presetItem.label}
-						</Button>
-					))}
-				</div>
-				<div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
-					<Button
-						variant="outline"
-						onClick={() => {
-							updateSearch({
-								module: "",
-								symbol: "",
-								include: "",
-								exclude: "",
-								mode: "contains",
-								scope: "all",
-								preset: "",
-							});
-						}}
-					>
-						Reset filters
-					</Button>
-					<span>
-						Try: module = lodash-es, symbol = omit, include = @weliihq/backend and routers/organization.
+					<span className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+						<ChevronDown className="size-4 -rotate-90 transition-transform group-open:rotate-0" />
 					</span>
-				</div>
+				</summary>
+				<div className="border-t border-slate-200/70 px-5 py-4 dark:border-slate-800">
+					<div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Imported module
+							</label>
+							<Input
+								placeholder="lodash-es, ./router, @weliihq/backend..."
+								value={moduleQuery}
+								onChange={(event) =>
+									updateSearch({ module: event.currentTarget.value, preset: "" })
+								}
+							/>
+						</div>
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Imported symbol
+							</label>
+							<Input
+								placeholder="omit, mapValues, OrganizationRouter..."
+								value={symbolQuery}
+								onChange={(event) =>
+									updateSearch({ symbol: event.currentTarget.value, preset: "" })
+								}
+							/>
+						</div>
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Match mode
+							</label>
+							<select
+								className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+								value={matchMode}
+								onChange={(event) =>
+									updateSearch({
+										mode: event.currentTarget.value as MatchMode,
+										preset: "",
+									})
+								}
+							>
+								<option value="contains">contains</option>
+								<option value="exact">exact</option>
+								<option value="regex">regex</option>
+							</select>
+						</div>
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Target scope
+							</label>
+							<select
+								className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+								value={targetScope}
+								onChange={(event) =>
+									updateSearch({
+										scope: event.currentTarget.value as TargetScope,
+										preset: "",
+									})
+								}
+							>
+								<option value="all">all imports</option>
+								<option value="workspace">workspace or monorepo imports</option>
+								<option value="external">external package imports</option>
+							</select>
+						</div>
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Only imported from
+							</label>
+							<textarea
+								className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+								placeholder="@weliihq/backend\nrouters/organization"
+								value={includeSources}
+								onChange={(event) =>
+									updateSearch({ include: event.currentTarget.value, preset: "" })
+								}
+							/>
+							<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+								Regex helpers: use <code>routers/organization</code>, <code>(router|service)</code>, or <code>^apps/backend/</code> when match mode is regex.
+							</p>
+						</div>
+						<div className="space-y-2">
+							<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
+								Exclude imported from
+							</label>
+							<textarea
+								className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+								placeholder="test, stories, generated"
+								value={excludeSources}
+								onChange={(event) =>
+									updateSearch({ exclude: event.currentTarget.value, preset: "" })
+								}
+							/>
+						</div>
 					</div>
-				)}
-			</section>
+					<div className="mt-4 flex flex-wrap gap-2">
+						{presets.map((presetItem) => (
+							<Button
+								key={presetItem.id}
+								variant={preset === presetItem.id ? "default" : "outline"}
+								size="sm"
+								onClick={presetItem.apply}
+							>
+								{presetItem.label}
+							</Button>
+						))}
+					</div>
+					<div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
+						<Button
+							variant="outline"
+							onClick={() => {
+								updateSearch({
+									module: "",
+									symbol: "",
+									include: "",
+									exclude: "",
+									mode: "contains",
+									scope: "all",
+									preset: "",
+								});
+							}}
+						>
+							Reset filters
+						</Button>
+						<span>
+							Try: module = lodash-es, symbol = omit, include = @weliihq/backend and routers/organization.
+						</span>
+					</div>
+				</div>
+			</details>
 
 			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 				<div className="flex flex-wrap items-center justify-between gap-4">

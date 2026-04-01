@@ -1,12 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { VizNode } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ImportDisplay } from "~/components/modviz/import-display";
 import {
 	filterNodesByScope,
+	getNodeScope,
 	getWorkspacePackageNames,
 	type ModvizDataBundle,
 	type ModvizScope,
@@ -79,19 +80,21 @@ export function ExplorerView(props: {
 				null,
 		[props.search.selected, scopedNodes],
 	);
-	const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
-		new Set(selectedNode ? getAncestorPaths(selectedNode.path) : []),
+	const [manuallyExpandedPaths, setManuallyExpandedPaths] = useState<Set<string>>(
+		() => new Set(),
 	);
-
-	useEffect(() => {
-		if (!selectedNode) {
-			return;
-		}
-
-		setExpandedPaths(
-			(previous) => new Set([...previous, ...getAncestorPaths(selectedNode.path)]),
-		);
-	}, [selectedNode]);
+	const expandedPaths = useMemo(
+		() =>
+			new Set([
+				...manuallyExpandedPaths,
+				...(selectedNode ? getAncestorPaths(selectedNode.path) : []),
+			]),
+		[manuallyExpandedPaths, selectedNode],
+	);
+	const selectedNodeScope =
+		selectedNode == null
+			? "workspace"
+			: getNodeScope(selectedNode, workspacePackageNames);
 
 	const normalizedQuery = props.search.q.trim().toLowerCase();
 	const visibleTree = useMemo(
@@ -128,14 +131,14 @@ export function ExplorerView(props: {
 					/>
 					<Button
 						variant="outline"
-						onClick={() => setExpandedPaths(new Set())}
+						onClick={() => setManuallyExpandedPaths(new Set())}
 					>
 						Collapse
 					</Button>
 					<Button
 						variant="outline"
 						onClick={() =>
-							setExpandedPaths(new Set(flattenFolderPaths(visibleTree)))
+							setManuallyExpandedPaths(new Set(flattenFolderPaths(visibleTree)))
 						}
 					>
 						Expand
@@ -150,7 +153,7 @@ export function ExplorerView(props: {
 								expandedPaths={expandedPaths}
 								selectedPath={selectedNode?.path ?? ""}
 								onToggle={(path) => {
-									setExpandedPaths((previous) => {
+									setManuallyExpandedPaths((previous) => {
 										const next = new Set(previous);
 										if (next.has(path)) {
 											next.delete(path);
@@ -160,12 +163,7 @@ export function ExplorerView(props: {
 										return next;
 									});
 								}}
-								onSelect={(path) => {
-									setExpandedPaths(
-										(previous) => new Set([...previous, ...getAncestorPaths(path)]),
-									);
-									props.onSearchChange({ selected: path });
-								}}
+								onSelect={(path) => props.onSearchChange({ selected: path })}
 							/>
 						))}
 					</div>
@@ -195,9 +193,7 @@ export function ExplorerView(props: {
 								search={{
 									...defaultGraphSearch,
 									focus: selectedNode.path,
-									scope: selectedNode.path.includes("node_modules")
-										? "external"
-										: "workspace",
+									scope: selectedNodeScope,
 								}}
 								className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 							>
@@ -209,9 +205,7 @@ export function ExplorerView(props: {
 									search={{
 										...defaultImportSearch,
 										include: selectedNode.path,
-										scope: selectedNode.path.includes("node_modules")
-											? "external"
-											: "workspace",
+										scope: selectedNodeScope,
 									}}
 									className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 								>
@@ -273,16 +267,13 @@ function CollapsibleSection(props: {
 	description: string;
 	children: React.ReactNode;
 }) {
-	const [isOpen, setIsOpen] = useState(true);
 	return (
-		<div className="rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex w-full items-center gap-3 text-left"
-			>
-				<ChevronDown
-					className={`size-5 shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`}
-				/>
+		<details
+			open
+			className="group rounded-[24px] border border-slate-200/70 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+		>
+			<summary className="flex cursor-pointer list-none items-center gap-3 text-left">
+				<ChevronDown className="size-5 shrink-0 -rotate-90 transition-transform group-open:rotate-0" />
 				<div className="flex-1">
 					<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
 						{props.title}
@@ -291,9 +282,9 @@ function CollapsibleSection(props: {
 						{props.description}
 					</p>
 				</div>
-			</button>
-			{isOpen && <div className="mt-4">{props.children}</div>}
-		</div>
+			</summary>
+			<div className="mt-4">{props.children}</div>
+		</details>
 	);
 }
 

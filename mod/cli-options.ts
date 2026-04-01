@@ -4,6 +4,7 @@ export type CliCommand = "analyze" | "serve" | "report";
 
 export interface CliFlags {
 	port?: string;
+	open: boolean;
 	ui: boolean;
 	llmAnalyze: boolean;
 	llmBaseUrl?: string;
@@ -32,8 +33,77 @@ export interface ParsedCliArgs {
 	flags: CliFlags;
 }
 
-const getOptionValue = (args: string[], name: string) =>
-	args.find((arg) => arg.startsWith(`${name}=`))?.split("=")[1];
+const valueOptionNames = new Set([
+	"--port",
+	"--llm-base-url",
+	"--llm-model",
+	"--output-file",
+	"--package",
+	"--node",
+	"--limit",
+	"--module-lexer",
+	"--graph-file",
+	"--snapshot-name",
+	"--snapshot",
+]);
+
+type ParsedOptionTokens = {
+	flags: Set<string>;
+	values: Map<string, string>;
+	positionals: string[];
+};
+
+const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
+	const flags = new Set<string>();
+	const values = new Map<string, string>();
+	const positionals: string[] = [];
+
+	for (let index = 0; index < args.length; index += 1) {
+		const currentArg = args[index];
+		if (!currentArg) {
+			continue;
+		}
+
+		if (currentArg === "--") {
+			positionals.push(...args.slice(index + 1));
+			break;
+		}
+
+		if (!currentArg.startsWith("--")) {
+			positionals.push(currentArg);
+			continue;
+		}
+
+		if (currentArg.startsWith("--no-")) {
+			flags.add(currentArg);
+			continue;
+		}
+
+		const equalSignIndex = currentArg.indexOf("=");
+		const optionName =
+			equalSignIndex === -1
+				? currentArg
+				: currentArg.slice(0, equalSignIndex);
+
+		if (equalSignIndex !== -1) {
+			values.set(optionName, currentArg.slice(equalSignIndex + 1));
+			continue;
+		}
+
+		if (valueOptionNames.has(optionName)) {
+			const nextArg = args[index + 1];
+			if (nextArg && nextArg !== "--") {
+				values.set(optionName, nextArg);
+				index += 1;
+			}
+			continue;
+		}
+
+		flags.add(optionName);
+	}
+
+	return { flags, values, positionals };
+};
 
 export function parseCliArgs(args: string[]): ParsedCliArgs {
 	const [firstArg, ...restArgs] = args;
@@ -42,35 +112,39 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			? firstArg
 			: "analyze";
 	const commandArgs = command === "analyze" && firstArg !== "analyze" ? args : restArgs;
-	const positionalArgs = commandArgs.filter((arg) => !arg.startsWith("--"));
+	const { flags: parsedFlags, values: parsedValues, positionals } =
+		parseOptionTokens(commandArgs);
 	const serve = args.includes("--serve");
 	const effectiveServe = command === "serve" || serve;
+	const getOptionValue = (name: string) => parsedValues.get(name);
+	const hasFlag = (name: string) => parsedFlags.has(name);
 
 	return {
 		command,
-		entryFile: effectiveServe || command === "report" ? undefined : positionalArgs[0],
-		serveDataFile: effectiveServe ? positionalArgs[0] : undefined,
+		entryFile: effectiveServe || command === "report" ? undefined : positionals[0],
+		serveDataFile: effectiveServe ? positionals[0] : undefined,
 		flags: {
-			port: getOptionValue(commandArgs, "--port"),
-			ui: commandArgs.includes("--ui"),
-			llmAnalyze: commandArgs.includes("--llm-analyze"),
-			llmBaseUrl: getOptionValue(commandArgs, "--llm-base-url"),
-			llmModel: getOptionValue(commandArgs, "--llm-model"),
-			outputFile: getOptionValue(commandArgs, "--output-file") ?? "./modviz.json",
-			nodeModules: commandArgs.includes("--node-modules"),
-			ignoreDynamic: commandArgs.includes("--ignore-dynamic"),
+			port: getOptionValue("--port"),
+			open: !hasFlag("--no-open"),
+			ui: hasFlag("--ui"),
+			llmAnalyze: hasFlag("--llm-analyze"),
+			llmBaseUrl: getOptionValue("--llm-base-url"),
+			llmModel: getOptionValue("--llm-model"),
+			outputFile: getOptionValue("--output-file") ?? "./modviz.json",
+			nodeModules: hasFlag("--node-modules"),
+			ignoreDynamic: hasFlag("--ignore-dynamic"),
 			serve: effectiveServe,
 			help: commandArgs.includes("--help") || commandArgs.includes("-h"),
-			llm: commandArgs.includes("--llm"),
-			packageQuery: getOptionValue(commandArgs, "--package"),
-			nodeQuery: getOptionValue(commandArgs, "--node"),
-			limit: Number.parseInt(getOptionValue(commandArgs, "--limit") ?? "20", 10),
-			moduleLexer: getOptionValue(commandArgs, "--module-lexer"),
-			summary: commandArgs.includes("--summary"),
-			graphFile: getOptionValue(commandArgs, "--graph-file"),
-			snapshotName: getOptionValue(commandArgs, "--snapshot-name"),
-			snapshot: getOptionValue(commandArgs, "--snapshot"),
-			listSnapshots: commandArgs.includes("--list-snapshots"),
+			llm: hasFlag("--llm"),
+			packageQuery: getOptionValue("--package"),
+			nodeQuery: getOptionValue("--node"),
+			limit: Number.parseInt(getOptionValue("--limit") ?? "20", 10),
+			moduleLexer: getOptionValue("--module-lexer"),
+			summary: hasFlag("--summary"),
+			graphFile: getOptionValue("--graph-file"),
+			snapshotName: getOptionValue("--snapshot-name"),
+			snapshot: getOptionValue("--snapshot"),
+			listSnapshots: hasFlag("--list-snapshots"),
 		},
 	};
 }
@@ -129,6 +203,7 @@ Options:
 	--output-file=<file>   Base JSON output path for the UI graph (default: ./modviz.json)
 	--graph-file=<file>    Existing graph file used by report (default: ./modviz.json)
 	--port=<port>          Port for the web server (default: 3000)
+	--no-open              Do not open a browser window when launching the UI
 	--ui                   Launch the browser UI after generating the graph
 	--serve                Launch the UI server using an existing graph JSON file
 	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact

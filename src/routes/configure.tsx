@@ -7,6 +7,7 @@ import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { useModvizBundle } from "~/utils/modviz-data";
 
 type CommandBuilderState = {
+	launchUi: boolean;
 	outputFile: string;
 	enableLlm: boolean;
 	enableAiAnalysis: boolean;
@@ -15,9 +16,11 @@ type CommandBuilderState = {
 	nodeModules: boolean;
 	packageQuery: string;
 	nodeQuery: string;
+	snapshotName: string;
 };
 
 const defaultCommandBuilderState: CommandBuilderState = {
+	launchUi: true,
 	outputFile: "modviz.json",
 	enableLlm: false,
 	enableAiAnalysis: false,
@@ -26,6 +29,53 @@ const defaultCommandBuilderState: CommandBuilderState = {
 	nodeModules: false,
 	packageQuery: "",
 	nodeQuery: "",
+	snapshotName: "",
+};
+
+const quoteCliValue = (value: string) =>
+	/\s/.test(value) ? JSON.stringify(value) : value;
+
+const buildAnalyzeCommand = (
+	entryFile: string,
+	config: CommandBuilderState,
+) => {
+	const parts = ["pnpm", "exec", "modviz", "analyze", quoteCliValue(entryFile)];
+
+	if (
+		config.outputFile &&
+		config.outputFile !== defaultCommandBuilderState.outputFile
+	) {
+		parts.push(`--output-file=${quoteCliValue(config.outputFile)}`);
+	}
+	if (config.launchUi) {
+		parts.push("--ui");
+	}
+	if (config.enableLlm) {
+		parts.push("--llm");
+	}
+	if (config.enableAiAnalysis) {
+		parts.push("--llm-analyze");
+	}
+	if (config.enableAiAnalysis && config.llmModel.trim()) {
+		parts.push(`--llm-model=${quoteCliValue(config.llmModel.trim())}`);
+	}
+	if (config.ignoreDynamic) {
+		parts.push("--ignore-dynamic");
+	}
+	if (config.nodeModules) {
+		parts.push("--node-modules");
+	}
+	if (config.snapshotName.trim()) {
+		parts.push(`--snapshot-name=${quoteCliValue(config.snapshotName.trim())}`);
+	}
+	if (config.packageQuery.trim()) {
+		parts.push(`--package=${quoteCliValue(config.packageQuery.trim())}`);
+	}
+	if (config.nodeQuery.trim()) {
+		parts.push(`--node=${quoteCliValue(config.nodeQuery.trim())}`);
+	}
+
+	return parts.join(" ");
 };
 
 export const Route = createFileRoute("/configure")({
@@ -45,35 +95,22 @@ function ConfigureRoute() {
 		setConfig((current) => ({ ...current, [key]: value }));
 	};
 
-	const buildCommand = () => {
-		const basePath = bundle.graph?.metadata.entrypoints[0] || "./src/index.ts";
-		let cmd = `pnpm exec modviz analyze ${basePath}`;
-
-		if (config.outputFile && config.outputFile !== defaultCommandBuilderState.outputFile) {
-			cmd += ` --output-file=${config.outputFile}`;
-		}
-		if (config.enableLlm) cmd += " --llm";
-		if (config.enableAiAnalysis) cmd += " --llm-analyze";
-		if (config.enableAiAnalysis && config.llmModel.trim()) {
-			cmd += ` --llm-model=${config.llmModel.trim()}`;
-		}
-		if (config.ignoreDynamic) cmd += " --ignore-dynamic";
-		if (config.nodeModules) cmd += " --node-modules";
-		if (config.packageQuery) cmd += ` --package=${config.packageQuery}`;
-		if (config.nodeQuery) cmd += ` --node=${config.nodeQuery}`;
-
-		return cmd;
-	};
-
 	const copyToClipboard = async (text: string) => {
 		await navigator.clipboard.writeText(text);
 		setDidCopy(true);
 		window.setTimeout(() => setDidCopy(false), 2000);
 	};
 
-	const cmd = useMemo(() => buildCommand(), [bundle.graph?.metadata.entrypoints, config]);
+	const cmd = useMemo(() => {
+		const basePath = bundle.graph?.metadata.entrypoints[0] || "./src/index.ts";
+		return buildAnalyzeCommand(basePath, config);
+	}, [bundle.graph?.metadata.entrypoints, config]);
 	const summary = bundle.summary;
 	const toggleFields = [
+		{
+			key: "launchUi" as const,
+			label: "Launch web UI after analyze (--ui)",
+		},
 		{
 			key: "enableLlm" as const,
 			label: "Enable LLM analysis (--llm)",
@@ -119,6 +156,18 @@ function ConfigureRoute() {
 								value={config.outputFile}
 								onChange={(e) => updateConfig("outputFile", e.target.value)}
 								placeholder="modviz.json"
+								className="mt-1"
+							/>
+						</div>
+
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								Snapshot name (optional)
+							</label>
+							<Input
+								value={config.snapshotName}
+								onChange={(e) => updateConfig("snapshotName", e.target.value)}
+								placeholder="before-refactor"
 								className="mt-1"
 							/>
 						</div>

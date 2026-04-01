@@ -56,7 +56,7 @@ if (flags.help || (command === "analyze" && !entryFile && !flags.serve)) {
 }
 
 if (command === "serve" || flags.serve) {
-	await launchWebUI(flags.port, serveDataFile ?? flags.graphFile);
+	await launchWebUI(flags.port, serveDataFile ?? flags.graphFile, flags.open);
 	process.exit(0);
 }
 
@@ -274,7 +274,7 @@ if (shouldBuildLlmReport) {
 }
 
 if (flags.ui) {
-	await launchWebUI(flags.port, flags.outputFile);
+	await launchWebUI(flags.port, flags.outputFile, flags.open);
 }
 
 function formatDuration(milliseconds: number) {
@@ -411,11 +411,15 @@ function getNodeType(
 	return "internal";
 }
 
-async function launchWebUI(port: string | undefined, dataFile?: string) {
+async function launchWebUI(
+	port: string | undefined,
+	dataFile?: string,
+	open = true,
+) {
 	const resolvedPort = port ? Number.parseInt(port, 10) : 3000;
 	console.log(`🚀 Launching production web UI on port ${resolvedPort}...`);
 	await startProductionServer({
-		open: true,
+		open,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),
 		port: resolvedPort,
 	});

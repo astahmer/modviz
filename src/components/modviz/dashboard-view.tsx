@@ -102,31 +102,34 @@ function RankingList(props: {
 				</div>
 			</div>
 			<div className="mt-4 space-y-3">
-				{props.items.map((item, index) => (
-					<Link
-						key={`${item.path}-${index}`}
-						to={props.getLink(item).to}
-						search={props.getLink(item).search}
-						className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50/80 px-4 py-3 transition hover:bg-sky-50 dark:bg-slate-900/80 dark:hover:bg-sky-500/10"
-					>
-						<div className="min-w-0">
-							<p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
-								{item.label}
-							</p>
-							<p className="truncate text-xs text-slate-500 dark:text-slate-400">
-								{item.path}
-							</p>
-							{item.description ? (
-								<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-									{item.description}
+				{props.items.map((item, index) => {
+					const link = props.getLink(item);
+					return (
+						<Link
+							key={`${item.path}-${index}`}
+							to={link.to}
+							search={link.search}
+							className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50/80 px-4 py-3 transition hover:bg-sky-50 dark:bg-slate-900/80 dark:hover:bg-sky-500/10"
+						>
+							<div className="min-w-0">
+								<p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+									{item.label}
 								</p>
-							) : null}
-						</div>
-						<div className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
-							{formatNumber.format(item.value)}
-						</div>
-					</Link>
-				))}
+								<p className="truncate text-xs text-slate-500 dark:text-slate-400">
+									{item.path}
+								</p>
+								{item.description ? (
+									<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+										{item.description}
+									</p>
+								) : null}
+							</div>
+							<div className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
+								{formatNumber.format(item.value)}
+							</div>
+						</Link>
+					);
+				})}
 			</div>
 		</section>
 	);
@@ -175,13 +178,40 @@ export function DashboardView(props: { bundle: ReadyBundle }) {
 
 			{/* Data-driven rankings - actionable insights */}
 			<section className="grid gap-4 xl:grid-cols-3">
-				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Graph-derived hotspots ranked by transitive reach."} items={summary.hotspots.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
-				<RankingList title="Most imported by" description="Files or modules with the most inbound edges." items={summary.topImportedBy.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
-				<RankingList title="Top clusters" description="Largest package or cluster groupings in the loaded graph." items={summary.topClusters.slice(0, 6)} getLink={(item) => ({ to: "/graph", search: { cluster: item.label, externalGrouping: "package" } })} />
+				<RankingList
+					title="Hotspots"
+					description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Graph-derived hotspots ranked by transitive reach."}
+					items={summary.hotspots.slice(0, 6)}
+					getLink={getExplorerSummaryLink}
+				/>
+				<RankingList
+					title="Most imported by"
+					description="Files or modules with the most inbound edges."
+					items={summary.topImportedBy.slice(0, 6)}
+					getLink={getExplorerSummaryLink}
+				/>
+				<RankingList
+					title="Top clusters"
+					description="Largest package or cluster groupings in the loaded graph."
+					items={summary.topClusters.slice(0, 6)}
+					getLink={(item) => ({
+						to: "/graph",
+						search: { cluster: item.label, externalGrouping: "package" },
+					})}
+				/>
 			</section>
 		</div>
 	);
 }
+
+
+const getExplorerSummaryLink = (item: SummaryListItem) => ({
+		to: "/explorer",
+		search: {
+			selected: item.path,
+			scope: item.path.includes("node_modules") ? "external" : "workspace",
+		},
+	});
 
 const presetRoutes: RouteCard[] = [
 	{
