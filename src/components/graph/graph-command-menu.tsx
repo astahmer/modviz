@@ -21,6 +21,7 @@ import {
 	PopoverTrigger,
 } from "~/components/ui/popover";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { getExternalPackageName } from "~/utils/modviz-data";
 
 export function GraphCommandMenuDialog(props: {
 	nodes: ModvizOutput["nodes"];
@@ -74,6 +75,8 @@ export function GraphCommandMenuDialog(props: {
 											node.name,
 											node.package?.name,
 											node.cluster,
+											node.path,
+											...node.path.split("/"),
 										].filter(Boolean) as string[]}
 										onMouseEnter={() => {
 											props.onHighlight(node.path);
@@ -156,6 +159,8 @@ export function GraphCommandMenu(props: {
 												node.name,
 												node.package?.name,
 												node.cluster,
+												node.path,
+												...node.path.split("/"),
 											].filter(Boolean) as string[]}
 											onMouseEnter={() => {
 												props.onHighlight(node.path);
@@ -188,10 +193,9 @@ const useNodesByClusterMap = (nodes: ModvizOutput["nodes"]) => {
 	const nodesByClusterMap = useMemo(() => {
 		const map = new Map<string, VizNode[]>();
 		nodes.forEach((node) => {
-			const group =
-				node.cluster ??
-				node.package?.name ??
-				(node.path.includes("node_modules") ? "node_modules" : "workspace");
+			const group = node.path.includes("node_modules")
+				? `node_modules/${getExternalPackageName(node)}`
+				: node.cluster ?? node.package?.name ?? "workspace";
 			const existingNodes = map.get(group) ?? [];
 			existingNodes.push(node);
 			map.set(group, existingNodes);
@@ -200,7 +204,11 @@ const useNodesByClusterMap = (nodes: ModvizOutput["nodes"]) => {
 		for (const [, groupedNodes] of map) {
 			groupedNodes.sort((left, right) => left.path.localeCompare(right.path));
 		}
-		return map;
+		return new Map(
+			Array.from(map.entries()).sort((left, right) =>
+				left[0].localeCompare(right[0]),
+			),
+		);
 	}, [nodes]);
 
 	return nodesByClusterMap;

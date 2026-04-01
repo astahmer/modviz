@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 
 const formatNumber = new Intl.NumberFormat("en-US");
@@ -23,6 +24,7 @@ function SummaryTable(props: {
 	description: string;
 	rows: SummaryListItem[];
 	valueLabel: string;
+	getLink: (row: SummaryListItem) => { to: string; search?: Record<string, unknown> };
 }) {
 	return (
 		<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -49,9 +51,11 @@ function SummaryTable(props: {
 					</thead>
 					<tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-950/60">
 						{props.rows.map((row, index) => (
-							<tr key={`${row.path}-${index}`}>
+							<tr key={`${row.path}-${index}`} className="transition hover:bg-sky-50/70 dark:hover:bg-sky-500/10">
 								<td className="px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-100">
-									{row.label}
+									<Link to={props.getLink(row).to} search={props.getLink(row).search} className="hover:text-sky-700 dark:hover:text-sky-300">
+										{row.label}
+									</Link>
 									{row.description ? (
 										<p className="mt-1 text-xs font-normal text-slate-500 dark:text-slate-400">
 											{row.description}
@@ -86,16 +90,16 @@ export function SummaryView(props: { bundle: ModvizDataBundle }) {
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-2">
-				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Fallback ranking based on direct outgoing import count."} rows={summary.hotspots} valueLabel={summary.hasLlm ? "Reachable" : "Outgoing"} />
-				<SummaryTable title="Most imported by" description="Files or modules with the highest number of direct importers." rows={summary.topImportedBy} valueLabel="Inbound" />
+				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Fallback ranking based on direct outgoing import count."} rows={summary.hotspots} valueLabel={summary.hasLlm ? "Reachable" : "Outgoing"} getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<SummaryTable title="Most imported by" description="Files or modules with the highest number of direct importers." rows={summary.topImportedBy} valueLabel="Inbound" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-2">
-				<SummaryTable title="Top importers" description="Files or modules with the highest number of direct outgoing imports." rows={summary.topImporters} valueLabel="Outgoing" />
-				<SummaryTable title="External packages" description="Distinct external package presence in the current graph." rows={summary.topExternalPackages} valueLabel="Nodes" />
+				<SummaryTable title="Top importers" description="Files or modules with the highest number of direct outgoing imports." rows={summary.topImporters} valueLabel="Outgoing" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<SummaryTable title="External packages" description="Distinct external package presence in the current graph." rows={summary.topExternalPackages} valueLabel="Nodes" getLink={(row) => ({ to: "/graph", search: { scope: "external", cluster: row.label, externalGrouping: "package" } })} />
 			</section>
 
-			<SummaryTable title="Largest clusters" description="Useful when deciding where to zoom first in the bubble graph or what to scope in import search." rows={summary.topClusters} valueLabel="Nodes" />
+			<SummaryTable title="Largest clusters" description="Useful when deciding where to zoom first in the bubble graph or what to scope in import search." rows={summary.topClusters} valueLabel="Nodes" getLink={(row) => ({ to: "/graph", search: { cluster: row.label, externalGrouping: "package" } })} />
 		</div>
 	);
 }

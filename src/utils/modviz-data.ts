@@ -3,6 +3,9 @@ import path from "node:path";
 import { createServerFn } from "@tanstack/react-start";
 import type { ModvizLlmOutput, ModvizOutput, VizNode } from "../../mod/types";
 
+export type ModvizScope = "all" | "workspace" | "external";
+export type ExternalGroupingMode = "combined" | "package";
+
 export type SummaryListItem = {
 	label: string;
 	path: string;
@@ -43,13 +46,80 @@ const getLlmOutputPath = (graphPath: string) => {
 const readJsonFile = <T>(filePath: string): T =>
 	JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
 
-const isExternalNode = (
+export const isExternalNode = (
 	node: VizNode,
 	workspacePackageNames: Set<string>,
 ) => {
 	if (node.path.includes("node_modules")) return true;
 	if (!node.package?.name) return false;
 	return !workspacePackageNames.has(node.package.name);
+};
+
+export const getWorkspacePackageNames = (graph: ModvizOutput) =>
+	new Set(graph.metadata.packages.map((pkg) => pkg.name));
+
+export const getNodeScope = (
+	node: VizNode,
+	workspacePackageNames: Set<string>,
+): Exclude<ModvizScope, "all"> =>
+	isExternalNode(node, workspacePackageNames) ? "external" : "workspace";
+
+export const getExternalPackageName = (node: VizNode) => {
+	if (!node.path.includes("node_modules")) {
+		return node.package?.name ?? "external";
+	}
+
+	if (node.package?.name) {
+		return node.package.name;
+	}
+
+	const marker = `${path.sep}node_modules${path.sep}`;
+	const normalizedPath = node.path.split("\\").join(path.sep);
+	const nodeModulesIndex = normalizedPath.lastIndexOf(marker);
+	if (nodeModulesIndex === -1) {
+		return "node_modules";
+	}
+
+	const remainder = normalizedPath.slice(nodeModulesIndex + marker.length);
+	const segments = remainder.split(path.sep).filter(Boolean);
+	const scopeOrName = segments[0];
+	const maybeName = segments[1];
+
+	if (!scopeOrName) {
+		return "node_modules";
+	}
+
+	return scopeOrName.startsWith("@") && maybeName
+		? `${scopeOrName}/${maybeName}`
+		: scopeOrName;
+};
+
+export const getNodeGroupingLabel = (
+	node: VizNode,
+	workspacePackageNames: Set<string>,
+	externalGrouping: ExternalGroupingMode,
+) => {
+	if (getNodeScope(node, workspacePackageNames) === "external") {
+		return externalGrouping === "package"
+			? getExternalPackageName(node)
+			: "node_modules";
+	}
+
+	return node.cluster ?? node.package?.name ?? "workspace";
+};
+
+export const filterNodesByScope = (
+	nodes: VizNode[],
+	workspacePackageNames: Set<string>,
+	scope: ModvizScope,
+) => {
+	if (scope === "all") {
+		return nodes;
+	}
+
+	return nodes.filter(
+		(node) => getNodeScope(node, workspacePackageNames) === scope,
+	);
 };
 
 const countBy = <T, K extends string>(items: T[], getKey: (item: T) => K | null) => {

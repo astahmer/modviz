@@ -5,6 +5,10 @@ import type { ModvizOutput, VizNode } from "../../../../mod/types";
 import { colors } from "~/components/graph/common/colors";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { getRandom } from "~/components/graph/common/random";
+import {
+	getNodeGroupingLabel,
+	type ExternalGroupingMode,
+} from "~/utils/modviz-data";
 
 export type NodeType = {
 	x: number;
@@ -26,16 +30,26 @@ export type EdgeType = { label: string; hidden?: boolean; color?: string };
 export const useCreateGraph = (props: {
 	entryNode?: string;
 	layoutSettings?: GraphLayoutSettings;
+	externalGrouping?: ExternalGroupingMode;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 }) => {
+	const workspacePackageNames = useMemo(
+		() => new Set(props.packages.map((pkg) => pkg.name)),
+		[props.packages],
+	);
+
 	const clusterColors = useMemo(() => {
 		const colorMap = new Map<string, string>();
 		const clusters = new Set<string>();
 		props.nodes.forEach((node) => {
-			if (node.cluster || node.package?.name) {
-				clusters.add((node.cluster || node.package?.name) as string);
-			}
+			clusters.add(
+				getNodeGroupingLabel(
+					node,
+					workspacePackageNames,
+					props.externalGrouping ?? "combined",
+				),
+			);
 		});
 		let index = 0;
 		clusters.forEach((cluster) => {
@@ -45,7 +59,7 @@ export const useCreateGraph = (props: {
 			);
 		});
 		return colorMap;
-	}, []);
+	}, [props.externalGrouping, props.nodes, workspacePackageNames]);
 
 	const edges = useMemo(() => {
 		const ids = new Set<string>();
@@ -73,6 +87,11 @@ export const useCreateGraph = (props: {
 
 		props.nodes.forEach((node) => {
 			nodesMap.set(node.path, node);
+			const groupLabel = getNodeGroupingLabel(
+				node,
+				workspacePackageNames,
+				props.externalGrouping ?? "combined",
+			);
 
 			// Position entry node at center, others spread out more
 			const isEntry = props.entryNode === node.path;
@@ -89,10 +108,10 @@ export const useCreateGraph = (props: {
 				label,
 				originalLabel: label,
 				modType: node.type,
-				cluster: node.cluster ?? node.package?.name ?? "default",
-				clusterPath: node.package?.path,
+				cluster: groupLabel,
+				clusterPath: node.package?.path ?? groupLabel,
 				color:
-					clusterColors.get(node.cluster ?? node.package?.name ?? "") ??
+					clusterColors.get(groupLabel) ??
 					colors.default,
 				size: clamp(
 					4,
@@ -106,12 +125,15 @@ export const useCreateGraph = (props: {
 		edges.list.forEach((edge) => {
 			if (nodesMap.has(edge.source) && nodesMap.has(edge.target)) {
 				const sourceNode = nodesMap.get(edge.source)!;
+				const sourceGroup = getNodeGroupingLabel(
+					sourceNode,
+					workspacePackageNames,
+					props.externalGrouping ?? "combined",
+				);
 				graph.addEdge(edge.source, edge.target, {
 					label: edge.source,
 					color:
-						clusterColors.get(
-							sourceNode.cluster ?? sourceNode.package?.name ?? "",
-						) ?? colors.default,
+						clusterColors.get(sourceGroup) ?? colors.default,
 				});
 			}
 		});
@@ -119,5 +141,13 @@ export const useCreateGraph = (props: {
 		// applyHybridClustering(graph, packageColors);
 
 		return graph as Graph<NodeType, EdgeType>;
-	}, [edges.list, clusterColors, props.layoutSettings?.nodeSizeScale]);
+	}, [
+		clusterColors,
+		edges.list,
+		props.entryNode,
+		props.externalGrouping,
+		props.layoutSettings?.nodeSizeScale,
+		props.nodes,
+		workspacePackageNames,
+	]);
 };

@@ -1,14 +1,31 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BarChart3, GitBranchPlus, Network, Sparkles, SquareStack } from "lucide-react";
+import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, Sparkles, SquareStack } from "lucide-react";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 
-const routes = [
+type RouteCard = {
+	to: "/graph" | "/explorer" | "/summary" | "/imports" | "/hierarchy";
+	title: string;
+	description: string;
+	icon: typeof Network;
+	search?: Record<string, unknown>;
+};
+
+const routes: RouteCard[] = [
 	{
 		to: "/graph",
 		title: "Bubble graph",
 		description:
 			"Open the force-directed view only when you need it, with tunable layout controls and broader node search.",
 		icon: Network,
+		search: undefined,
+	},
+	{
+		to: "/explorer",
+		title: "File explorer",
+		description:
+			"Browse folders and files directly, then inspect imports and imported-by lists from the selected path.",
+		icon: FolderTree,
+		search: undefined,
 	},
 	{
 		to: "/summary",
@@ -16,6 +33,7 @@ const routes = [
 		description:
 			"Read hotspots, top importers, top imported modules, and package-level distribution without rendering Sigma.",
 		icon: BarChart3,
+		search: undefined,
 	},
 	{
 		to: "/imports",
@@ -23,6 +41,7 @@ const routes = [
 		description:
 			"Search for imports by module or symbol and narrow results to specific monorepo packages, folders, or files.",
 		icon: GitBranchPlus,
+		search: undefined,
 	},
 	{
 		to: "/hierarchy",
@@ -30,6 +49,7 @@ const routes = [
 		description:
 			"Inspect the dependency tree as a flamegraph-style hierarchy for entrypoint-focused analysis.",
 		icon: SquareStack,
+		search: undefined,
 	},
 ] as const;
 
@@ -57,6 +77,7 @@ function RankingList(props: {
 	title: string;
 	description: string;
 	items: SummaryListItem[];
+	getLink: (item: SummaryListItem) => { to: string; search?: Record<string, unknown> };
 }) {
 	return (
 		<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -72,9 +93,11 @@ function RankingList(props: {
 			</div>
 			<div className="mt-4 space-y-3">
 				{props.items.map((item, index) => (
-					<div
+					<Link
 						key={`${item.path}-${index}`}
-						className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50/80 px-4 py-3 dark:bg-slate-900/80"
+						to={props.getLink(item).to}
+						search={props.getLink(item).search}
+						className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50/80 px-4 py-3 transition hover:bg-sky-50 dark:bg-slate-900/80 dark:hover:bg-sky-500/10"
 					>
 						<div className="min-w-0">
 							<p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
@@ -92,7 +115,7 @@ function RankingList(props: {
 						<div className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
 							{formatNumber.format(item.value)}
 						</div>
-					</div>
+					</Link>
 				))}
 			</div>
 		</section>
@@ -114,23 +137,8 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 						Start with structure, then open the heavy views only when the question needs them.
 					</h2>
 					<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-						The dataset contains {formatNumber.format(summary.overview.totalNodes)} modules across {formatNumber.format(summary.overview.workspacePackages)} workspace packages and {formatNumber.format(summary.overview.externalPackages)} external packages. The bubble graph is now a dedicated route instead of the default landing view.
+						The dataset contains {formatNumber.format(summary.overview.totalNodes)} modules across {formatNumber.format(summary.overview.workspacePackages)} workspace packages and {formatNumber.format(summary.overview.externalPackages)} external packages.
 					</p>
-					<div className="mt-6 flex flex-wrap gap-3">
-						{routes.map((route) => {
-							const Icon = route.icon;
-							return (
-								<Link
-									key={route.to}
-									to={route.to}
-									className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-sky-100"
-								>
-									<Icon className="size-4" />
-									<span>{route.title}</span>
-								</Link>
-							);
-						})}
-					</div>
 				</div>
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
 					<StatCard
@@ -154,12 +162,13 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 			</section>
 
 			<section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-				{routes.map((route) => {
+				{[...presetRoutes, ...routes].map((route) => {
 					const Icon = route.icon;
 					return (
 						<Link
-							key={route.to}
+							key={`${route.to}-${route.title}`}
 							to={route.to}
+							search={route.search}
 							className="group rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-[0_24px_70px_-34px_rgba(14,165,233,0.45)] dark:border-slate-800 dark:bg-slate-950/70"
 						>
 							<div className="flex items-start justify-between gap-4">
@@ -180,10 +189,34 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-3">
-				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Fallback ranking based on direct outgoing imports."} items={summary.hotspots.slice(0, 6)} />
-				<RankingList title="Most imported by" description="Files or modules with the most inbound edges." items={summary.topImportedBy.slice(0, 6)} />
-				<RankingList title="Top clusters" description="Largest package or cluster groupings in the loaded graph." items={summary.topClusters.slice(0, 6)} />
+				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Fallback ranking based on direct outgoing imports."} items={summary.hotspots.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<RankingList title="Most imported by" description="Files or modules with the most inbound edges." items={summary.topImportedBy.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<RankingList title="Top clusters" description="Largest package or cluster groupings in the loaded graph." items={summary.topClusters.slice(0, 6)} getLink={(item) => ({ to: "/graph", search: { cluster: item.label, externalGrouping: "package" } })} />
 			</section>
 		</div>
 	);
 }
+
+const presetRoutes: RouteCard[] = [
+	{
+		to: "/graph",
+		search: { scope: "workspace" as const },
+		title: "Monorepo graph",
+		description: "Start from workspace files only when external noise is getting in the way.",
+		icon: Network,
+	},
+	{
+		to: "/graph",
+		search: { scope: "external" as const, externalGrouping: "package" as const },
+		title: "node_modules graph",
+		description: "Open a dependency-package view where external files are grouped by package instead of one big node_modules blob.",
+		icon: Network,
+	},
+	{
+		to: "/imports",
+		search: { scope: "external" as const },
+		title: "External import hunt",
+		description: "Jump straight into package-focused search when you are tracking third-party usage.",
+		icon: GitBranchPlus,
+	},
+] as const;

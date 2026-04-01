@@ -1,11 +1,15 @@
 import { Flamegraph as AntfuFlamegraph, normalizeTreeNode } from "nanovis";
 import { useEffect, useRef } from "react";
-import { convertToNanovisHierarchyData } from "~/components/graph/map-to-flamegraph";
+import {
+	convertToNanovisHierarchyData,
+	type FlamegraphBuildOptions,
+} from "~/components/graph/map-to-flamegraph";
 import type { ModvizOutput } from "../../../mod/types";
 
 export const Flamegraph = (props: {
 	output: ModvizOutput;
 	entryNodeId?: string;
+	options?: FlamegraphBuildOptions;
 }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const flamegraphRef = useRef<any>(null);
@@ -17,7 +21,11 @@ export const Flamegraph = (props: {
 		// Convert data to nanovis format
 		const entryNodeId =
 			props.entryNodeId ?? props.output.metadata.entrypoints[0]!;
-		const data = convertToNanovisHierarchyData(props.output, entryNodeId);
+		const data = convertToNanovisHierarchyData(
+			props.output,
+			entryNodeId,
+			props.options,
+		);
 
 		// Normalize the tree data for nanovis
 		const normalizedTree = normalizeTreeNode(data as any);
@@ -83,7 +91,7 @@ export const Flamegraph = (props: {
 				flamegraphRef.current = null;
 			}
 		};
-	}, [props.output, props.entryNodeId]);
+	}, [props.entryNodeId, props.options, props.output]);
 
 	return (
 		<div className="relative w-full h-full min-h-0 flex flex-col">

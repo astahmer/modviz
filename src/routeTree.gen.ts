@@ -15,6 +15,7 @@ import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as ImportsRouteImport } from './routes/imports'
 import { Route as HierarchyRouteImport } from './routes/hierarchy'
 import { Route as GraphRouteImport } from './routes/graph'
+import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as IndexRouteImport } from './routes/index'
 import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
 
@@ -40,6 +41,11 @@ const GraphRoute = GraphRouteImport.update({
   path: '/graph',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExplorerRoute = ExplorerRouteImport.update({
+  id: '/explorer',
+  path: '/explorer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -53,6 +59,7 @@ const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
@@ -60,6 +67,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
@@ -68,6 +76,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
   '/hierarchy': typeof HierarchyRoute
   '/imports': typeof ImportsRoute
@@ -75,14 +84,28 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/graph' | '/hierarchy' | '/imports' | '/summary'
+  fullPaths:
+    | '/'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/graph' | '/hierarchy' | '/imports' | '/summary'
-  id: '__root__' | '/' | '/graph' | '/hierarchy' | '/imports' | '/summary'
+  to: '/' | '/explorer' | '/graph' | '/hierarchy' | '/imports' | '/summary'
+  id:
+    | '__root__'
+    | '/'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExplorerRoute: typeof ExplorerRoute
   GraphRoute: typeof GraphRoute
   HierarchyRoute: typeof HierarchyRoute
   ImportsRoute: typeof ImportsRoute
@@ -140,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GraphRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explorer': {
+      id: '/explorer'
+      path: '/explorer'
+      fullPath: '/explorer'
+      preLoaderRoute: typeof ExplorerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -163,6 +193,7 @@ declare module '@tanstack/react-start/server' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExplorerRoute: ExplorerRoute,
   GraphRoute: GraphRoute,
   HierarchyRoute: HierarchyRoute,
   ImportsRoute: ImportsRoute,

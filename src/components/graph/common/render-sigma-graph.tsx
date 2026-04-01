@@ -9,6 +9,7 @@ import {
 } from "~/components/graph/common/use-create-graph";
 import { useGraphSettings } from "~/components/graph/common/use-graph-settings";
 import type { ModvizOutput } from "../../../../mod/types";
+import type { ExternalGroupingMode } from "~/utils/modviz-data";
 
 type ForceAtlas2SynchronousLayoutParameters = Parameters<
 	typeof useLayoutForceAtlas2
@@ -16,6 +17,7 @@ type ForceAtlas2SynchronousLayoutParameters = Parameters<
 
 export const SigmaGraph = (props: {
 	entryNode?: string;
+	externalGrouping?: ExternalGroupingMode;
 	layoutSettings: GraphLayoutSettings;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];

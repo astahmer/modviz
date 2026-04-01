@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Boxes, GitBranchPlus, Network, SquareStack } from "lucide-react";
+import { BarChart3, Boxes, FolderTree, GitBranchPlus, Network, SquareStack } from "lucide-react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { cn } from "~/lib/utils";
 
@@ -8,6 +8,7 @@ const navigationItems = [
 	{ to: "/graph", label: "Bubble graph", icon: Network },
 	{ to: "/summary", label: "Summary", icon: BarChart3 },
 	{ to: "/imports", label: "Import search", icon: GitBranchPlus },
+	{ to: "/explorer", label: "Explorer", icon: FolderTree },
 	{ to: "/hierarchy", label: "Hierarchy", icon: SquareStack },
 ] as const;
 

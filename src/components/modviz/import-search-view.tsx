@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { startTransition, useMemo } from "react";
 import type { ModvizDataBundle } from "~/utils/modviz-data";
 import type { VizImport, VizNode } from "../../../mod/types";
 import { Input } from "~/components/ui/input";
@@ -66,18 +66,54 @@ const isWorkspaceImport = (
 	return false;
 };
 
-export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
+export function ImportSearchView(props: {
+	bundle: ModvizDataBundle;
+	search: {
+		exclude: string;
+		include: string;
+		mode: MatchMode;
+		module: string;
+		preset: string;
+		scope: TargetScope;
+		symbol: string;
+	};
+	onSearchChange: (
+		patch: Partial<{
+			exclude: string;
+			include: string;
+			mode: MatchMode;
+			module: string;
+			preset: string;
+			scope: TargetScope;
+			symbol: string;
+		}>,
+	) => void;
+}) {
 	const { graph } = props.bundle;
+	const {
+		exclude: excludeSources,
+		include: includeSources,
+		mode: matchMode,
+		module: moduleQuery,
+		preset,
+		scope: targetScope,
+		symbol: symbolQuery,
+	} = props.search;
 	const workspacePackageNames = useMemo(
 		() => new Set(graph.metadata.packages.map((pkg) => pkg.name)),
 		[graph.metadata.packages],
 	);
-	const [moduleQuery, setModuleQuery] = useState("");
-	const [symbolQuery, setSymbolQuery] = useState("");
-	const [includeSources, setIncludeSources] = useState("");
-	const [excludeSources, setExcludeSources] = useState("");
-	const [matchMode, setMatchMode] = useState<MatchMode>("contains");
-	const [targetScope, setTargetScope] = useState<TargetScope>("all");
+	const updateSearch = (
+		patch: Partial<{
+			exclude: string;
+			include: string;
+			mode: MatchMode;
+			module: string;
+			preset: string;
+			scope: TargetScope;
+			symbol: string;
+		}>,
+	) => startTransition(() => props.onSearchChange(patch));
 
 	const search = useMemo(() => {
 		try {
@@ -151,6 +187,43 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 		workspacePackageNames,
 	]);
 
+	const presets = [
+		{
+			id: "external-hunt",
+			label: "External package hunt",
+			apply: () =>
+				updateSearch({
+					preset: "external-hunt",
+					scope: "external",
+					mode: "contains",
+				}),
+		},
+		{
+			id: "workspace-path-regex",
+			label: "Workspace path regex",
+			apply: () =>
+				updateSearch({
+					preset: "workspace-path-regex",
+					scope: "workspace",
+					mode: "regex",
+					include:
+						includeSources || "(@weliihq/backend|apps/backend).*(routers|organization)",
+				}),
+		},
+		{
+			id: "lodash-omit",
+			label: "Find lodash omit",
+			apply: () =>
+				updateSearch({
+					preset: "lodash-omit",
+					module: "lodash-es",
+					symbol: "omit",
+					scope: "external",
+					mode: "contains",
+				}),
+		},
+	] as const;
+
 	return (
 		<div className="space-y-6">
 			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -162,7 +235,9 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 						<Input
 							placeholder="lodash-es, ./router, @weliihq/backend..."
 							value={moduleQuery}
-							onChange={(event) => setModuleQuery(event.currentTarget.value)}
+							onChange={(event) =>
+								updateSearch({ module: event.currentTarget.value, preset: "" })
+							}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -172,7 +247,9 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 						<Input
 							placeholder="omit, mapValues, OrganizationRouter..."
 							value={symbolQuery}
-							onChange={(event) => setSymbolQuery(event.currentTarget.value)}
+							onChange={(event) =>
+								updateSearch({ symbol: event.currentTarget.value, preset: "" })
+							}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -183,7 +260,10 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 							className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 							value={matchMode}
 							onChange={(event) =>
-								setMatchMode(event.currentTarget.value as MatchMode)
+								updateSearch({
+									mode: event.currentTarget.value as MatchMode,
+									preset: "",
+								})
 							}
 						>
 							<option value="contains">contains</option>
@@ -199,7 +279,10 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 							className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 							value={targetScope}
 							onChange={(event) =>
-								setTargetScope(event.currentTarget.value as TargetScope)
+								updateSearch({
+									scope: event.currentTarget.value as TargetScope,
+									preset: "",
+								})
 							}
 						>
 							<option value="all">all imports</option>
@@ -215,8 +298,13 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 							placeholder="@weliihq/backend\nrouters/organization"
 							value={includeSources}
-							onChange={(event) => setIncludeSources(event.currentTarget.value)}
+							onChange={(event) =>
+								updateSearch({ include: event.currentTarget.value, preset: "" })
+							}
 						/>
+						<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+							Regex helpers: use <code>routers/organization</code>, <code>(router|service)</code>, or <code>^apps/backend/</code> when match mode is regex.
+						</p>
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -226,20 +314,37 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 							placeholder="test, stories, generated"
 							value={excludeSources}
-							onChange={(event) => setExcludeSources(event.currentTarget.value)}
+							onChange={(event) =>
+								updateSearch({ exclude: event.currentTarget.value, preset: "" })
+							}
 						/>
 					</div>
+				</div>
+				<div className="mt-4 flex flex-wrap gap-2">
+					{presets.map((presetItem) => (
+						<Button
+							key={presetItem.id}
+							variant={preset === presetItem.id ? "default" : "outline"}
+							size="sm"
+							onClick={presetItem.apply}
+						>
+							{presetItem.label}
+						</Button>
+					))}
 				</div>
 				<div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
 					<Button
 						variant="outline"
 						onClick={() => {
-							setModuleQuery("");
-							setSymbolQuery("");
-							setIncludeSources("");
-							setExcludeSources("");
-							setMatchMode("contains");
-							setTargetScope("all");
+							updateSearch({
+								module: "",
+								symbol: "",
+								include: "",
+								exclude: "",
+								mode: "contains",
+								scope: "all",
+								preset: "",
+							});
 						}}
 					>
 						Reset filters
@@ -291,31 +396,17 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 									{formatNumber.format(result.matches.length)} matching import(s)
 								</div>
 							</div>
-							<div className="mt-3 overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800">
-								<table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-									<thead className="bg-white/80 dark:bg-slate-950/80">
-										<tr>
-											<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-												Imported module
-											</th>
-											<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-												Imported name
-											</th>
-										</tr>
-									</thead>
-									<tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-										{result.matches.map((match, index) => (
-											<tr key={`${match.module}-${match.name}-${index}`}>
-												<td className="px-4 py-2 text-sm text-slate-800 dark:text-slate-100">
-													{match.module}
-												</td>
-												<td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400">
-													{match.name || match.declaration || "default import"}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
+							<div className="mt-3 space-y-3 rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+								{formatImportBlocks(result.matches).map((block) => (
+									<div key={block.module} className="rounded-2xl bg-slate-50/90 p-3 dark:bg-slate-900/90">
+										<p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+											{block.module}
+										</p>
+										<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
+											<code>{block.code}</code>
+										</pre>
+									</div>
+								))}
 							</div>
 						</article>
 					))}
@@ -328,4 +419,52 @@ export function ImportSearchView(props: { bundle: ModvizDataBundle }) {
 			</section>
 		</div>
 	);
+}
+
+function formatImportBlocks(matches: VizImport[]) {
+	const grouped = new Map<
+		string,
+		{ names: Set<string>; hasBareImport: boolean }
+	>();
+
+	for (const match of matches) {
+		const current = grouped.get(match.module) ?? {
+			names: new Set<string>(),
+			hasBareImport: false,
+		};
+
+		const importName = match.name || match.declaration;
+		if (importName) {
+			current.names.add(importName);
+		} else {
+			current.hasBareImport = true;
+		}
+
+		grouped.set(match.module, current);
+	}
+
+	return Array.from(grouped.entries()).map(([module, details]) => {
+		const names = Array.from(details.names).sort((left, right) =>
+			left.localeCompare(right),
+		);
+
+		if (!names.length) {
+			return {
+				module,
+				code: `import ${JSON.stringify(module)};`,
+			};
+		}
+
+		const importBody =
+			names.length === 1
+				? `{ ${names[0]} }`
+				: `{
+	${names.join(",\n\t")}
+}`;
+
+		return {
+			module,
+			code: `import ${importBody} from ${JSON.stringify(module)};${details.hasBareImport ? "\nimport \"" + module + "\";" : ""}`,
+		};
+	});
 }

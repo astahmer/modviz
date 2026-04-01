@@ -27,10 +27,12 @@ import {
 import { GraphCommandMenuDialog } from "~/components/graph/graph-command-menu";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
+import type { ExternalGroupingMode } from "~/utils/modviz-data";
 
 export const ModvizSigma = (props: {
 	output: ModvizOutput;
 	entryNode?: string;
+	externalGrouping?: ExternalGroupingMode;
 	layoutSettings: GraphLayoutSettings;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
@@ -44,6 +46,7 @@ export const ModvizSigma = (props: {
 		>
 			<SigmaGraph
 				entryNode={props.entryNode}
+				externalGrouping={props.externalGrouping}
 				layoutSettings={props.layoutSettings}
 				packages={props.packages}
 				nodes={props.nodes}
@@ -54,6 +57,7 @@ export const ModvizSigma = (props: {
 					output={props.output}
 					sigma={sigma as never}
 					nodes={props.nodes}
+					externalGrouping={props.externalGrouping}
 					entryNode={props.entryNode}
 				/>
 			)}
@@ -63,6 +67,7 @@ export const ModvizSigma = (props: {
 
 const WithGraph = (props: {
 	entryNode?: string;
+	externalGrouping?: ExternalGroupingMode;
 	hideClusterLabels: boolean;
 	output: ModvizOutput;
 	sigma: Sigma<NodeType, EdgeType>;
@@ -71,6 +76,13 @@ const WithGraph = (props: {
 	const sigma = props.sigma;
 	const clusterMap = useClusterMap(sigma);
 	const clusterList = useClusterList(clusterMap);
+	const externalNodeIds = useMemo(
+		() =>
+			props.nodes
+				.filter((node) => node.path.includes("node_modules"))
+				.map((node) => node.path),
+		[props.nodes],
+	);
 	useClusterLabelLayer(sigma, clusterMap, props.hideClusterLabels);
 
 	const graph = sigma.getGraph();
@@ -108,6 +120,18 @@ const WithGraph = (props: {
 							Focus entrypoint
 						</button>
 					)}
+					{props.externalGrouping === "package" && externalNodeIds.length ? (
+						<button
+							className="flex items-center gap-2 rounded-md bg-white px-2 py-1 hover:bg-gray-100"
+							onClick={() => {
+								fitViewportToNodes(sigma as never, externalNodeIds, {
+									animate: true,
+								});
+							}}
+						>
+							node_modules ({externalNodeIds.length})
+						</button>
+					) : null}
 					<div className="overflow-auto max-h-[300px] flex flex-col gap-2">
 						{clusterList
 							.filter((cluster) => cluster.nodes.length > 5)
