@@ -305,9 +305,13 @@ test("renderModvizLlmMarkdown summarizes multi-source packages", () => {
 		"@weliihq/core (packages/core/src/index.ts) (internal) reaches 2 modules, including 1 node_modules modules",
 	);
 	expect(markdown).toContain("Pulls in: lodash-es");
+	expect(markdown).toContain("## Internal fan-out culprits");
 	expect(markdown).toContain("## node_modules with multiple sources");
 	expect(markdown).toContain(
 		"lodash-es is introduced by 4 sources: @weliihq/core, src/features/bar/index.ts, src/features/foo/foo.ts, src/features/foo/index.ts",
+	);
+	expect(markdown).toContain(
+		"Fan-out sources: src/features/bar/index.ts, src/features/foo/index.ts",
 	);
 	expect(markdown).not.toContain("Pulls in: lodash-es, lodash-es");
 });

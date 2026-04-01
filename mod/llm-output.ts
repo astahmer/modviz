@@ -86,13 +86,24 @@ export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 }
 
 export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
+	const internalFanoutCulprits = report.hotspots.filter(
+		(hotspot) =>
+			hotspot.type !== "external" &&
+			hotspot.type !== "entry" &&
+			(hotspot.reachableNodeModulesCount > 0 ||
+				hotspot.reachableModulesCount >= 25),
+	);
+	const multiSourcePackages = report.externalPackages.filter(
+		(pkg) => pkg.sourceGroupCount > 1,
+	);
+
 	const lines = [
 		"# modviz LLM report",
 		"",
 		"## Summary",
 		`- Total nodes: ${report.summary.totalNodes}`,
 		`- Internal nodes: ${report.summary.internalNodes}`,
-		`- Barrel files: ${report.summary.barrelFiles}`,
+		`- Explicit barrel files: ${report.summary.barrelFiles}`,
 		`- External dependency modules: ${report.summary.externalDependencies}`,
 		`- External packages: ${report.summary.externalPackages}`,
 		`- Nodes with multiple origin chains: ${report.summary.nodesWithMultipleOrigins}`,
@@ -104,48 +115,61 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 		lines.push("- None");
 	} else {
 		for (const hotspot of report.hotspots.slice(0, 10)) {
+			const kindLabel = hotspot.isBarrelFile
+				? `explicit barrel, ${hotspot.type}`
+				: hotspot.type;
 			lines.push(
-				`- ${hotspot.displayPath} (${hotspot.isBarrelFile ? "barrel" : hotspot.type}) reaches ${hotspot.reachableModulesCount} modules, including ${hotspot.reachableNodeModulesCount} node_modules modules; direct importers: ${formatList(hotspot.directImporters.map((importer) => formatPathForLlm(importer, report.metadata)))}`,
+				`- ${hotspot.displayPath} (${kindLabel}) reaches ${hotspot.reachableModulesCount} modules, including ${hotspot.reachableNodeModulesCount} node_modules modules; direct importers: ${formatPreviewList(
+					hotspot.directImporters.map((importer) =>
+						formatPathForLlm(importer, report.metadata),
+					),
+					5,
+				)}`,
 			);
 			if (hotspot.topExternalPackages.length > 0) {
 				lines.push(
-					`  Pulls in: ${hotspot.topExternalPackages.slice(0, 5).join(", ")}`,
+					`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`,
 				);
+			}
+			if (hotspot.signals.length > 0) {
+				lines.push(`  Signals: ${formatPreviewList(hotspot.signals, 4)}`);
 			}
 			if (hotspot.originChains.length > 0) {
 				lines.push(
 					`  Origin chains: ${hotspot.originChains
-						.slice(0, 3)
+						.slice(0, 2)
 						.map((chain) => formatChainForLlm(chain, report.metadata))
-						.join(" | ")}`,
+						.join(
+							" | ",
+						)}${hotspot.originChains.length > 2 ? ` | +${hotspot.originChains.length - 2} more` : ""}`,
 				);
 			}
 		}
 	}
 
-	lines.push("", "## Explicit barrel files");
-	if (report.barrelFiles.length === 0) {
+	lines.push("", "## Internal fan-out culprits");
+	if (internalFanoutCulprits.length === 0) {
 		lines.push("- None");
 	} else {
-		for (const barrelFile of report.barrelFiles.slice(0, 10)) {
+		for (const hotspot of internalFanoutCulprits.slice(0, 10)) {
 			lines.push(
-				`- ${barrelFile.displayPath} reaches ${barrelFile.impact.reachableModulesCount} modules, including ${barrelFile.impact.reachableNodeModulesCount} node_modules modules; direct importers: ${formatList(barrelFile.directImporters.map((importer) => formatPathForLlm(importer, report.metadata)))}`,
+				`- ${hotspot.displayPath}${hotspot.isBarrelFile ? " [explicit barrel]" : ""} reaches ${hotspot.reachableModulesCount} modules, including ${hotspot.reachableNodeModulesCount} node_modules modules; direct importers: ${formatPreviewList(
+					hotspot.directImporters.map((importer) =>
+						formatPathForLlm(importer, report.metadata),
+					),
+					5,
+				)}`,
 			);
-			const introducedPackages = sortStrings(
-				barrelFile.nodeModulesIntroduced.map(
-					(dependency) => dependency.packageName ?? dependency.path,
-				),
-			);
-			if (introducedPackages.length > 0) {
-				lines.push(`  Pulls in: ${introducedPackages.slice(0, 5).join(", ")}`);
+			if (hotspot.topExternalPackages.length > 0) {
+				lines.push(
+					`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`,
+				);
 			}
+			lines.push(`  Signals: ${formatPreviewList(hotspot.signals, 4)}`);
 		}
 	}
 
 	lines.push("", "## node_modules with multiple sources");
-	const multiSourcePackages = report.externalPackages.filter(
-		(pkg) => pkg.sourceCount > 1,
-	);
 	if (multiSourcePackages.length === 0) {
 		lines.push("- None");
 	} else {
@@ -155,27 +179,38 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 					? `${pkg.sourceCount} sources`
 					: `${pkg.sourceCount} source files across ${pkg.sourceGroupCount} source groups`;
 			lines.push(
-				`- ${pkg.packageName} is introduced by ${sourceSummary}: ${formatList(pkg.sourceGroups.map((group) => group.label))}`,
+				`- ${pkg.packageName} is introduced by ${sourceSummary}: ${formatPreviewList(
+					pkg.sourceGroups.map((group) => group.label),
+					8,
+				)}`,
 			);
 			if (pkg.barrelSources.length > 0) {
-				lines.push(
-					`  Barrel sources: ${formatList(pkg.barrelSources.map((source) => formatPathForLlm(source, report.metadata)))}`,
-				);
+				const fanoutSources = buildSourceGroups(
+					pkg.barrelSources,
+					report.metadata,
+				).map((sourceGroup) => sourceGroup.label);
+				lines.push(`  Fan-out sources: ${formatPreviewList(fanoutSources, 5)}`);
 			}
 			if (pkg.modulePaths.length > 0) {
 				lines.push(
-					`  Representative modules: ${pkg.modulePaths
-						.slice(0, 3)
-						.map((modulePath) => formatPathForLlm(modulePath, report.metadata))
-						.join(", ")}`,
+					`  Representative modules: ${formatPreviewList(
+						pkg.modulePaths
+							.slice(0, 3)
+							.map((modulePath) =>
+								formatPathForLlm(modulePath, report.metadata),
+							),
+						3,
+					)}`,
 				);
 			}
 			if (pkg.originChains.length > 0) {
 				lines.push(
 					`  Origin chains: ${pkg.originChains
-						.slice(0, 3)
+						.slice(0, 2)
 						.map((chain) => formatChainForLlm(chain, report.metadata))
-						.join(" | ")}`,
+						.join(
+							" | ",
+						)}${pkg.originChains.length > 2 ? ` | +${pkg.originChains.length - 2} more` : ""}`,
 				);
 			}
 		}
@@ -411,11 +446,12 @@ function collectReachablePaths(
 			continue;
 		}
 
-		reachable.add(currentPath);
 		const currentNode = nodeMap.get(currentPath);
 		if (!currentNode) {
 			continue;
 		}
+
+		reachable.add(currentPath);
 
 		for (const importee of currentNode.importees) {
 			if (!reachable.has(importee)) {
@@ -536,8 +572,13 @@ function buildSourceGroups(sources: string[], metadata: VizMetadata) {
 			source,
 			metadata,
 		);
-		const label = workspacePackage?.name ?? source;
-		const kind = workspacePackage ? "workspace-package" : "file";
+		const externalPackage = getPackageNameFromNodeModulesPath(source);
+		const label = workspacePackage?.name ?? externalPackage ?? source;
+		const kind = workspacePackage
+			? "workspace-package"
+			: externalPackage
+				? "external-package"
+				: "file";
 		const current = groups.get(label);
 
 		if (!current) {
@@ -552,9 +593,7 @@ function buildSourceGroups(sources: string[], metadata: VizMetadata) {
 		current.paths = sortStrings([...current.paths, source]);
 	}
 
-	return Array.from(groups.values()).sort((left, right) =>
-		left.label.localeCompare(right.label),
-	);
+	return Array.from(groups.values()).sort(compareSourceGroups);
 }
 
 function formatChainForLlm(chain: string[], metadata: VizMetadata) {
@@ -613,6 +652,46 @@ function sortStrings(values: string[]) {
 	);
 }
 
-function formatList(values: string[]) {
-	return values.length > 0 ? values.join(", ") : "none";
+function formatPreviewList(values: string[], limit: number) {
+	const uniqueValues = Array.from(new Set(values));
+	if (uniqueValues.length === 0) {
+		return "none";
+	}
+
+	const preview = uniqueValues.slice(0, limit).join(", ");
+	return uniqueValues.length > limit
+		? `${preview}, +${uniqueValues.length - limit} more`
+		: preview;
+}
+
+function compareSourceGroups(
+	left: LlmExternalPackageReport["sourceGroups"][number],
+	right: LlmExternalPackageReport["sourceGroups"][number],
+) {
+	const leftRank = getSourceGroupRank(left.kind);
+	const rightRank = getSourceGroupRank(right.kind);
+	if (leftRank !== rightRank) {
+		return leftRank - rightRank;
+	}
+
+	if (right.paths.length !== left.paths.length) {
+		return right.paths.length - left.paths.length;
+	}
+
+	return left.label.localeCompare(right.label);
+}
+
+function getSourceGroupRank(
+	kind: LlmExternalPackageReport["sourceGroups"][number]["kind"],
+) {
+	switch (kind) {
+		case "workspace-package":
+			return 0;
+		case "file":
+			return 1;
+		case "external-package":
+			return 2;
+		default:
+			return 3;
+	}
 }

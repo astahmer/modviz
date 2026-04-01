@@ -145,7 +145,7 @@ export interface LlmBarrelFileReport {
 }
 
 export interface LlmSourceGroup {
-	kind: "workspace-package" | "file";
+	kind: "workspace-package" | "external-package" | "file";
 	label: string;
 	paths: string[];
 }
