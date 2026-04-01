@@ -1,11 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ChevronLeft, FolderTree, Info } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ChevronLeft, Info } from "lucide-react";
+import { colors } from "~/components/graph/common/colors";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { Button } from "~/components/ui/button";
 import { fetchModvizBundle, getWorkspacePackageNames } from "~/utils/modviz-data";
-import type { VizNode } from "../../mod/types";
-import { colors } from "~/components/graph/common/colors";
+import {
+	buildTreemapModel,
+	collectTreemapModules,
+	getTreemapAncestors,
+	layoutTreemap,
+	type TreemapTreeNode,
+} from "~/utils/treemap";
 
 export const Route = createFileRoute("/treemap")({
 	ssr: false,
@@ -13,34 +19,44 @@ export const Route = createFileRoute("/treemap")({
 	component: TreemapRoute,
 });
 
-interface TreemapNode {
-	path: string;
-	size: number;
-	label: string;
-	color: string;
-	children?: TreemapNode[];
-	x?: number;
-	y?: number;
-	width?: number;
-	height?: number;
-	node?: VizNode;
-}
+const formatCount = (value: number, singular: string, plural = `${singular}s`) =>
+	`${value} ${value === 1 ? singular : plural}`;
 
-interface Rectangle {
-	path: string;
-	label: string;
-	color: string;
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-	size: number;
-	node?: VizNode;
-}
+const getNodeTitle = (node: TreemapTreeNode) => {
+	if (node.kind === "module") {
+		return node.sourcePath ?? node.label;
+	}
+	return node.label;
+};
+
+const getNodeSubtitle = (node: TreemapTreeNode) => {
+	if (node.kind === "module" && node.sourceNode) {
+		return `${node.sourceNode.type}${node.sourceNode.cluster ? ` • ${node.sourceNode.cluster}` : ""}`;
+	}
+	if (node.kind === "package") {
+		return `${formatCount(node.moduleCount, "module")} in package`;
+	}
+	if (node.kind === "scope") {
+		return `${formatCount(node.moduleCount, "module")} in ${node.label.toLowerCase()}`;
+	}
+	return `${formatCount(node.moduleCount, "module")} across this branch`;
+	};
+
+const getRectCaption = (node: TreemapTreeNode) => {
+	if (node.kind === "module") {
+		return `${node.totalOutgoing} out • ${node.totalIncoming} in`;
+	}
+	return `${formatCount(node.moduleCount, "module")}`;
+};
+
+const getRectNumberVisibility = (width: number, height: number) =>
+	width > 32 && height > 24;
 
 function TreemapRoute() {
 	const bundle = Route.useLoaderData();
-	const [selectedPath, setSelectedPath] = useState<string | null>(null);
+	const [focusNodeId, setFocusNodeId] = useState("root");
+	const [activeNodeId, setActiveNodeId] = useState("root");
+	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
 	const workspacePackageNames = useMemo(
 		() => getWorkspacePackageNames(bundle.graph),
@@ -50,163 +66,345 @@ function TreemapRoute() {
 	const clusterColors = useMemo(() => {
 		const colorMap = new Map<string, string>();
 		bundle.graph.nodes.forEach((node) => {
-			const cluster = node.cluster ?? node.package?.name ?? "other";
-			if (!colorMap.has(cluster)) {
+			const colorKey = node.cluster ?? node.package?.name ?? node.type ?? node.path;
+			if (!colorMap.has(colorKey)) {
 				colorMap.set(
-					cluster,
-					colors.list[colorMap.size] ?? colors.deterministic(cluster),
+					colorKey,
+					colors.list[colorMap.size] ?? colors.deterministic(colorKey),
 				);
 			}
 		});
 		return colorMap;
 	}, [bundle.graph.nodes]);
 
-	const treemapData = useMemo(() => {
-		const nodesMap = new Map(bundle.graph.nodes.map((n) => [n.path, n]));
-		const tree = buildHierarchy(
-			bundle.graph.nodes,
-			clusterColors,
-			selectedPath,
-		);
-		return { tree, nodesMap };
-	}, [bundle.graph.nodes, clusterColors, selectedPath]);
+	const treemap = useMemo(
+		() => buildTreemapModel(bundle.graph.nodes, workspacePackageNames, clusterColors),
+		[bundle.graph.nodes, workspacePackageNames, clusterColors],
+	);
 
-	const rectangles = useMemo(() => {
-		const rects = layout(treemapData.tree, 0, 0, 1000, 600);
-		return rects;
-	}, [treemapData.tree]);
-
-	const selectedNode = selectedPath
-		? treemapData.nodesMap.get(selectedPath)
+	const resolvedFocusNode = treemap.nodesById.get(focusNodeId) ?? treemap.root;
+	const resolvedActiveNode = treemap.nodesById.get(activeNodeId) ?? resolvedFocusNode;
+	const breadcrumbs = useMemo(
+		() => getTreemapAncestors(resolvedFocusNode, treemap.nodesById),
+		[resolvedFocusNode, treemap.nodesById],
+	);
+	const parentNode = resolvedFocusNode.parentId
+		? treemap.nodesById.get(resolvedFocusNode.parentId) ?? null
 		: null;
-	const parentPath = selectedPath ? selectedPath.split("/").slice(0, -1).join("/") : null;
+
+	const visibleNodes = resolvedFocusNode.children.length > 0
+		? resolvedFocusNode.children
+		: [resolvedFocusNode];
+	const rectangles = useMemo(
+		() =>
+			layoutTreemap(visibleNodes, 0, 0, 1000, 600).map((rect, index) => ({
+				...rect,
+				legendIndex: index + 1,
+			})),
+		[visibleNodes],
+	);
+	const hoveredNode = hoveredNodeId
+		? treemap.nodesById.get(hoveredNodeId) ?? null
+		: null;
+	const previewNode = hoveredNode ?? resolvedActiveNode;
+	const topModules = useMemo(
+		() =>
+			collectTreemapModules(resolvedActiveNode)
+				.sort((left, right) => right.size - left.size)
+				.slice(0, 6),
+		[resolvedActiveNode],
+	);
+
+	const handleRectClick = (node: TreemapTreeNode) => {
+		setActiveNodeId(node.id);
+		if (node.children.length > 0) {
+			setFocusNodeId(node.id);
+		}
+	};
+
+	const handleNavigateTo = (nodeId: string) => {
+		setFocusNodeId(nodeId);
+		setActiveNodeId(nodeId);
+	};
 
 	return (
 		<ModvizLayout>
 			<div className="space-y-4">
 				<div>
-					<div className="flex items-center gap-3">
+					<div className="flex flex-wrap items-center gap-3">
 						<h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
 							Treemap Visualization
 						</h1>
-						{selectedPath && (
+						{parentNode && (
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setSelectedPath(null)}
+								onClick={() => handleNavigateTo(parentNode.id)}
 								className="gap-2"
 							>
 								<ChevronLeft className="size-4" />
+								Up one level
+							</Button>
+						)}
+						{resolvedFocusNode.id !== treemap.root.id && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => handleNavigateTo(treemap.root.id)}
+							>
 								Reset view
 							</Button>
 						)}
 					</div>
 					<p className="mt-2 text-slate-600 dark:text-slate-400">
-						Hierarchical view of modules sized by import dependencies. Click to zoom.
+						Size reflects total direct dependency edges for each branch or file.
+						Click folders or packages to drill in, then click files to inspect the hotspot.
 					</p>
 				</div>
 
 				<div className="rounded-[24px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+					<div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+						<FolderTree className="size-4" />
+						{breadcrumbs.map((node, index) => (
+							<button
+								key={node.id}
+								type="button"
+								onClick={() => handleNavigateTo(node.id)}
+								className="rounded-full px-2 py-1 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+							>
+								{index > 0 ? "/ " : ""}
+								{node.label}
+							</button>
+						))}
+					</div>
+					<div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[20px] border border-slate-200/70 bg-slate-50/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+								{hoveredNode ? "Hover preview" : "Selection preview"}
+							</p>
+							<p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+								{getNodeTitle(previewNode)}
+							</p>
+							<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+								{getNodeSubtitle(previewNode)}
+							</p>
+						</div>
+						<div className="text-right text-xs text-slate-500 dark:text-slate-400">
+							<p>{getRectCaption(previewNode)}</p>
+							<p className="mt-1">
+								{formatCount(previewNode.totalNamedImports, "import statement")}
+							</p>
+						</div>
+					</div>
 					<svg
 						viewBox="0 0 1000 600"
-						className="w-full border border-slate-200 dark:border-slate-700"
-						style={{
-							maxHeight: "70vh",
-							backgroundColor: "var(--bg)",
-						}}
+						className="w-full rounded-[20px] border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60"
+						style={{ maxHeight: "70vh" }}
 					>
-						{rectangles.map((rect) => (
-							<g
-								key={rect.path}
-								onClick={() => setSelectedPath(rect.path === "root" ? null : rect.path)}
-								className="cursor-pointer transition-opacity hover:opacity-80"
-							>
-								<rect
-									x={rect.x}
-									y={rect.y}
-									width={rect.width}
-									height={rect.height}
-									fill={rect.color}
-									stroke="white"
-									strokeWidth="2"
-									opacity="0.85"
-								/>
-								{rect.width > 60 && rect.height > 40 && (
-									<foreignObject
-										x={rect.x + 4}
-										y={rect.y + 4}
-										width={rect.width - 8}
-										height={rect.height - 8}
-									>
-										<div className="flex h-full flex-col overflow-hidden text-white">
-											<p className="truncate text-xs font-semibold">
-												{rect.label}
-											</p>
-											<p className="text-[10px] opacity-90">
-												{rect.size} import{rect.size !== 1 ? "s" : ""}
-											</p>
-										</div>
-									</foreignObject>
-								)}
-							</g>
-						))}
+						{rectangles.map((rect) => {
+							const isActive = rect.node.id === resolvedActiveNode.id;
+							const isHovered = rect.node.id === hoveredNodeId;
+							return (
+								<g
+									key={rect.id}
+									onClick={() => handleRectClick(rect.node)}
+									className="cursor-pointer transition-opacity hover:opacity-90"
+									onMouseEnter={() => setHoveredNodeId(rect.node.id)}
+									onMouseLeave={() => setHoveredNodeId((current) => (current === rect.node.id ? null : current))}
+								>
+									<title>
+										#{rect.legendIndex} {getNodeTitle(rect.node)}
+										{`\n${getNodeSubtitle(rect.node)}`}
+										{`\n${getRectCaption(rect.node)}`}
+									</title>
+									<rect
+										x={rect.x + 2}
+										y={rect.y + 2}
+										width={Math.max(0, rect.width - 4)}
+										height={Math.max(0, rect.height - 4)}
+										fill={rect.node.color}
+										stroke={isActive || isHovered ? "#0f172a" : "rgba(255,255,255,0.92)"}
+										strokeWidth={isActive ? 4 : isHovered ? 3 : 2}
+										rx={10}
+										opacity={rect.node.kind === "module" ? 0.9 : 0.84}
+									/>
+									{getRectNumberVisibility(rect.width, rect.height) && (
+										<g>
+											<rect
+												x={rect.x + 10}
+												y={rect.y + 10}
+												width={Math.min(34, Math.max(24, rect.width - 20))}
+												height={20}
+												rx={10}
+												fill="rgba(15,23,42,0.72)"
+											/>
+											<text
+												x={rect.x + 10 + Math.min(34, Math.max(24, rect.width - 20)) / 2}
+												y={rect.y + 24}
+												textAnchor="middle"
+												fontSize="11"
+												fontWeight="700"
+												fill="white"
+											>
+												#{rect.legendIndex}
+											</text>
+										</g>
+									)}
+									{rect.width > 110 && rect.height > 72 && (
+										<foreignObject
+											x={rect.x + 14}
+											y={rect.y + 36}
+											width={Math.max(0, rect.width - 28)}
+											height={Math.max(0, rect.height - 50)}
+										>
+											<div className="flex h-full flex-col justify-between overflow-hidden text-white">
+												<div>
+													<p className="truncate text-sm font-semibold leading-tight">
+														{rect.node.label}
+													</p>
+													<p className="mt-1 text-xs opacity-90">
+														{getRectCaption(rect.node)}
+													</p>
+												</div>
+												{rect.node.kind !== "module" && (
+													<p className="text-[11px] opacity-80">
+														Click to zoom deeper
+													</p>
+												)}
+											</div>
+										</foreignObject>
+									)}
+								</g>
+							);
+						})}
 					</svg>
 				</div>
 
-				{selectedNode && (
+				<div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
 					<div className="rounded-[24px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-						<div className="flex items-start justify-between">
-							<div>
-								<p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-300">
-									Selected Node
-								</p>
-								<h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-									{selectedNode.path}
-								</h2>
-								<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-									{selectedNode.cluster ?? selectedNode.type}
-								</p>
-							</div>
-							{parentPath && (
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setSelectedPath(parentPath)}
-								>
-									<ChevronLeft className="size-4" />
-									Parent
-								</Button>
-							)}
-						</div>
+						<p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-300">
+							Current selection
+						</p>
+						<h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+							{getNodeTitle(resolvedActiveNode)}
+						</h2>
+						<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+							{getNodeSubtitle(resolvedActiveNode)}
+						</p>
 
 						<div className="mt-4 grid gap-4 md:grid-cols-3">
 							<div className="rounded-lg bg-slate-50/80 p-4 dark:bg-slate-900/50">
 								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-									Direct imports
+									Modules
 								</p>
 								<p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-									{selectedNode.imports.length}
+									{resolvedActiveNode.moduleCount}
 								</p>
 							</div>
 							<div className="rounded-lg bg-slate-50/80 p-4 dark:bg-slate-900/50">
 								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-									Imported by
+									Outgoing imports
 								</p>
 								<p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-									{selectedNode.importedBy.length}
+									{resolvedActiveNode.totalOutgoing}
 								</p>
 							</div>
 							<div className="rounded-lg bg-slate-50/80 p-4 dark:bg-slate-900/50">
 								<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-									Type
+									Incoming imports
 								</p>
-								<p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-									{selectedNode.type}
+								<p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+									{resolvedActiveNode.totalIncoming}
 								</p>
 							</div>
 						</div>
+
+						{resolvedActiveNode.kind === "module" && resolvedActiveNode.sourceNode && (
+							<div className="mt-4 rounded-lg bg-slate-50/80 p-4 text-sm text-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
+								<p>
+									Named imports in source: {resolvedActiveNode.totalNamedImports}
+								</p>
+								<p className="mt-1">
+									Imported by {formatCount(resolvedActiveNode.sourceNode.importedBy.length, "module")}
+									 and imports {formatCount(resolvedActiveNode.sourceNode.importees.length, "module")}.
+								</p>
+							</div>
+						)}
 					</div>
-				)}
+
+					<div className="rounded-[24px] border border-slate-200/70 bg-white/90 p-6 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+						<p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+							Nodes in current view
+						</p>
+						<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+							Tiny tiles are numbered to match this list.
+						</p>
+						<div className="mt-4 max-h-[26rem] space-y-3 overflow-auto pr-1">
+							{rectangles.map((rect) => (
+								<button
+									key={rect.id}
+									type="button"
+									onClick={() => handleRectClick(rect.node)}
+									onMouseEnter={() => setHoveredNodeId(rect.node.id)}
+									onMouseLeave={() => setHoveredNodeId((current) => (current === rect.node.id ? null : current))}
+									className="block w-full rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+								>
+									<div className="flex items-start gap-3">
+										<div className="mt-0.5 flex items-center gap-2">
+											<span className="inline-flex min-w-8 items-center justify-center rounded-full bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
+												#{rect.legendIndex}
+											</span>
+											<span
+												className="mt-1 size-3 rounded-full"
+												style={{ backgroundColor: rect.node.color }}
+											/>
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+												{getNodeTitle(rect.node)}
+											</p>
+											<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+												{getNodeSubtitle(rect.node)}
+											</p>
+											<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+												{getRectCaption(rect.node)}
+											</p>
+										</div>
+									</div>
+								</button>
+							))}
+							{rectangles.length === 0 && (
+								<p className="text-sm text-slate-500 dark:text-slate-400">
+									No nodes are visible at this level.
+								</p>
+							)}
+							{topModules.length > 0 && (
+								<div className="pt-2">
+									<p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+										Heaviest modules in selection
+									</p>
+									<div className="mt-3 space-y-3">
+										{topModules.map((node) => (
+											<button
+												key={node.id}
+												type="button"
+												onClick={() => setActiveNodeId(node.id)}
+												className="block w-full rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700 dark:hover:bg-slate-900"
+											>
+												<p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+													{node.sourcePath ?? node.label}
+												</p>
+												<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+													{node.totalOutgoing} outgoing • {node.totalIncoming} incoming
+												</p>
+											</button>
+										))}
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
 
 				<div className="rounded-[24px] border border-blue-200/70 bg-blue-50/80 p-4 dark:border-blue-900/30 dark:bg-blue-950/30">
 					<div className="flex gap-3">
@@ -214,9 +412,9 @@ function TreemapRoute() {
 						<div className="text-sm text-blue-800 dark:text-blue-200">
 							<p className="font-semibold">About this view</p>
 							<p className="mt-1">
-								Rectangle size represents the number of direct imports for each module.
-								Click on any rectangle to zoom in and explore sub-modules. Rectangles are
-								color-coded by cluster/package for quick visual identification.
+								The treemap now groups workspace code by folders and third-party code by package,
+								so the first click reveals structure instead of dropping you into a broken leaf.
+								Area reflects direct dependency pressure using incoming plus outgoing edges.
 							</p>
 						</div>
 					</div>
@@ -224,168 +422,4 @@ function TreemapRoute() {
 			</div>
 		</ModvizLayout>
 	);
-}
-
-function buildHierarchy(
-	nodes: VizNode[],
-	colorMap: Map<string, string>,
-	selectedPath: string | null,
-): TreemapNode {
-	const nodeMap = new Map(nodes.map((n) => [n.path, n]));
-	const hierarchy = new Map<string, TreemapNode>();
-	let root: TreemapNode = {
-		path: "root",
-		size: 0,
-		label: "All Modules",
-		color: "#94a3b8",
-		children: [],
-	};
-
-	// Filter nodes if a path is selected
-	const visibleNodes = selectedPath
-		? nodes.filter(
-				(n) =>
-					n.path === selectedPath ||
-					n.path.startsWith(`${selectedPath}/`),
-			)
-		: nodes;
-
-	// Build path hierarchy
-	for (const node of visibleNodes) {
-		const cluster = node.cluster ?? node.package?.name ?? "other";
-		const size = Math.max(1, node.imports.length);
-		const color = colorMap.get(cluster) ?? "#94a3b8";
-
-		let parentPath = selectedPath || "root";
-		let currentPath = selectedPath ? selectedPath : "root";
-
-		// Create nodes for the path hierarchy
-		const parts = selectedPath
-			? node.path.slice(selectedPath.length + 1).split("/")
-			: node.path.split("/");
-
-		parts.forEach((part, index) => {
-			const fullPath = currentPath === "root"
-				? `${part}`
-				: `${currentPath}/${part}`;
-			const isLeaf = index === parts.length - 1;
-
-			if (!hierarchy.has(fullPath)) {
-				const newNode: TreemapNode = {
-					path: fullPath,
-					size: isLeaf ? size : 0,
-					label: part,
-					color,
-					node: isLeaf ? node : undefined,
-					children: [],
-				};
-				hierarchy.set(fullPath, newNode);
-
-				if (parentPath === "root") {
-					if (!root.children) root.children = [];
-					root.children.push(newNode);
-				} else {
-					const parent = hierarchy.get(parentPath);
-					if (parent) {
-						if (!parent.children) parent.children = [];
-						parent.children.push(newNode);
-					}
-				}
-			} else if (isLeaf) {
-				const existing = hierarchy.get(fullPath);
-				if (existing) {
-					existing.size += size;
-				}
-			}
-
-			parentPath = fullPath;
-			currentPath = fullPath;
-		});
-	}
-
-	// Calculate sizes bottom-up
-	const calculateSize = (node: TreemapNode): number => {
-		if (!node.children || node.children.length === 0) {
-			return node.size;
-		}
-		node.size = node.children.reduce((sum, child) => sum + calculateSize(child), 0);
-		return node.size;
-	};
-
-	if (root.children) {
-		root.size = root.children.reduce(
-			(sum, child) => sum + calculateSize(child),
-			0,
-		);
-	}
-
-	return root;
-}
-
-function layout(
-	node: TreemapNode,
-	x: number,
-	y: number,
-	width: number,
-	height: number,
-): Rectangle[] {
-	const rectangles: Rectangle[] = [];
-
-	if (!node.children || node.children.length === 0) {
-		rectangles.push({
-			path: node.path,
-			label: node.label,
-			color: node.color,
-			x,
-			y,
-			width,
-			height,
-			size: node.size,
-			node: node.node,
-		});
-		return rectangles;
-	}
-
-	const children = [...node.children].sort((a, b) => b.size - a.size);
-	const ratio = width / height;
-	let row: TreemapNode[] = [];
-	let rowWidth = 0;
-
-	for (const child of children) {
-		row.push(child);
-		rowWidth += child.size;
-
-		const rowRatio = Math.max(
-			ratio,
-			(rowWidth * rowWidth) / (node.size * node.size),
-		);
-		const maxRatio = Math.max(
-			...row.map((r) => (r.size * r.size) / row.reduce((s, c) => s + c.size, 0) / rowRatio),
-		);
-
-		if (maxRatio > 1.5 || child === children[children.length - 1]) {
-			const rowHeight = rowWidth / (width / rowRatio);
-			let rowX = x;
-
-			for (const rowChild of row) {
-				const childWidth = (width / rowWidth) * rowChild.size;
-				const childRects = layout(
-					rowChild,
-					rowX,
-					y,
-					childWidth,
-					rowHeight,
-				);
-				rectangles.push(...childRects);
-				rowX += childWidth;
-			}
-
-			y += rowHeight;
-			height -= rowHeight;
-			row = [];
-			rowWidth = 0;
-		}
-	}
-
-	return rectangles;
 }
