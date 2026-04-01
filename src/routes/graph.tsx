@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
-import { lazy, startTransition, Suspense, useEffect, useMemo, useState, useTransition } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ChevronRight, RotateCcw, Settings2 } from "lucide-react";
 import { z } from "zod";
 import { GraphCommandMenu } from "~/components/graph/graph-command-menu";
@@ -87,9 +87,6 @@ function GraphRoute() {
 	const navigate = Route.useNavigate();
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [refreshNonce, setRefreshNonce] = useState(0);
-	const [isGraphBusy, setIsGraphBusy] = useState(true);
-	const [cancelNonce, setCancelNonce] = useState(0);
-	const [isPending, startUiTransition] = useTransition();
 	const focusedValue = useAtom(focusedNodeIdAtom);
 	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
 	const workspacePackageNames = useMemo(
@@ -136,20 +133,18 @@ function GraphRoute() {
 			JSON.stringify({
 				cluster: search.cluster,
 				externalGrouping,
+				layoutSettings,
 				refreshNonce,
 				scope,
 			}),
-		[externalGrouping, refreshNonce, scope, search.cluster],
+		[externalGrouping, layoutSettings, refreshNonce, scope, search.cluster],
 	);
 	const updateSearch = (
 		patch: Partial<GraphSearch>,
 	) =>
-		startUiTransition(() => {
-			setIsGraphBusy(true);
-			void navigate({
-				replace: true,
-				search: (previous) => ({ ...previous, ...patch }),
-			});
+		navigate({
+			replace: true,
+			search: (previous) => ({ ...previous, ...patch }),
 		});
 
 	useEffect(() => {
@@ -160,15 +155,6 @@ function GraphRoute() {
 		highlightedNodeIdAtom.set(search.focus);
 		focusedNodeIdAtom.set(search.focus);
 	}, [search.focus]);
-
-	useEffect(() => {
-		setIsGraphBusy(true);
-	}, [filteredNodes, layoutSettings]);
-
-	const cancelGraphUpdate = () => {
-		setCancelNonce((value) => value + 1);
-		setIsGraphBusy(false);
-	};
 
 	return (
 		<ModvizLayout
@@ -235,12 +221,7 @@ function GraphRoute() {
 					</div>
 					<Button
 						variant="outline"
-						onClick={() =>
-							startTransition(() => {
-								setIsGraphBusy(true);
-								setRefreshNonce((value) => value + 1);
-							})
-						}
+						onClick={() => setRefreshNonce((value) => value + 1)}
 					>
 						<RotateCcw className="size-4" />
 						Refresh canvas
@@ -257,7 +238,6 @@ function GraphRoute() {
 					<div className="text-sm text-slate-500 dark:text-slate-400">
 						{filteredNodes.length} nodes, {bundle.graph.metadata.packages.length} workspace packages
 						{search.cluster ? ` • filtered to ${search.cluster}` : ""}
-						{isPending ? " • applying changes" : ""}
 					</div>
 				</section>
 				<section className="min-h-0 flex-1 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_70px_-36px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -267,11 +247,7 @@ function GraphRoute() {
 							output={{ ...bundle.graph, nodes: filteredNodes }}
 							entryNode={search.focus || bundle.graph.metadata.entrypoints[0]}
 							externalGrouping={externalGrouping}
-							isBusy={isGraphBusy}
-							cancelNonce={cancelNonce}
 							layoutSettings={layoutSettings}
-							onCancelUpdate={cancelGraphUpdate}
-							onBusyChange={setIsGraphBusy}
 							packages={bundle.graph.metadata.packages}
 							nodes={filteredNodes}
 						/>
@@ -283,10 +259,7 @@ function GraphRoute() {
 				settings={layoutSettings}
 				onOpenChange={setSettingsOpen}
 				onSettingsChange={(nextSettings) => updateSearch(nextSettings)}
-				onReset={() => {
-					updateSearch(defaultLayoutSettings);
-					return defaultLayoutSettings;
-				}}
+				onReset={() => updateSearch(defaultLayoutSettings)}
 			/>
 		</ModvizLayout>
 	);

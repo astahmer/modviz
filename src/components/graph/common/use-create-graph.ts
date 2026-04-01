@@ -39,6 +39,7 @@ export const useCreateGraph = (props: {
 		[props.packages],
 	);
 	const clusterAnchors = useMemo(() => {
+		const spreadBase = Math.max(26, Math.sqrt(props.nodes.length) * 0.9);
 		const groups = Array.from(
 			new Set(
 				props.nodes.map((node) =>
@@ -54,7 +55,7 @@ export const useCreateGraph = (props: {
 		return new Map(
 			groups.map((groupLabel, index) => {
 				const angle = index * 2.399963229728653;
-				const radius = 12 * Math.sqrt(index + 1);
+				const radius = spreadBase * Math.sqrt(index + 1);
 
 				return [
 					groupLabel,
@@ -118,8 +119,9 @@ export const useCreateGraph = (props: {
 				props.externalGrouping ?? "combined",
 			);
 			const anchor = clusterAnchors.get(groupLabel) ?? { x: 0, y: 0 };
-			const jitterX = (getRandom() - 0.5) * 8;
-			const jitterY = (getRandom() - 0.5) * 8;
+			const clusterRadius = Math.max(12, Math.min(36, Math.sqrt(node.importedBy.length + 1) * 6));
+			const jitterX = (getRandom() - 0.5) * clusterRadius;
+			const jitterY = (getRandom() - 0.5) * clusterRadius;
 
 			// Seed clusters into separate regions so ForceAtlas2 can preserve community structure.
 			const isEntry = props.entryNode === node.path;

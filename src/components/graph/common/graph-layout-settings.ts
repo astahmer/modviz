@@ -17,14 +17,14 @@ export const getDefaultGraphLayoutSettings = (
 	const densityFactor = Math.max(1, Math.sqrt(safeNodeCount));
 
 	return {
-		iterations: Math.min(320, Math.max(160, Math.round(120 + densityFactor * 1.5))),
-		gravity: Number(Math.max(0.6, Math.min(4, densityFactor / 30)).toFixed(1)),
-		scalingRatio: Math.min(140, Math.max(18, Math.round(12 + densityFactor * 1.2))),
+		iterations: Math.min(420, Math.max(220, Math.round(170 + densityFactor * 2.4))),
+		gravity: Number(Math.max(0.15, Math.min(1.2, densityFactor / 90)).toFixed(2)),
+		scalingRatio: Math.min(220, Math.max(40, Math.round(28 + densityFactor * 2.6))),
 		strongGravityMode: false,
 		linLogMode: true,
 		adjustSizes: true,
 		outboundAttractionDistribution: true,
 		hideClusterLabels: false,
-		nodeSizeScale: 0.9,
+		nodeSizeScale: 0.85,
 	};
 };

@@ -1,5 +1,6 @@
 import { useLoadGraph } from "@react-sigma/core";
 import { useWorkerLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
+import { useLayoutNoverlap } from "@react-sigma/layout-noverlap";
 import { useEffect, useMemo, useRef } from "react";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import {
@@ -52,6 +53,16 @@ export const SigmaGraph = (props: {
 		],
 	);
 	const layout = useWorkerLayoutForceAtlas2(workerLayoutOptions);
+	const noverlap = useLayoutNoverlap({
+		maxIterations: Math.min(240, Math.max(80, Math.round(props.layoutSettings.iterations / 2))),
+		settings: {
+			expansion: 1.2,
+			gridSize: 40,
+			margin: 6,
+			ratio: 1.4,
+			speed: 2,
+		},
+	});
 
 	const createGraph = useCreateGraph(props);
 	const loadGraph = useLoadGraph<NodeType, EdgeType>();
@@ -60,6 +71,14 @@ export const SigmaGraph = (props: {
 	const animationFrameRef = useRef<number | null>(null);
 	const activeRunIdRef = useRef(0);
 	useGraphSettings(props);
+
+	const applyNoverlapSpacing = (runId: number) => {
+		if (activeRunIdRef.current !== runId) {
+			return;
+		}
+
+		noverlap.assign();
+	};
 
 	const stopLayoutAfterDelay = (delayMs: number, runId: number) => {
 		if (stopTimerRef.current != null) {
@@ -72,6 +91,7 @@ export const SigmaGraph = (props: {
 			}
 
 			layout.stop();
+			applyNoverlapSpacing(runId);
 			stopTimerRef.current = null;
 			props.onBusyChange?.(false);
 		}, delayMs);
@@ -170,6 +190,7 @@ export const SigmaGraph = (props: {
 	useEffect(() => {
 		return () => {
 			cancelActiveUpdate();
+			layout.stop();
 			layout.kill();
 		};
 	}, [layout.kill]);
