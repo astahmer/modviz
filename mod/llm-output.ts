@@ -10,6 +10,27 @@ import type {
 	VizNode,
 } from "./types.ts";
 
+export interface ModvizFocusOptions {
+	packageName?: string;
+	nodeQuery?: string;
+	limit?: number;
+}
+
+export interface ModvizFocusResolution {
+	matchedPackageNames: string[];
+	matchedNodePaths: string[];
+	includedPaths: string[];
+}
+
+interface ModvizMarkdownOptions {
+	commandHints?: {
+		packageCommand: string;
+		nodeCommand: string;
+	};
+	focus?: ModvizFocusOptions;
+	focusedDrilldown?: string;
+}
+
 export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 	const metadata = output.metadata;
 	const nodeMap = new Map(output.nodes.map((node) => [node.path, node]));
@@ -85,7 +106,10 @@ export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 	};
 }
 
-export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
+export function renderModvizLlmMarkdown(
+	report: ModvizLlmOutput,
+	options: ModvizMarkdownOptions = {},
+): string {
 	const auditHotspots = report.hotspots.filter(
 		(hotspot) => hotspot.type !== "entry" && hotspot.type !== "external",
 	);
@@ -104,6 +128,18 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 	const lines = [
 		"# modviz LLM report",
 		"",
+		...(options.focus?.packageName || options.focus?.nodeQuery
+			? [
+					"## Active focus",
+					...(options.focus.packageName
+						? [`- Package query: ${options.focus.packageName}`]
+						: []),
+					...(options.focus.nodeQuery
+						? [`- Node query: ${options.focus.nodeQuery}`]
+						: []),
+					"",
+				]
+			: []),
 		"## Summary",
 		`- Total nodes: ${report.summary.totalNodes}`,
 		`- Internal nodes: ${report.summary.internalNodes}`,
@@ -224,16 +260,36 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 		}
 	}
 
+	if (options.commandHints) {
+		lines.push(
+			"",
+			"## Follow-up commands",
+			`- Inspect one package: ${options.commandHints.packageCommand}`,
+			`- Inspect one node: ${options.commandHints.nodeCommand}`,
+		);
+	}
+
+	if (options.focusedDrilldown) {
+		lines.push(
+			"",
+			"## Focused drilldown",
+			...trimTrailingBlankLines(
+				options.focusedDrilldown
+					.split("\n")
+					.filter(
+						(line, index) =>
+							!(index === 0 && line.trim() === "# modviz LLM drilldown"),
+					),
+			),
+		);
+	}
+
 	return `${lines.join("\n")}\n`;
 }
 
 export function renderModvizLlmDrilldown(
 	report: ModvizLlmOutput,
-	options: {
-		packageName?: string;
-		nodeQuery?: string;
-		limit?: number;
-	},
+	options: ModvizFocusOptions,
 ) {
 	const limit = Math.max(options.limit ?? 20, 1);
 	const lines = ["# modviz LLM drilldown", ""];
@@ -291,6 +347,79 @@ export function renderModvizLlmDrilldown(
 	}
 
 	return `${trimTrailingBlankLines(lines).join("\n")}\n`;
+}
+
+export function resolveModvizFocus(
+	report: ModvizLlmOutput,
+	options: ModvizFocusOptions,
+): ModvizFocusResolution {
+	const includedPaths = new Set<string>();
+	const matchedPackageNames = options.packageName
+		? findExternalPackageMatches(
+				report.externalPackages,
+				options.packageName,
+			).map((pkg) => pkg.packageName)
+		: [];
+	const matchedNodePaths = options.nodeQuery
+		? findNodeMatches(report, options.nodeQuery).map((node) => node.path)
+		: [];
+
+	for (const packageName of matchedPackageNames) {
+		const pkg = report.externalPackages.find(
+			(externalPackage) => externalPackage.packageName === packageName,
+		);
+		if (!pkg) {
+			continue;
+		}
+
+		for (const modulePath of pkg.modulePaths) {
+			includedPaths.add(modulePath);
+		}
+		for (const source of pkg.sources) {
+			includedPaths.add(source);
+		}
+		for (const source of pkg.barrelSources) {
+			includedPaths.add(source);
+		}
+		for (const chain of pkg.originChains) {
+			for (const nodePath of chain) {
+				includedPaths.add(nodePath);
+			}
+		}
+	}
+
+	for (const nodePath of matchedNodePaths) {
+		includedPaths.add(nodePath);
+		const node = findNodeMatches(report, nodePath)[0];
+		if (!node) {
+			continue;
+		}
+
+		const directImporters =
+			node.hotspot?.directImporters ??
+			node.externalDependency?.directImporters ??
+			[];
+		for (const importer of directImporters) {
+			includedPaths.add(importer);
+		}
+
+		const originChains =
+			node.hotspot?.originChains ??
+			node.barrel?.originChains ??
+			node.externalDependency?.originChains ??
+			[];
+		for (const chain of originChains) {
+			for (const chainNode of chain) {
+				includedPaths.add(chainNode);
+			}
+		}
+	}
+
+	return {
+		matchedPackageNames,
+		matchedNodePaths,
+		includedPaths: Array.from(includedPaths),
+	};
 }
 
 export function inferLlmOutputPaths(outputFile: string) {

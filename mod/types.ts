@@ -69,6 +69,12 @@ export interface VizMetadata {
 	generatedAt: string;
 	nodeModulesCount: number;
 	packages: VizPackage[];
+	focus?: {
+		packageName?: string;
+		nodeQuery?: string;
+		matchedPackageNames: string[];
+		matchedNodePaths: string[];
+	};
 }
 
 export interface LlmSummary {
