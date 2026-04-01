@@ -26,6 +26,7 @@ const flags = {
 		args.find((arg) => arg.startsWith("--output-file="))?.split("=")[1] ??
 		"./modviz.json",
 	nodeModules: args.includes("--node-modules"),
+	ignoreDynamic: args.includes("--ignore-dynamic"),
 	serve: args.includes("--serve"),
 	help: args.includes("--help") || args.includes("-h"),
 	moduleLexer: args
@@ -38,15 +39,16 @@ if (flags.help || (!entryFile && !flags.serve)) {
 modviz - Interactive Dependency Graph Visualizer
 
 Usage:
-  modviz <entryFile>                    Generate graph and launch web UI
-  modviz <entryFile> --ui      Generate graph data only
+  modviz <entryFile>                    Generate graph only
+  modviz <entryFile> --ui      Generate graph and launch web UI
   modviz --serve [dataFile]             Launch web UI with existing data
-  modviz <entryFile> --port=4000        Use custom port
+  modviz <entryFile> --ui --port=4000        Use custom port
 
 Options:
   --port=<port>     Port for web server (default: 3000)
-  --ui     Generate JSON data only, don't launch UI
-  --serve           Launch UI server (optionally with existing data file)
+  --ui     Launch browser UI
+  --serve  Launch UI server (optionally with existing data file)
+  --ignore-dynamic   Ignore dynamic imports
   --help, -h        Show this help message
 
 Examples:
@@ -111,7 +113,8 @@ const clusterizePlugin: Plugin = {
 
 const moduleGraph = await createModuleGraph(entryFile, {
 	// TODO configurable flag to allow this
-	exclude:flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
+	exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
+	ignoreDynamicImport: flags.ignoreDynamic,
 	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 	plugins: [
 		imports,
