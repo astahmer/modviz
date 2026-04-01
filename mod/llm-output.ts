@@ -86,10 +86,14 @@ export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 }
 
 export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
+	const auditHotspots = report.hotspots.filter(
+		(hotspot) => hotspot.type !== "entry" && hotspot.type !== "external",
+	);
 	const internalFanoutCulprits = report.hotspots.filter(
 		(hotspot) =>
 			hotspot.type !== "external" &&
 			hotspot.type !== "entry" &&
+			(hotspot.directImporterCount > 1 || hotspot.isBarrelFile) &&
 			(hotspot.reachableNodeModulesCount > 0 ||
 				hotspot.reachableModulesCount >= 25),
 	);
@@ -114,7 +118,7 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 	if (report.hotspots.length === 0) {
 		lines.push("- None");
 	} else {
-		for (const hotspot of report.hotspots.slice(0, 10)) {
+		for (const hotspot of auditHotspots.slice(0, 10)) {
 			const kindLabel = hotspot.isBarrelFile
 				? `explicit barrel, ${hotspot.type}`
 				: hotspot.type;
@@ -178,12 +182,12 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 				pkg.sourceGroupCount === pkg.sourceCount
 					? `${pkg.sourceCount} sources`
 					: `${pkg.sourceCount} source files across ${pkg.sourceGroupCount} source groups`;
-			lines.push(
-				`- ${pkg.packageName} is introduced by ${sourceSummary}: ${formatPreviewList(
-					pkg.sourceGroups.map((group) => group.label),
-					8,
-				)}`,
-			);
+			lines.push(`- ${pkg.packageName} is introduced by ${sourceSummary}`);
+			if (pkg.sourceGroups.length > 0) {
+				lines.push(
+					`  Top source groups: ${formatSourceGroupPreview(pkg.sourceGroups, 6)}`,
+				);
+			}
 			if (pkg.barrelSources.length > 0) {
 				const fanoutSources = buildSourceGroups(
 					pkg.barrelSources,
@@ -197,7 +201,11 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 						pkg.modulePaths
 							.slice(0, 3)
 							.map((modulePath) =>
-								formatPathForLlm(modulePath, report.metadata),
+								formatModulePathWithinPackage(
+									modulePath,
+									pkg.packageName,
+									report.metadata,
+								),
 							),
 						3,
 					)}`,
@@ -217,6 +225,72 @@ export function renderModvizLlmMarkdown(report: ModvizLlmOutput): string {
 	}
 
 	return `${lines.join("\n")}\n`;
+}
+
+export function renderModvizLlmDrilldown(
+	report: ModvizLlmOutput,
+	options: {
+		packageName?: string;
+		nodeQuery?: string;
+		limit?: number;
+	},
+) {
+	const limit = Math.max(options.limit ?? 20, 1);
+	const lines = ["# modviz LLM drilldown", ""];
+	let renderedSectionCount = 0;
+
+	if (options.packageName) {
+		const packageMatches = findExternalPackageMatches(
+			report.externalPackages,
+			options.packageName,
+		);
+
+		if (packageMatches.length === 0) {
+			lines.push(`## Package: ${options.packageName}`, "- No matching package");
+		} else if (packageMatches.length > 1) {
+			lines.push(
+				`## Package: ${options.packageName}`,
+				`- Multiple matches: ${formatPreviewList(
+					packageMatches.map((pkg) => pkg.packageName),
+					limit,
+				)}`,
+			);
+		} else {
+			renderPackageDrilldown(lines, packageMatches[0], report.metadata, limit);
+			renderedSectionCount += 1;
+		}
+		lines.push("");
+	}
+
+	if (options.nodeQuery) {
+		const nodeMatches = findNodeMatches(report, options.nodeQuery);
+
+		if (nodeMatches.length === 0) {
+			lines.push(`## Node: ${options.nodeQuery}`, "- No matching node");
+		} else if (nodeMatches.length > 1) {
+			lines.push(
+				`## Node: ${options.nodeQuery}`,
+				`- Multiple matches: ${formatPreviewList(
+					nodeMatches.map((node) => node.displayPath),
+					limit,
+				)}`,
+			);
+		} else {
+			renderNodeDrilldown(lines, nodeMatches[0], report.metadata, limit);
+			renderedSectionCount += 1;
+		}
+		lines.push("");
+	}
+
+	if (
+		renderedSectionCount === 0 &&
+		!options.packageName &&
+		!options.nodeQuery
+	) {
+		lines.push("- No drilldown query provided", "");
+	}
+
+	return `${trimTrailingBlankLines(lines).join("\n")}\n`;
 }
 
 export function inferLlmOutputPaths(outputFile: string) {
@@ -662,6 +736,293 @@ function formatPreviewList(values: string[], limit: number) {
 	return uniqueValues.length > limit
 		? `${preview}, +${uniqueValues.length - limit} more`
 		: preview;
+}
+
+function formatSourceGroupPreview(
+	sourceGroups: LlmExternalPackageReport["sourceGroups"],
+	limit: number,
+) {
+	return formatPreviewList(
+		sourceGroups.map((group) =>
+			group.paths.length > 1
+				? `${group.label} (${group.paths.length} files)`
+				: group.label,
+		),
+		limit,
+	);
+}
+
+function formatModulePathWithinPackage(
+	modulePath: string,
+	packageName: string,
+	metadata: VizMetadata,
+) {
+	const displayPath = toDisplayPath(modulePath, metadata.basePath);
+	const parts = normalizePath(displayPath).split("/");
+	const nodeModulesIndex = parts.lastIndexOf("node_modules");
+	if (nodeModulesIndex === -1) {
+		return displayPath;
+	}
+
+	const packageParts = packageName.startsWith("@")
+		? packageName.split("/")
+		: [packageName];
+	const startIndex = nodeModulesIndex + 1 + packageParts.length;
+	const withinPackage = parts.slice(startIndex).join("/");
+
+	return withinPackage || packageName;
+}
+
+function findExternalPackageMatches(
+	packages: LlmExternalPackageReport[],
+	query: string,
+) {
+	const normalizedQuery = normalizeSearchQuery(query);
+	const exactMatches = packages.filter(
+		(pkg) => normalizeSearchQuery(pkg.packageName) === normalizedQuery,
+	);
+	if (exactMatches.length > 0) {
+		return exactMatches;
+	}
+
+	return packages.filter((pkg) =>
+		normalizeSearchQuery(pkg.packageName).includes(normalizedQuery),
+	);
+}
+
+function findNodeMatches(report: ModvizLlmOutput, query: string) {
+	const nodesByPath = new Map<
+		string,
+		{
+			path: string;
+			displayPath: string;
+			hotspot?: LlmHotspot;
+			barrel?: LlmBarrelFileReport;
+			externalDependency?: LlmExternalDependencyReport;
+		}
+	>();
+
+	for (const hotspot of report.hotspots) {
+		nodesByPath.set(hotspot.path, {
+			path: hotspot.path,
+			displayPath: hotspot.displayPath,
+			hotspot,
+			barrel: report.barrelFiles.find((barrel) => barrel.path === hotspot.path),
+			externalDependency: report.externalDependencies.find(
+				(dependency) => dependency.path === hotspot.path,
+			),
+		});
+	}
+
+	for (const barrel of report.barrelFiles) {
+		const existing = nodesByPath.get(barrel.path);
+		if (existing) {
+			existing.barrel = barrel;
+			continue;
+		}
+
+		nodesByPath.set(barrel.path, {
+			path: barrel.path,
+			displayPath: barrel.displayPath,
+			barrel,
+		});
+	}
+
+	for (const dependency of report.externalDependencies) {
+		const existing = nodesByPath.get(dependency.path);
+		if (existing) {
+			existing.externalDependency = dependency;
+			continue;
+		}
+
+		nodesByPath.set(dependency.path, {
+			path: dependency.path,
+			displayPath: dependency.displayPath,
+			externalDependency: dependency,
+		});
+	}
+
+	const normalizedQuery = normalizeSearchQuery(query);
+	const nodes = Array.from(nodesByPath.values());
+	const exactMatches = nodes.filter((node) =>
+		buildNodeSearchTerms(node).some(
+			(term) => normalizeSearchQuery(term) === normalizedQuery,
+		),
+	);
+	if (exactMatches.length > 0) {
+		return exactMatches;
+	}
+
+	return nodes.filter((node) =>
+		buildNodeSearchTerms(node).some((term) =>
+			normalizeSearchQuery(term).includes(normalizedQuery),
+		),
+	);
+}
+
+function buildNodeSearchTerms(node: {
+	path: string;
+	displayPath: string;
+	externalDependency?: LlmExternalDependencyReport;
+}) {
+	return [node.path, node.displayPath, node.externalDependency?.packageName]
+		.filter(Boolean)
+		.map((term) => term as string);
+}
+
+function renderPackageDrilldown(
+	lines: string[],
+	pkg: LlmExternalPackageReport,
+	metadata: VizMetadata,
+	limit: number,
+) {
+	lines.push(`## Package: ${pkg.packageName}`);
+	lines.push(`- Source files: ${pkg.sourceCount}`);
+	lines.push(`- Source groups: ${pkg.sourceGroupCount}`);
+	lines.push(`- Matched external modules: ${pkg.modulePaths.length}`);
+	if (pkg.barrelSources.length > 0) {
+		lines.push(
+			`- Fan-out sources: ${formatPreviewList(
+				buildSourceGroups(pkg.barrelSources, metadata).map(
+					(group) => group.label,
+				),
+				limit,
+			)}`,
+		);
+	}
+	lines.push("", "### Source groups");
+	for (const group of pkg.sourceGroups.slice(0, limit)) {
+		lines.push(
+			`- ${group.label} (${group.paths.length} file${group.paths.length === 1 ? "" : "s"}): ${formatPreviewList(group.paths, limit)}`,
+		);
+	}
+	if (pkg.sourceGroups.length > limit) {
+		lines.push(`- +${pkg.sourceGroups.length - limit} more source groups`);
+	}
+	lines.push("", "### Representative modules");
+	for (const modulePath of pkg.modulePaths.slice(0, limit)) {
+		lines.push(
+			`- ${formatModulePathWithinPackage(modulePath, pkg.packageName, metadata)}`,
+		);
+	}
+	if (pkg.modulePaths.length > limit) {
+		lines.push(`- +${pkg.modulePaths.length - limit} more modules`);
+	}
+	lines.push("", "### Origin chains");
+	for (const chain of pkg.originChains.slice(0, limit)) {
+		lines.push(`- ${formatChainForLlm(chain, metadata)}`);
+	}
+	if (pkg.originChains.length > limit) {
+		lines.push(`- +${pkg.originChains.length - limit} more origin chains`);
+	}
+}
+
+function renderNodeDrilldown(
+	lines: string[],
+	node: {
+		path: string;
+		displayPath: string;
+		hotspot?: LlmHotspot;
+		barrel?: LlmBarrelFileReport;
+		externalDependency?: LlmExternalDependencyReport;
+	},
+	metadata: VizMetadata,
+	limit: number,
+) {
+	lines.push(`## Node: ${node.displayPath}`);
+	if (node.hotspot) {
+		lines.push(`- Type: ${node.hotspot.type}`);
+		lines.push(`- Reachable modules: ${node.hotspot.reachableModulesCount}`);
+		lines.push(
+			`- Reachable node_modules modules: ${node.hotspot.reachableNodeModulesCount}`,
+		);
+		lines.push(`- Direct importers: ${node.hotspot.directImporterCount}`);
+		lines.push(`- Direct importees: ${node.hotspot.directImporteeCount}`);
+		if (node.hotspot.topExternalPackages.length > 0) {
+			lines.push(
+				`- Top external packages: ${formatPreviewList(node.hotspot.topExternalPackages, limit)}`,
+			);
+		}
+		if (node.hotspot.signals.length > 0) {
+			lines.push(
+				`- Signals: ${formatPreviewList(node.hotspot.signals, limit)}`,
+			);
+		}
+	}
+	if (node.barrel) {
+		lines.push(`- Explicit barrel file: yes`);
+		lines.push(
+			`- node_modules introduced: ${node.barrel.nodeModulesIntroduced.length}`,
+		);
+	}
+	if (node.externalDependency) {
+		lines.push(
+			`- External package: ${node.externalDependency.packageName ?? node.externalDependency.path}`,
+		);
+		if (node.externalDependency.barrelSources.length > 0) {
+			lines.push(
+				`- Fan-out sources: ${formatPreviewList(node.externalDependency.barrelSources, limit)}`,
+			);
+		}
+	}
+	if (
+		node.hotspot?.directImporters.length ||
+		node.externalDependency?.directImporters.length
+	) {
+		const importers =
+			node.hotspot?.directImporters ??
+			node.externalDependency?.directImporters ??
+			[];
+		lines.push("", "### Direct importers");
+		for (const importer of importers.slice(0, limit)) {
+			lines.push(`- ${importer}`);
+		}
+		if (importers.length > limit) {
+			lines.push(`- +${importers.length - limit} more importers`);
+		}
+	}
+	if (node.externalDependency?.introducedThrough.length) {
+		lines.push("", "### Introduced through");
+		for (const source of node.externalDependency.introducedThrough.slice(
+			0,
+			limit,
+		)) {
+			lines.push(
+				`- ${source.path}: ${source.originChains.length} chain${source.originChains.length === 1 ? "" : "s"}`,
+			);
+		}
+		if (node.externalDependency.introducedThrough.length > limit) {
+			lines.push(
+				`- +${node.externalDependency.introducedThrough.length - limit} more introducers`,
+			);
+		}
+	}
+	const originChains =
+		node.hotspot?.originChains ??
+		node.barrel?.originChains ??
+		node.externalDependency?.originChains ??
+		[];
+	if (originChains.length > 0) {
+		lines.push("", "### Origin chains");
+		for (const chain of originChains.slice(0, limit)) {
+			lines.push(`- ${formatChainForLlm(chain, metadata)}`);
+		}
+		if (originChains.length > limit) {
+			lines.push(`- +${originChains.length - limit} more origin chains`);
+		}
+	}
+}
+
+function normalizeSearchQuery(value: string) {
+	return normalizePath(value).toLowerCase();
+}
+
+function trimTrailingBlankLines(lines: string[]) {
+	const nextLines = [...lines];
+	while (nextLines.length > 0 && nextLines.at(-1) === "") {
+		nextLines.pop();
+	}
+	return nextLines;
 }
 
 function compareSourceGroups(

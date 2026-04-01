@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import {
 	buildModvizLlmOutput,
 	inferLlmOutputPaths,
+	renderModvizLlmDrilldown,
 	renderModvizLlmMarkdown,
 } from "../mod/llm-output.ts";
 import type { ModvizOutput, VizNode } from "../mod/types.ts";
@@ -305,15 +306,44 @@ test("renderModvizLlmMarkdown summarizes multi-source packages", () => {
 		"@weliihq/core (packages/core/src/index.ts) (internal) reaches 2 modules, including 1 node_modules modules",
 	);
 	expect(markdown).toContain("Pulls in: lodash-es");
+	expect(markdown).not.toContain("src/main.ts (entry) reaches");
 	expect(markdown).toContain("## Internal fan-out culprits");
 	expect(markdown).toContain("## node_modules with multiple sources");
+	expect(markdown).toContain("lodash-es is introduced by 4 sources");
 	expect(markdown).toContain(
-		"lodash-es is introduced by 4 sources: @weliihq/core, src/features/bar/index.ts, src/features/foo/foo.ts, src/features/foo/index.ts",
+		"Top source groups: @weliihq/core, src/features/bar/index.ts, src/features/foo/foo.ts, src/features/foo/index.ts",
 	);
 	expect(markdown).toContain(
 		"Fan-out sources: src/features/bar/index.ts, src/features/foo/index.ts",
 	);
+	expect(markdown).toContain("Representative modules: index.js, omit.js");
 	expect(markdown).not.toContain("Pulls in: lodash-es, lodash-es");
+});
+
+test("renderModvizLlmDrilldown prints focused package and node details", () => {
+	const report = buildModvizLlmOutput(outputFixture);
+	const markdown = renderModvizLlmDrilldown(report, {
+		packageName: "lodash-es",
+		nodeQuery: "packages/core/src/index.ts",
+		limit: 10,
+	});
+
+	expect(markdown).toContain("# modviz LLM drilldown");
+	expect(markdown).toContain("## Package: lodash-es");
+	expect(markdown).toContain("- Source files: 4");
+	expect(markdown).toContain("### Source groups");
+	expect(markdown).toContain(
+		"- @weliihq/core (1 file): packages/core/src/index.ts",
+	);
+	expect(markdown).toContain("### Representative modules");
+	expect(markdown).toContain("- index.js");
+	expect(markdown).toContain("- omit.js");
+	expect(markdown).toContain(
+		"## Node: @weliihq/core (packages/core/src/index.ts)",
+	);
+	expect(markdown).toContain("- Direct importers: 1");
+	expect(markdown).toContain("### Direct importers");
+	expect(markdown).toContain("- src/main.ts");
 });
 
 test("inferLlmOutputPaths derives companion filenames from the base output", () => {

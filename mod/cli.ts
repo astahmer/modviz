@@ -4,6 +4,7 @@ import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
 	buildModvizLlmOutput,
 	inferLlmOutputPaths,
+	renderModvizLlmDrilldown,
 	renderModvizLlmMarkdown,
 } from "./llm-output.ts";
 import {
@@ -35,6 +36,14 @@ const flags = {
 	serve: args.includes("--serve"),
 	help: args.includes("--help") || args.includes("-h"),
 	llm: args.includes("--llm"),
+	llmPackage: args
+		.find((arg) => arg.startsWith("--llm-package="))
+		?.split("=")[1],
+	llmNode: args.find((arg) => arg.startsWith("--llm-node="))?.split("=")[1],
+	llmLimit: Number.parseInt(
+		args.find((arg) => arg.startsWith("--llm-limit="))?.split("=")[1] ?? "20",
+		10,
+	),
 	moduleLexer: args
 		.find((arg) => arg.startsWith("--module-lexer="))
 		?.split("=")[1],
@@ -48,6 +57,8 @@ Usage:
 	modviz <entryFile>                              Generate graph JSON for the UI
 	modviz <entryFile> --ui                         Generate graph JSON and launch the web UI
 	modviz <entryFile> --llm                        Generate UI JSON plus LLM-focused JSON and Markdown reports
+	modviz <entryFile> --llm-package=zod            Print a package drilldown with full sources and origin chains
+	modviz <entryFile> --llm-node=src/foo.ts        Print a node drilldown with full importers and origin chains
 	modviz --serve [dataFile]                       Launch the web UI with existing graph data
 	modviz <entryFile> --ui --port=4000             Use a custom port
 
@@ -57,6 +68,9 @@ Options:
 	--ui                   Launch the browser UI after generating the graph
 	--serve                Launch the UI server using an existing graph JSON file
 	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
+	--llm-package=<name>   Print a focused drilldown for one external package from the LLM analysis
+	--llm-node=<path>      Print a focused drilldown for one node path or display path from the LLM analysis
+	--llm-limit=<n>        Limit list output in drilldowns (default: 20)
 	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
 	--ignore-dynamic       Ignore dynamic imports
 	--module-lexer=<mode>  Choose import parser: rs or es (default: rs)
@@ -66,6 +80,8 @@ Examples:
   modviz src/index.ts
 	modviz src/index.ts --ui --port=4000
 	modviz src/index.ts --llm --node-modules
+	modviz src/index.ts --node-modules --llm-package=googleapis
+	modviz src/index.ts --node-modules --llm-node=src/adapter-rest/register-app-routes.ts
   modviz --serve ./modviz.json
 	`);
 	process.exit(0);
@@ -83,15 +99,20 @@ if (!entryFile) {
 	process.exit(1);
 }
 
-if (!existsSync(entryFile)) {
+const entryFileAbsolute = path.resolve(entryFile);
+
+if (!existsSync(entryFileAbsolute)) {
 	console.error(`Error: Entry file "${entryFile}" does not exist`);
 	process.exit(1);
 }
 
-console.log(`🔍 Analyzing dependency graph for: ${entryFile}`);
+console.log(`🔍 Analyzing dependency graph for: ${entryFileAbsolute}`);
 
-const basePath = process.cwd();
-const workspaces = findWorkspaces(entryFile) ?? [];
+const workspaces = findWorkspaces(entryFileAbsolute) ?? [];
+const basePath = deriveAnalysisBasePath(entryFileAbsolute, workspaces);
+const entryFileForGraph = normalizeRelativePath(
+	path.relative(basePath, entryFileAbsolute),
+);
 const workspaceList = (workspaces ?? []).map((workspace) => ({
 	relativePath: path.relative(basePath, workspace.location),
 	absolutePath: workspace.location,
@@ -123,7 +144,8 @@ const clusterizePlugin: Plugin = {
 	},
 };
 
-const moduleGraph = await createModuleGraph(entryFile, {
+const moduleGraph = await createModuleGraph(entryFileForGraph, {
+	basePath,
 	// TODO configurable flag to allow this
 	exclude: flags.nodeModules
 		? undefined
@@ -144,25 +166,46 @@ const moduleGraph = await createModuleGraph(entryFile, {
 
 const packages = workspaceList.map((workspace) => ({
 	name: workspace.name,
-	path: workspace.relativePath,
+	path: normalizeRelativePath(workspace.relativePath),
 }));
-const webGraphData = processModuleGraphForWeb(moduleGraph, entryFile, packages);
+const webGraphData = processModuleGraphForWeb(
+	moduleGraph,
+	entryFileForGraph,
+	packages,
+	basePath,
+);
 
 writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
 console.log(
 	`💾 Graph data saved to: ${flags.outputFile} (${webGraphData.nodes.length} nodes out of ${webGraphData.imports.length} imports)`,
 );
 
-if (flags.llm) {
+const shouldBuildLlmReport =
+	flags.llm || Boolean(flags.llmPackage) || Boolean(flags.llmNode);
+
+if (shouldBuildLlmReport) {
 	const llmOutput = buildModvizLlmOutput(webGraphData);
-	const llmOutputPaths = inferLlmOutputPaths(flags.outputFile);
 
-	writeFileSync(llmOutputPaths.json, JSON.stringify(llmOutput, null, 2));
-	writeFileSync(llmOutputPaths.markdown, renderModvizLlmMarkdown(llmOutput));
+	if (flags.llm) {
+		const llmOutputPaths = inferLlmOutputPaths(flags.outputFile);
 
-	console.log(
-		`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`,
-	);
+		writeFileSync(llmOutputPaths.json, JSON.stringify(llmOutput, null, 2));
+		writeFileSync(llmOutputPaths.markdown, renderModvizLlmMarkdown(llmOutput));
+
+		console.log(
+			`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`,
+		);
+	}
+
+	if (flags.llmPackage || flags.llmNode) {
+		console.log(
+			renderModvizLlmDrilldown(llmOutput, {
+				packageName: flags.llmPackage,
+				nodeQuery: flags.llmNode,
+				limit: Number.isFinite(flags.llmLimit) ? flags.llmLimit : 20,
+			}),
+		);
+	}
 }
 
 if (flags.ui) {
@@ -176,6 +219,7 @@ function processModuleGraphForWeb(
 		path: string;
 		name: string;
 	}>,
+	basePath: string,
 ): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
@@ -214,7 +258,7 @@ function processModuleGraphForWeb(
 	return {
 		metadata: {
 			entrypoints: moduleGraph.entrypoints.map((entrypoint) =>
-				path.relative(basePath, entrypoint),
+				normalizeRelativePath(entrypoint),
 			),
 			basePath: basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
@@ -252,4 +296,57 @@ interface VizModule extends Module {
 	cluster?: string;
 	imports: Import[];
 	exports: Export[];
+}
+
+function deriveAnalysisBasePath(
+	entryFileAbsolute: string,
+	workspaces: Array<{ location: string }>,
+) {
+	const workspaceLocations = workspaces.map((workspace) => workspace.location);
+	if (workspaceLocations.length > 0) {
+		return getCommonAncestorPath([
+			path.dirname(entryFileAbsolute),
+			...workspaceLocations,
+		]);
+	}
+
+	return findNearestPackageRoot(path.dirname(entryFileAbsolute));
+}
+
+function getCommonAncestorPath(paths: string[]) {
+	const normalizedPaths = paths.map((currentPath) => path.resolve(currentPath));
+	let commonPath = normalizedPaths[0] ?? process.cwd();
+
+	for (const currentPath of normalizedPaths.slice(1)) {
+		while (
+			commonPath !== path.dirname(commonPath) &&
+			!currentPath.startsWith(`${commonPath}${path.sep}`) &&
+			currentPath !== commonPath
+		) {
+			commonPath = path.dirname(commonPath);
+		}
+	}
+
+	return commonPath;
+}
+
+function findNearestPackageRoot(startDirectory: string) {
+	let currentDirectory = path.resolve(startDirectory);
+
+	while (true) {
+		if (existsSync(path.join(currentDirectory, "package.json"))) {
+			return currentDirectory;
+		}
+
+		const parentDirectory = path.dirname(currentDirectory);
+		if (parentDirectory === currentDirectory) {
+			return startDirectory;
+		}
+
+		currentDirectory = parentDirectory;
+	}
+}
+
+function normalizeRelativePath(filePath: string) {
+	return filePath.replace(/\\/g, "/");
 }

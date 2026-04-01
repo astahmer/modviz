@@ -44,6 +44,12 @@ pnpm run cli -- src/index.ts --ui --port=4000
 pnpm run cli -- src/index.ts --llm --node-modules
 ```
 
+### Drill into one package or node when the summary is not enough
+```bash
+pnpm run cli -- src/index.ts --node-modules --llm-package=googleapis
+pnpm run cli -- src/index.ts --node-modules --llm-node=src/adapter-rest/register-app-routes.ts
+```
+
 ## 🎨 Web UI Features
 
 ### Graph Visualization
@@ -91,6 +97,12 @@ The `modviz.llm.json` file is designed to answer questions such as:
 - which `node_modules` entries are introduced from multiple sources?
 - what import chains lead from the entrypoint to a problematic dependency?
 
+When the compact Markdown summary is too short, you can ask for a focused drilldown directly from the CLI:
+
+- `--llm-package=<name>`: print the full source groups, representative modules, and origin chains for one external package
+- `--llm-node=<path>`: print the direct importers, origin chains, and hotspot metrics for one internal or external node
+- `--llm-limit=<n>`: cap the length of each printed list in the drilldown output
+
 The generated `modviz.json` contains:
 
 ```json
@@ -127,6 +139,9 @@ The generated `modviz.json` contains:
 - `--serve`: launch the UI from an existing JSON graph file
 - `--output-file=<file>`: choose the base output filename
 - `--llm`: also emit LLM-oriented JSON and Markdown companion reports
+- `--llm-package=<name>`: print a focused drilldown for one external package from the LLM analysis
+- `--llm-node=<path>`: print a focused drilldown for one node path or display path from the LLM analysis
+- `--llm-limit=<n>`: limit list output in drilldowns
 - `--node-modules`: keep `node_modules` in the analyzed graph instead of excluding them
 - `--ignore-dynamic`: ignore dynamic imports
 - `--module-lexer=rs|es`: choose the import parser
