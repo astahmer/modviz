@@ -25,8 +25,14 @@ pnpm add -D modviz
 pnpm run cli -- src/index.ts --ui
 ```
 
-This builds the production UI and launches the built Node server instead of the Vite development server.
+This serves the prebuilt production UI from `dist/runtime` and launches the packaged Node server instead of rebuilding with Vite on every run.
 The UI also polls the graph JSON file timestamp and refreshes automatically when the snapshot changes on disk.
+
+Build the packaged runtime once as the library author:
+
+```bash
+pnpm run build
+```
 
 ### Generate graph data only (no UI)
 ```bash

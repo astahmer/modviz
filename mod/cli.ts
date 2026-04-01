@@ -424,6 +424,9 @@ interface VizModule extends Module {
 	cluster?: string;
 	imports: Import[];
 	exports: Export[];
+	unusedExports?: Export[];
+	importedBy: string[];
+	isBarrelFile?: boolean;
 }
 
 function deriveAnalysisBasePath(
