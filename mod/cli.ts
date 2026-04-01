@@ -2,6 +2,11 @@ import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
+	buildModvizLlmOutput,
+	inferLlmOutputPaths,
+	renderModvizLlmMarkdown,
+} from "./llm-output.ts";
+import {
 	createModuleGraph,
 	type Module,
 	type Plugin,
@@ -29,6 +34,7 @@ const flags = {
 	ignoreDynamic: args.includes("--ignore-dynamic"),
 	serve: args.includes("--serve"),
 	help: args.includes("--help") || args.includes("-h"),
+	llm: args.includes("--llm"),
 	moduleLexer: args
 		.find((arg) => arg.startsWith("--module-lexer="))
 		?.split("=")[1],
@@ -36,24 +42,30 @@ const flags = {
 
 if (flags.help || (!entryFile && !flags.serve)) {
 	console.log(`
-modviz - Interactive Dependency Graph Visualizer
+modviz - Module dependency graph visualizer and import analysis CLI
 
 Usage:
-  modviz <entryFile>                    Generate graph only
-  modviz <entryFile> --ui      Generate graph and launch web UI
-  modviz --serve [dataFile]             Launch web UI with existing data
-  modviz <entryFile> --ui --port=4000        Use custom port
+	modviz <entryFile>                              Generate graph JSON for the UI
+	modviz <entryFile> --ui                         Generate graph JSON and launch the web UI
+	modviz <entryFile> --llm                        Generate UI JSON plus LLM-focused JSON and Markdown reports
+	modviz --serve [dataFile]                       Launch the web UI with existing graph data
+	modviz <entryFile> --ui --port=4000             Use a custom port
 
 Options:
-  --port=<port>     Port for web server (default: 3000)
-  --ui     Launch browser UI
-  --serve  Launch UI server (optionally with existing data file)
-  --ignore-dynamic   Ignore dynamic imports
-  --help, -h        Show this help message
+	--output-file=<file>   Base JSON output path for the UI graph (default: ./modviz.json)
+	--port=<port>          Port for the web server (default: 3000)
+	--ui                   Launch the browser UI after generating the graph
+	--serve                Launch the UI server using an existing graph JSON file
+	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
+	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
+	--ignore-dynamic       Ignore dynamic imports
+	--module-lexer=<mode>  Choose import parser: rs or es (default: rs)
+	--help, -h             Show this help message
 
 Examples:
   modviz src/index.ts
-  modviz src/index.ts --port=4000
+	modviz src/index.ts --ui --port=4000
+	modviz src/index.ts --llm --node-modules
   modviz --serve ./modviz.json
 	`);
 	process.exit(0);
@@ -113,7 +125,9 @@ const clusterizePlugin: Plugin = {
 
 const moduleGraph = await createModuleGraph(entryFile, {
 	// TODO configurable flag to allow this
-	exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
+	exclude: flags.nodeModules
+		? undefined
+		: [(importee) => importee.includes("node_modules")],
 	ignoreDynamicImport: flags.ignoreDynamic,
 	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 	plugins: [
@@ -138,6 +152,18 @@ writeFileSync(flags.outputFile, JSON.stringify(webGraphData, null, 2));
 console.log(
 	`💾 Graph data saved to: ${flags.outputFile} (${webGraphData.nodes.length} nodes out of ${webGraphData.imports.length} imports)`,
 );
+
+if (flags.llm) {
+	const llmOutput = buildModvizLlmOutput(webGraphData);
+	const llmOutputPaths = inferLlmOutputPaths(flags.outputFile);
+
+	writeFileSync(llmOutputPaths.json, JSON.stringify(llmOutput, null, 2));
+	writeFileSync(llmOutputPaths.markdown, renderModvizLlmMarkdown(llmOutput));
+
+	console.log(
+		`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`,
+	);
+}
 
 if (flags.ui) {
 	await launchWebUI(flags.port, flags.outputFile);

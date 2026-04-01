@@ -1,6 +1,6 @@
-# 📊 Dependency Graph Visualizer
+# Dependency Graph Visualizer
 
-An interactive web-based tool for visualizing module dependency graphs using `@thepassle/module-graph`.
+An interactive CLI and web UI for visualizing module dependency graphs and spotting import hotspots.
 
 ## 🚀 Features
 
@@ -21,22 +21,27 @@ pnpm add -D modviz
 
 ### Generate graph and launch web UI
 ```bash
-pnpm run modviz src/index.ts
+pnpm run cli -- src/index.ts --ui
 ```
 
 ### Generate graph data only (no UI)
 ```bash
-pnpm run modviz src/index.ts --output-only
+pnpm run cli -- src/index.ts
 ```
 
 ### Launch UI with existing data
 ```bash
-pnpm run modviz --serve ./module-graph.json
+pnpm run cli -- --serve ./modviz.json
 ```
 
 ### Use custom port
 ```bash
-pnpm run modviz src/index.ts --port=4000
+pnpm run cli -- src/index.ts --ui --port=4000
+```
+
+### Generate LLM-oriented reports for barrel and import analysis
+```bash
+pnpm run cli -- src/index.ts --llm --node-modules
 ```
 
 ## 🎨 Web UI Features
@@ -71,42 +76,63 @@ The tool automatically detects TypeScript projects and applies appropriate plugi
 - Barrel file detection
 - Unused export detection
 
-## 📝 Output Format
+## Output Files
 
-The generated `module-graph.json` contains:
+The default output file is `modviz.json`, which is the UI-oriented graph payload.
+
+When you add `--llm`, modviz also writes:
+
+- `modviz.llm.json`: structured analysis of hotspots, barrel files, external dependencies, and origin chains
+- `modviz.llm.md`: compact Markdown summary intended to be pasted into an LLM or shared in code review
+
+The `modviz.llm.json` file is designed to answer questions such as:
+
+- which barrel files fan out to the most modules?
+- which `node_modules` entries are introduced from multiple sources?
+- what import chains lead from the entrypoint to a problematic dependency?
+
+The generated `modviz.json` contains:
 
 ```json
 {
+  "metadata": {
+    "entrypoints": ["src/index.ts"],
+    "basePath": "/repo",
+    "totalFiles": 25,
+    "generatedAt": "2026-04-01T00:00:00.000Z",
+    "nodeModulesCount": 5,
+    "packages": []
+  },
   "nodes": [
     {
-      "id": "src/index.ts",
-      "label": "index.ts",
+      "name": "index.ts",
       "path": "src/index.ts",
-      "size": 1234,
       "type": "entry",
-      "imports": ["./utils", "./components"],
-      "exports": ["main", "init"],
+      "imports": [],
+      "exports": [],
       "isBarrelFile": false,
-      "unusedExports": []
+      "unusedExports": [],
+      "importees": ["src/utils.ts"],
+      "importedBy": [],
+      "chain": [["src/index.ts"]]
     }
   ],
-  "edges": [
-    {
-      "source": "src/index.ts",
-      "target": "src/utils.ts",
-      "type": "import"
-    }
-  ],
-  "metadata": {
-    "entryPoint": "src/index.ts",
-    "totalFiles": 25,
-    "generatedAt": "2025-01-10T...",
-    "nodeModulesCount": 5
-  }
+  "imports": ["src/utils.ts"]
 }
 ```
 
-## 🎯 Use Cases
+## CLI flags
+
+- `--ui`: launch the browser UI after generating the graph
+- `--serve`: launch the UI from an existing JSON graph file
+- `--output-file=<file>`: choose the base output filename
+- `--llm`: also emit LLM-oriented JSON and Markdown companion reports
+- `--node-modules`: keep `node_modules` in the analyzed graph instead of excluding them
+- `--ignore-dynamic`: ignore dynamic imports
+- `--module-lexer=rs|es`: choose the import parser
+- `--port=<port>`: choose the UI server port
+
+## Use Cases
 
 - **Refactoring**: Identify unused exports and circular dependencies
 - **Code Review**: Understand module relationships and import patterns
