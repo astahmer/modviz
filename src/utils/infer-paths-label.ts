@@ -51,6 +51,8 @@ export function inferPathsLabel(filePaths: string[]): string | undefined {
 	const genericNames = new Set([
 		"apps",
 		"packages",
+		"node_modules",
+		".pnpm",
 		"src",
 		"modules",
 		"components",

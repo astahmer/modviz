@@ -69,21 +69,18 @@ export const getExternalPackageName = (node: VizNode) => {
 		return node.package?.name ?? "external";
 	}
 
-	if (node.package?.name) {
+	if (node.package?.name && node.package.name !== "node_modules") {
 		return node.package.name;
 	}
 
-	// Normalize path to use / as separator for browser compatibility
-	const normalizedPath = node.path.split("\\").join("/");
-	const nodeModulesIndex = normalizedPath.lastIndexOf("/node_modules/");
+	const segments = node.path.split(/[\\/]/).filter(Boolean);
+	const nodeModulesIndex = segments.lastIndexOf("node_modules");
 	if (nodeModulesIndex === -1) {
 		return "node_modules";
 	}
 
-	const remainder = normalizedPath.slice(nodeModulesIndex + "/node_modules/".length);
-	const segments = remainder.split("/").filter(Boolean);
-	const scopeOrName = segments[0];
-	const maybeName = segments[1];
+	const scopeOrName = segments[nodeModulesIndex + 1];
+	const maybeName = segments[nodeModulesIndex + 2];
 
 	if (!scopeOrName) {
 		return "node_modules";
@@ -155,7 +152,9 @@ export const buildModvizSummary = (
 	const workspaceNodes = graph.nodes.filter(
 		(node) => !isExternalNode(node, workspacePackageNames),
 	);
-	const externalPackageCounts = countBy(externalNodes, (node) => node.package?.name ?? null);
+	const externalPackageCounts = countBy(externalNodes, (node) =>
+		getExternalPackageName(node),
+	);
 	const clusterCounts = countBy(graph.nodes, (node) => {
 		return node.cluster ?? node.package?.name ?? node.type ?? "unclassified";
 	});
