@@ -138,7 +138,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 			exports,
 			unusedExports,
 			barrelFile({
-				amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
+				amountOfExportsToConsiderModuleAsBarrel: flags.barrelThreshold,
 			}),
 			replaceImportTypeToImportPlugin,
 			clusterizePlugin,

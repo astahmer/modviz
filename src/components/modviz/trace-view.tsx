@@ -58,41 +58,36 @@ export function TraceView(props: {
 	onSearchChange: (patch: Partial<TraceSearch>) => void;
 }) {
 	const [draftSearch, setDraftSearch] = useState(props.search);
-	const [appliedSearch, setAppliedSearch] = useState(props.search);
-	const deferredSearch = useDeferredValue(appliedSearch);
+	const deferredSearch = useDeferredValue(props.search);
 
 	useEffect(() => {
 		setDraftSearch(props.search);
-		setAppliedSearch(props.search);
 	}, [props.search]);
 
 	const applySearch = (next: TraceSearch) => {
-		setAppliedSearch(next);
 		props.onSearchChange(next);
 	};
-
-	const getInputValue = (target: EventTarget | null) =>
-		target instanceof HTMLInputElement ? target.value : "";
+	const renderedLimit = deferredSearch.limit || TRACE_RESULT_LIMIT_DEFAULT;
 
 	const report = useMemo(() => {
 		if (deferredSearch.package.trim()) {
 			return buildPackageTraceReport(props.bundle.graph, deferredSearch.package, {
-				maxChainsPerTarget: 14,
+				maxChainsPerTarget: Math.max(14, renderedLimit),
 				maxDepth: 22,
-				maxNodesPerPackage: 80,
+				maxNodesPerPackage: Math.max(80, renderedLimit * 4),
 			});
 		}
 
 		if (deferredSearch.node.trim()) {
 			return buildNodeTraceReport(props.bundle.graph, deferredSearch.node, {
-				maxChainsPerTarget: 14,
+				maxChainsPerTarget: Math.max(14, renderedLimit),
 				maxDepth: 22,
-				maxNodeMatches: 160,
+				maxNodeMatches: Math.max(160, renderedLimit * 6),
 			});
 		}
 
 		return null;
-	}, [deferredSearch.node, deferredSearch.package, props.bundle.graph]);
+	}, [deferredSearch.node, deferredSearch.package, props.bundle.graph, renderedLimit]);
 
 	const visibleMatches = useMemo(
 		() => report?.matches.slice(0, TRACE_RENDERED_MATCHES_LIMIT) ?? [],
@@ -111,12 +106,12 @@ export function TraceView(props: {
 							placeholder="zod, react, lodash-es"
 							value={draftSearch.package}
 							onChange={(event) => {
-								const value = getInputValue(event.target);
+								const value = event.currentTarget.value;
 								setDraftSearch((previous) => ({ ...previous, package: value, node: "" }));
 							}}
 							onKeyDown={(event) => {
 								if (event.key === "Enter") {
-									const value = getInputValue(event.target);
+									const value = event.currentTarget.value;
 									applySearch({ ...draftSearch, package: value, node: "" });
 								}
 							}}
@@ -130,12 +125,12 @@ export function TraceView(props: {
 							placeholder="src/routes/index.ts"
 							value={draftSearch.node}
 							onChange={(event) => {
-								const value = getInputValue(event.target);
+								const value = event.currentTarget.value;
 								setDraftSearch((previous) => ({ ...previous, node: value, package: "" }));
 							}}
 							onKeyDown={(event) => {
 								if (event.key === "Enter") {
-									const value = getInputValue(event.target);
+									const value = event.currentTarget.value;
 									applySearch({ ...draftSearch, node: value, package: "" });
 								}
 							}}
@@ -151,10 +146,12 @@ export function TraceView(props: {
 							max="200"
 							value={String(draftSearch.limit)}
 							onChange={(event) => {
-								const value = getInputValue(event.target);
 								setDraftSearch((previous) => ({
 									...previous,
-									limit: Math.max(1, Number(value) || TRACE_RESULT_LIMIT_DEFAULT),
+									limit: Math.max(
+										1,
+										Number(event.currentTarget.value) || TRACE_RESULT_LIMIT_DEFAULT,
+									),
 								}));
 							}}
 							onKeyDown={(event) => {
@@ -217,7 +214,7 @@ export function TraceView(props: {
 								</h2>
 								<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
 									Matched {report.matches.length} result(s) across {report.totalChains} origin
-									chain(s). Showing up to {draftSearch.limit} path(s) per section.
+									chain(s). Showing up to {renderedLimit} path(s) per section.
 								</p>
 							</div>
 							<div className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
@@ -308,7 +305,7 @@ export function TraceView(props: {
 											<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
 												{match.introducedThrough.length > 0 ? (
 													match.introducedThrough
-														.slice(0, draftSearch.limit)
+														.slice(0, renderedLimit)
 														.map((segment) => (
 															<TracePathLink
 																key={`${match.path}-introduced-${segment}`}
@@ -333,7 +330,7 @@ export function TraceView(props: {
 											<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
 												{match.workspaceOrigins.length > 0 ? (
 													match.workspaceOrigins
-														.slice(0, draftSearch.limit)
+														.slice(0, renderedLimit)
 														.map((segment) => (
 															<TracePathLink
 																key={`${match.path}-origin-${segment}`}
@@ -356,7 +353,7 @@ export function TraceView(props: {
 											Concrete matching files inside the package or node search result.
 										</p>
 										<div className="mt-2 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-											{match.targetPaths.slice(0, draftSearch.limit).map((targetPath) => (
+											{match.targetPaths.slice(0, renderedLimit).map((targetPath) => (
 												<div key={`${match.path}-target-${targetPath}`} className="font-mono">
 													<TracePathLink
 														path={targetPath}
@@ -367,7 +364,7 @@ export function TraceView(props: {
 										</div>
 									</div>
 									<div className="mt-4 space-y-3">
-										{match.chains.slice(0, draftSearch.limit).map((chain, index) => (
+										{match.chains.slice(0, renderedLimit).map((chain, index) => (
 											<div
 												key={`${match.path}-${index}`}
 												className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70"

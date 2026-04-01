@@ -9,6 +9,7 @@ import { useModvizBundle } from "~/utils/modviz-data";
 type CommandBuilderState = {
 	launchUi: boolean;
 	outputFile: string;
+	barrelThreshold: number;
 	enableLlm: boolean;
 	enableAiAnalysis: boolean;
 	ignoreDynamic: boolean;
@@ -22,6 +23,7 @@ type CommandBuilderState = {
 const defaultCommandBuilderState: CommandBuilderState = {
 	launchUi: true,
 	outputFile: "modviz.json",
+	barrelThreshold: 3,
 	enableLlm: false,
 	enableAiAnalysis: false,
 	ignoreDynamic: false,
@@ -39,6 +41,9 @@ const buildAnalyzeCommand = (entryFile: string, config: CommandBuilderState) => 
 
 	if (config.outputFile && config.outputFile !== defaultCommandBuilderState.outputFile) {
 		parts.push(`--output-file=${quoteCliValue(config.outputFile)}`);
+	}
+	if (config.barrelThreshold !== defaultCommandBuilderState.barrelThreshold) {
+		parts.push(`--barrel-threshold=${config.barrelThreshold}`);
 	}
 	if (config.launchUi) {
 		parts.push("--ui");
@@ -151,6 +156,27 @@ function ConfigureRoute() {
 								placeholder="modviz.json"
 								className="mt-1"
 							/>
+						</div>
+
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								Barrel threshold
+							</label>
+							<Input
+								type="number"
+								min="1"
+								value={String(config.barrelThreshold)}
+								onChange={(e) =>
+									updateConfig(
+										"barrelThreshold",
+										Math.max(1, Number(e.target.value) || defaultCommandBuilderState.barrelThreshold),
+									)
+								}
+								className="mt-1"
+							/>
+							<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+								Files exporting at least this many symbols are treated as barrel files.
+							</p>
 						</div>
 
 						<div>

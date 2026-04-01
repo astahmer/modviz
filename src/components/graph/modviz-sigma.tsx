@@ -32,6 +32,8 @@ import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
 import type { ExternalGroupingMode } from "~/utils/modviz-data";
 
+const SIGMA_CONTAINER_SETTINGS = { allowInvalidContainer: true } as const;
+
 export const ModvizSigma = (props: {
 	output: ModvizOutput;
 	entryNode?: string;
@@ -49,7 +51,7 @@ export const ModvizSigma = (props: {
 		<SigmaContainer
 			ref={setSigma}
 			className="relative h-full w-full"
-			settings={{ allowInvalidContainer: true }}
+			settings={SIGMA_CONTAINER_SETTINGS}
 		>
 			<SigmaGraph
 				entryNode={props.entryNode}

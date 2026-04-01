@@ -6,6 +6,7 @@ export interface CliFlags {
 	port?: string;
 	open: boolean;
 	ui: boolean;
+	barrelThreshold: number;
 	llmAnalyze: boolean;
 	llmBaseUrl?: string;
 	llmModel?: string;
@@ -31,6 +32,7 @@ export interface ParsedCliArgs {
 	entryFile?: string;
 	serveDataFile?: string;
 	flags: CliFlags;
+	missingValueOptions?: string[];
 }
 
 const valueOptionNames = new Set([
@@ -38,6 +40,7 @@ const valueOptionNames = new Set([
 	"--llm-base-url",
 	"--llm-model",
 	"--output-file",
+	"--barrel-threshold",
 	"--package",
 	"--node",
 	"--limit",
@@ -50,12 +53,14 @@ const valueOptionNames = new Set([
 type ParsedOptionTokens = {
 	flags: Set<string>;
 	values: Map<string, string>;
+	missingValueOptions: string[];
 	positionals: string[];
 };
 
 const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 	const flags = new Set<string>();
 	const values = new Map<string, string>();
+	const missingValueOptions: string[] = [];
 	const positionals: string[] = [];
 
 	for (let index = 0; index < args.length; index += 1) {
@@ -89,9 +94,11 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 
 		if (valueOptionNames.has(optionName)) {
 			const nextArg = args[index + 1];
-			if (nextArg && nextArg !== "--") {
+			if (nextArg && nextArg !== "--" && !nextArg.startsWith("--")) {
 				values.set(optionName, nextArg);
 				index += 1;
+			} else {
+				missingValueOptions.push(optionName);
 			}
 			continue;
 		}
@@ -99,7 +106,7 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 		flags.add(optionName);
 	}
 
-	return { flags, values, positionals };
+	return { flags, values, missingValueOptions, positionals };
 };
 
 export function parseCliArgs(args: string[]): ParsedCliArgs {
@@ -107,7 +114,12 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 	const command =
 		firstArg === "analyze" || firstArg === "serve" || firstArg === "report" ? firstArg : "analyze";
 	const commandArgs = command === "analyze" && firstArg !== "analyze" ? args : restArgs;
-	const { flags: parsedFlags, values: parsedValues, positionals } = parseOptionTokens(commandArgs);
+	const {
+		flags: parsedFlags,
+		values: parsedValues,
+		missingValueOptions,
+		positionals,
+	} = parseOptionTokens(commandArgs);
 	const serve = args.includes("--serve");
 	const effectiveServe = command === "serve" || serve;
 	const getOptionValue = (name: string) => parsedValues.get(name);
@@ -121,6 +133,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			port: getOptionValue("--port"),
 			open: !hasFlag("--no-open"),
 			ui: hasFlag("--ui"),
+			barrelThreshold: Number.parseInt(getOptionValue("--barrel-threshold") ?? "3", 10),
 			llmAnalyze: hasFlag("--llm-analyze"),
 			llmBaseUrl: getOptionValue("--llm-base-url"),
 			llmModel: getOptionValue("--llm-model"),
@@ -140,11 +153,16 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			snapshot: getOptionValue("--snapshot"),
 			listSnapshots: hasFlag("--list-snapshots"),
 		},
+		missingValueOptions,
 	};
 }
 
 export function validateCliArgs(parsedArgs: ParsedCliArgs) {
-	const { command, entryFile, flags } = parsedArgs;
+	const { command, entryFile, flags, missingValueOptions = [] } = parsedArgs;
+
+	if (missingValueOptions.length > 0) {
+		return `Missing value for ${missingValueOptions[0]}`;
+	}
 
 	if (command === "analyze" && !flags.serve && !entryFile && !flags.help) {
 		return "Entry file is required when not using --serve.";
@@ -167,6 +185,10 @@ export function validateCliArgs(parsedArgs: ParsedCliArgs) {
 
 	if (!Number.isFinite(flags.limit) || flags.limit < 1) {
 		return `Invalid --limit value: ${flags.limit}`;
+	}
+
+	if (!Number.isFinite(flags.barrelThreshold) || flags.barrelThreshold < 1) {
+		return `Invalid --barrel-threshold value: ${flags.barrelThreshold}`;
 	}
 
 	if (flags.moduleLexer && flags.moduleLexer !== "rs" && flags.moduleLexer !== "es") {
@@ -195,6 +217,7 @@ Options:
 	--port=<port>          Port for the web server (default: 3000)
 	--no-open              Do not open a browser window when launching the UI
 	--ui                   Launch the browser UI after generating the graph
+	--barrel-threshold=<n> Export count that marks a file as a barrel file (default: 3)
 	--serve                Launch the UI server using an existing graph JSON file
 	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
 	--llm-analyze          Use the Vercel AI SDK to turn the structured LLM report into <output>.llm.ai.md
@@ -215,6 +238,7 @@ Options:
 Examples:
 	modviz analyze src/index.ts --ui --port=4000
 	modviz analyze src/index.ts --llm --snapshot-name=before-refactor
+	modviz analyze src/index.ts --barrel-threshold=5
 	modviz analyze src/index.ts --node-modules --package=googleapis
 	modviz serve ./modviz.json
 	modviz report --summary

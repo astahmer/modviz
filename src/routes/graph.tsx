@@ -118,16 +118,16 @@ function GraphRoute() {
 	const layoutSettings = useMemo<GraphLayoutSettings>(
 		() => ({
 			adjustSizes: search.adjustSizes,
-			gravity: search.gravity || defaultLayoutSettings.gravity,
+			gravity: search.gravity,
 			hideClusterLabels: search.hideClusterLabels,
-			iterations: search.iterations || defaultLayoutSettings.iterations,
+			iterations: search.iterations,
 			linLogMode: search.linLogMode,
-			nodeSizeScale: search.nodeSizeScale || defaultLayoutSettings.nodeSizeScale,
+			nodeSizeScale: search.nodeSizeScale,
 			outboundAttractionDistribution: search.outboundAttractionDistribution,
-			scalingRatio: search.scalingRatio || defaultLayoutSettings.scalingRatio,
+			scalingRatio: search.scalingRatio,
 			strongGravityMode: search.strongGravityMode,
 		}),
-		[defaultLayoutSettings, search],
+		[search],
 	);
 	const scope = search.scope as ModvizScope;
 	const externalGrouping = search.externalGrouping as ExternalGroupingMode;
@@ -161,15 +161,18 @@ function GraphRoute() {
 			replace: true,
 			search: (previous) => ({ ...previous, ...patch }),
 		});
+	const setFocusedNode = (nodePath: string | null) => {
+		highlightedNodeIdAtom.set(nodePath);
+		currentNodeIdAtom.set(nodePath);
+		selectedNodeIdsAtom.set(nodePath ? [nodePath] : []);
+	};
 
 	useEffect(() => {
 		if (!search.focus) {
 			return;
 		}
 
-		highlightedNodeIdAtom.set(search.focus);
-		currentNodeIdAtom.set(search.focus);
-		selectedNodeIdsAtom.set([search.focus]);
+		setFocusedNode(search.focus);
 	}, [search.focus]);
 
 	return (
@@ -228,10 +231,14 @@ function GraphRoute() {
 							}}
 							onSelect={(value) => {
 								highlightedNodeIdAtom.set(null);
-								if (!value) return currentNodeIdAtom.set(null);
-								updateSearch({ focus: value });
-								currentNodeIdAtom.set(value);
-								selectedNodeIdsAtom.set([value]);
+								if (!value) {
+									setFocusedNode(null);
+									void updateSearch({ focus: "" });
+									return;
+								}
+
+								setFocusedNode(value);
+								void updateSearch({ focus: value });
 							}}
 						/>
 					</div>
@@ -258,8 +265,9 @@ function GraphRoute() {
 						<Button
 							variant="outline"
 							onClick={() => {
-								currentNodeIdAtom.set(null);
+								setFocusedNode(null);
 								isNodeDetailsOpenAtom.set(false);
+								void updateSearch({ focus: "" });
 							}}
 						>
 							Clear current node

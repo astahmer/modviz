@@ -52,6 +52,8 @@ test("parseCliArgs supports space-separated option values and no-open", () => {
 		"src/index.ts",
 		"--port",
 		"4010",
+		"--barrel-threshold",
+		"5",
 		"--output-file",
 		"out/modviz.json",
 		"--package",
@@ -61,9 +63,16 @@ test("parseCliArgs supports space-separated option values and no-open", () => {
 
 	expect(parsed.entryFile).toBe("src/index.ts");
 	expect(parsed.flags.port).toBe("4010");
+	expect(parsed.flags.barrelThreshold).toBe(5);
 	expect(parsed.flags.outputFile).toBe("out/modviz.json");
 	expect(parsed.flags.packageQuery).toBe("@scope/pkg");
 	expect(parsed.flags.open).toBe(false);
+});
+
+test("validateCliArgs rejects missing option values instead of swallowing the next flag", () => {
+	const parsed = parseCliArgs(["src/index.ts", "--port", "--ui"]);
+	expect(parsed.flags.ui).toBe(true);
+	expect(validateCliArgs(parsed)).toBe("Missing value for --port");
 });
 
 test("validateCliArgs rejects invalid numeric options", () => {
@@ -72,6 +81,11 @@ test("validateCliArgs rejects invalid numeric options", () => {
 
 	const invalidLimit = parseCliArgs(["src/index.ts", "--limit=0"]);
 	expect(validateCliArgs(invalidLimit)).toBe("Invalid --limit value: 0");
+
+	const invalidBarrelThreshold = parseCliArgs(["src/index.ts", "--barrel-threshold=0"]);
+	expect(validateCliArgs(invalidBarrelThreshold)).toBe(
+		"Invalid --barrel-threshold value: 0",
+	);
 
 	const invalidReport = parseCliArgs(["report"]);
 	expect(validateCliArgs(invalidReport)).toBe(
