@@ -12,6 +12,8 @@ import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
 	isFocusedModalOpenedAtom,
+	selectedNodeIdsAtom,
+	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { GraphSettingsPanel } from "~/components/graph/graph-settings-panel";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
@@ -91,6 +93,8 @@ function GraphRoute() {
 	const [refreshNonce, setRefreshNonce] = useState(0);
 	const focusedValue = useAtom(focusedNodeIdAtom);
 	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
+	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
+	const selectedNodeIds = useAtom(selectedNodeIdsAtom);
 
 	if (!isModvizBundleReady(bundle)) {
 		return (
@@ -222,7 +226,15 @@ function GraphRoute() {
 							}}
 							onSelect={(value) => {
 								highlightedNodeIdAtom.set(null);
-								if (!value) return focusedNodeIdAtom.set(null);
+									if (!value) return focusedNodeIdAtom.set(null);
+									if (selectionModeEnabled) {
+										selectedNodeIdsAtom.set((previous) =>
+											previous.includes(value)
+												? previous.filter((nodeId) => nodeId !== value)
+												: [...previous, value],
+										);
+										return;
+									}
 								updateSearch({ focus: value });
 								focusedNodeIdAtom.set(
 									focusedNodeIdAtom.get() === value ? null : value,
@@ -230,6 +242,26 @@ function GraphRoute() {
 							}}
 						/>
 					</div>
+					<Button
+						variant={selectionModeEnabled ? "default" : "outline"}
+						onClick={() => {
+							selectionModeEnabledAtom.set(!selectionModeEnabled);
+							if (selectionModeEnabled) {
+								selectedNodeIdsAtom.set([]);
+							}
+						}}
+					>
+						Selection mode
+					</Button>
+					{selectionModeEnabled ? (
+						<Button
+							variant="outline"
+							onClick={() => selectedNodeIdsAtom.set([])}
+							disabled={selectedNodeIds.length === 0}
+						>
+							Clear selection ({selectedNodeIds.length})
+						</Button>
+					) : null}
 					<Button
 						variant="outline"
 						onClick={() => setRefreshNonce((value) => value + 1)}
@@ -248,6 +280,7 @@ function GraphRoute() {
 					) : null}
 					<div className="text-sm text-slate-500 dark:text-slate-400">
 						{filteredNodes.length} nodes, {bundle.graph.metadata.packages.length} workspace packages
+						{selectionModeEnabled && selectedNodeIds.length > 0 ? ` • ${selectedNodeIds.length} selected` : ""}
 						{search.cluster ? ` • filtered to ${search.cluster}` : ""}
 					</div>
 				</section>

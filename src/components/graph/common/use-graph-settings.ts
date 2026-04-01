@@ -16,6 +16,8 @@ import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
 	hoveredClusterNameAtom,
+	selectedNodeIdsAtom,
+	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = () => {
@@ -23,6 +25,9 @@ export const useGraphSettings = () => {
 	const setSettings = useSetSettings<NodeType, EdgeType>();
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
 	const hoveredClusterName = useAtom(hoveredClusterNameAtom);
+	const selectedNodeIds = useAtom(selectedNodeIdsAtom);
+	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
+ 	const selectedNodeSet = new Set(selectedNodeIds);
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -34,6 +39,14 @@ export const useGraphSettings = () => {
 			leaveNode: () => setHoveredNodeId(null),
 			clickNode: (event) => {
 				gotoNode(event.node);
+				if (selectionModeEnabled) {
+					selectedNodeIdsAtom.set((previous) =>
+						previous.includes(event.node)
+							? previous.filter((nodeId) => nodeId !== event.node)
+							: [...previous, event.node],
+					);
+					return;
+				}
 				focusedNodeIdAtom.set((prev) =>
 					prev === event.node ? null : event.node,
 				);
@@ -63,6 +76,20 @@ export const useGraphSettings = () => {
 					...node,
 					highlighted: node.highlighted || false,
 				};
+
+				if (selectionModeEnabled && selectedNodeSet.size > 0) {
+					if (selectedNodeSet.has(nodeId)) {
+						updated.label = node.label;
+						updated.highlighted = true;
+						updated.size = node.size + clamp(2, 8, node.size * 0.15);
+					} else {
+						updated.color = colors.default;
+						updated.label = "";
+						updated.highlighted = false;
+					}
+
+					return updated;
+				}
 
 				if (hoveredNodeId && graph.hasNode(hoveredNodeId)) {
 					if (nodeId === hoveredNodeId) {
@@ -99,6 +126,16 @@ export const useGraphSettings = () => {
 				const graph = sigma.getGraph();
 				const updated: EdgeType = { ...edge, hidden: true };
 
+				if (selectionModeEnabled && selectedNodeSet.size > 0) {
+					const [source, target] = graph.extremities(edgeId);
+					if (selectedNodeSet.has(source) && selectedNodeSet.has(target)) {
+						updated.hidden = false;
+						updated.color = graph.getNodeAttribute(source, "color");
+					}
+
+					return updated;
+				}
+
 				if (
 					hoveredNodeId &&
 					graph.extremities(edgeId).includes(hoveredNodeId)
@@ -124,5 +161,5 @@ export const useGraphSettings = () => {
 				return updated;
 			},
 		});
-	}, [hoveredClusterName, hoveredNodeId, setSettings, sigma]);
+	}, [hoveredClusterName, hoveredNodeId, selectedNodeIds, selectionModeEnabled, setSettings, sigma]);
 };

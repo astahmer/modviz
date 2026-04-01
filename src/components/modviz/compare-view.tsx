@@ -3,6 +3,12 @@ import { ArrowLeftRight, FileUp, RotateCcw } from "lucide-react";
 import type { ModvizOutput, ModvizSnapshotHistoryItem } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
 import {
+	Tooltip,
+	TooltipArrow,
+	TooltipContent,
+	TooltipTrigger,
+} from "~/components/ui/tooltip";
+import {
 	buildModvizGraphComparison,
 	type ChangedNodeSummary,
 } from "~/utils/modviz-compare";
@@ -200,13 +206,30 @@ function ChangeList(props: {
 }
 
 function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
+	const headerWithTooltip = (label: string, description: string, align: "left" | "right" = "left") => (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<button
+					type="button"
+					className={`inline-flex items-center gap-1 ${align === "right" ? "ml-auto" : ""}`}
+				>
+					{label}
+				</button>
+			</TooltipTrigger>
+			<TooltipContent>
+				<p>{description}</p>
+				<TooltipArrow />
+			</TooltipContent>
+		</Tooltip>
+	);
+
 	return (
 		<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 			<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
 				Modules with the largest direct-graph deltas
 			</h3>
 			<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-				Inbound edges, outbound edges, and import statement counts are compared per path.
+				Inbound counts are direct importers of a file, outbound counts are direct importees, and imports are the number of import statements declared in that file.
 			</p>
 			<div className="mt-4 overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800">
 				<table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
@@ -216,13 +239,13 @@ function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
 								Path
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								Inbound
+								{headerWithTooltip("Inbound", "How many direct importers point at this file or module path in each snapshot.", "right")}
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								Outbound
+								{headerWithTooltip("Outbound", "How many direct importee targets this file imports in each snapshot.", "right")}
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								Imports
+								{headerWithTooltip("Imports", "How many import statements were parsed in that file, even if multiple statements resolve to the same outbound module.", "right")}
 							</th>
 						</tr>
 					</thead>

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { Worker } from "node:worker_threads";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
 	buildCliHelpText,
@@ -286,35 +287,49 @@ function formatDuration(milliseconds: number) {
 
 async function withProgress<T>(label: string, work: () => Promise<T> | T) {
 	const start = Date.now();
-	const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-	let frameIndex = 0;
-	let interval: NodeJS.Timeout | undefined;
+	let spinnerWorker: Worker | undefined;
 
 	if (process.stdout.isTTY) {
 		process.stdout.write(`⏳ ${label}\n`);
-		interval = setInterval(() => {
-			const frame = frames[frameIndex % frames.length];
-			frameIndex += 1;
-			process.stdout.write(
-				`\r${frame} ${label} (${formatDuration(Date.now() - start)})`,
-			);
-		}, 80);
+		spinnerWorker = new Worker(
+			`
+				const { parentPort, workerData } = require("node:worker_threads");
+				const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+				const start = Date.now();
+				let frameIndex = 0;
+				const formatDuration = (milliseconds) => milliseconds < 1000 ? \
+						numberToString(milliseconds) + "ms" : numberToString((milliseconds / 1000).toFixed(1)) + "s";
+				function numberToString(value) { return String(value); }
+				const interval = setInterval(() => {
+					const frame = frames[frameIndex % frames.length];
+					frameIndex += 1;
+					process.stdout.write(\`\\r\${frame} \${workerData.label} (\${formatDuration(Date.now() - start)})\`);
+				}, 80);
+				parentPort.on("message", () => {
+					clearInterval(interval);
+					process.exit(0);
+				});
+			`,
+			{ eval: true, workerData: { label } },
+		);
 	} else {
 		console.log(`⏳ ${label}`);
 	}
 
 	try {
 		const result = await work();
-		if (interval) {
-			clearInterval(interval);
+		if (spinnerWorker) {
+			spinnerWorker.postMessage("stop");
+			await spinnerWorker.terminate().catch(() => undefined);
 			process.stdout.write(`\r✅ ${label} (${formatDuration(Date.now() - start)})\n`);
 		} else {
 			console.log(`✅ ${label} (${formatDuration(Date.now() - start)})`);
 		}
 		return result;
 	} catch (error) {
-		if (interval) {
-			clearInterval(interval);
+		if (spinnerWorker) {
+			spinnerWorker.postMessage("stop");
+			await spinnerWorker.terminate().catch(() => undefined);
 			process.stdout.write(`\r❌ ${label} failed after ${formatDuration(Date.now() - start)}\n`);
 		} else {
 			console.error(

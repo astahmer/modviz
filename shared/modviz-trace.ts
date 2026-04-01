@@ -20,6 +20,10 @@ export interface ModvizTraceReport {
 	totalChains: number;
 }
 
+const chainCache = new WeakMap<ModvizOutput, Map<string, string[][]>>();
+const packageReportCache = new WeakMap<ModvizOutput, Map<string, ModvizTraceReport>>();
+const nodeReportCache = new WeakMap<ModvizOutput, Map<string, ModvizTraceReport>>();
+
 const normalizeForSearch = (value: string) => value.trim().toLowerCase();
 
 const isExternalPath = (value: string) => value.includes("node_modules");
@@ -81,6 +85,12 @@ const buildUpstreamChains = (
 	maxChains = 40,
 	maxDepth = 28,
 ) => {
+	const cacheKey = `${targetPath}::${maxChains}::${maxDepth}`;
+	const cachedGraphChains = chainCache.get(graph);
+	if (cachedGraphChains?.has(cacheKey)) {
+		return cachedGraphChains.get(cacheKey)!;
+	}
+
 	const nodeByPath = new Map(graph.nodes.map((node) => [node.path, node]));
 	const entrypoints = new Set(graph.metadata.entrypoints);
 	const results: string[][] = [];
@@ -125,7 +135,14 @@ const buildUpstreamChains = (
 			});
 	}
 
-	return uniqueChains(results);
+	const resolvedChains = uniqueChains(results);
+	const nextCache = cachedGraphChains ?? new Map<string, string[][]>();
+	nextCache.set(cacheKey, resolvedChains);
+	if (!cachedGraphChains) {
+		chainCache.set(graph, nextCache);
+	}
+
+	return resolvedChains;
 };
 
 const getWorkspaceOrigin = (chain: string[]) =>
@@ -167,6 +184,11 @@ export const buildPackageTraceReport = (
 	packageQuery: string,
 ): ModvizTraceReport => {
 	const normalizedQuery = normalizeForSearch(packageQuery);
+	const cachedReports = packageReportCache.get(graph);
+	if (cachedReports?.has(normalizedQuery)) {
+		return cachedReports.get(normalizedQuery)!;
+	}
+
 	const groupedMatches = new Map<string, ModvizTraceMatch>();
 
 	graph.nodes
@@ -216,7 +238,7 @@ export const buildPackageTraceReport = (
 		left.label.localeCompare(right.label),
 	);
 
-	return {
+	const report: ModvizTraceReport = {
 		kind: "package",
 		query: packageQuery,
 		matchedLabels: Array.from(
@@ -225,6 +247,14 @@ export const buildPackageTraceReport = (
 		matches,
 		totalChains: matches.reduce((sum, match) => sum + match.chains.length, 0),
 	};
+
+	const nextCache = cachedReports ?? new Map<string, ModvizTraceReport>();
+	nextCache.set(normalizedQuery, report);
+	if (!cachedReports) {
+		packageReportCache.set(graph, nextCache);
+	}
+
+	return report;
 };
 
 export const buildNodeTraceReport = (
@@ -232,6 +262,11 @@ export const buildNodeTraceReport = (
 	nodeQuery: string,
 ): ModvizTraceReport => {
 	const normalizedQuery = normalizeForSearch(nodeQuery);
+	const cachedReports = nodeReportCache.get(graph);
+	if (cachedReports?.has(normalizedQuery)) {
+		return cachedReports.get(normalizedQuery)!;
+	}
+
 	const matches = graph.nodes
 		.filter((node) => {
 			return [node.path, node.name, node.package?.name, node.cluster]
@@ -240,13 +275,21 @@ export const buildNodeTraceReport = (
 		})
 		.map((node) => createTraceMatch(node, buildUpstreamChains(graph, node.path)));
 
-	return {
+	const report: ModvizTraceReport = {
 		kind: "node",
 		query: nodeQuery,
 		matchedLabels: matches.map((match) => match.path),
 		matches,
 		totalChains: matches.reduce((sum, match) => sum + match.chains.length, 0),
 	};
+
+	const nextCache = cachedReports ?? new Map<string, ModvizTraceReport>();
+	nextCache.set(normalizedQuery, report);
+	if (!cachedReports) {
+		nodeReportCache.set(graph, nextCache);
+	}
+
+	return report;
 };
 
 export const renderTraceReport = (

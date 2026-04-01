@@ -6,7 +6,7 @@ import { TraceView } from "~/components/modviz/trace-view";
 import { isModvizBundleReady, useModvizBundle } from "~/utils/modviz-data";
 
 const traceSearchSchema = z.object({
-	limit: z.coerce.number().catch(10),
+	limit: z.coerce.number().catch(25),
 	node: z.string().catch(""),
 	package: z.string().catch(""),
 });

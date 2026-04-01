@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Search, Sparkles } from "lucide-react";
-import { useMemo } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import type { ModvizDataBundle } from "~/utils/modviz-data";
@@ -11,6 +11,26 @@ type TraceSearch = {
 	node: string;
 	package: string;
 };
+
+const TRACE_RESULT_LIMIT_DEFAULT = 25;
+
+const explorerSearchForPath = (path: string) => ({
+	q: "",
+	selected: path,
+	scope: path.includes("node_modules") ? ("external" as const) : ("workspace" as const),
+});
+
+function TracePathLink(props: { path: string; className?: string }) {
+	return (
+		<Link
+			to="/explorer"
+			search={explorerSearchForPath(props.path)}
+			className={props.className ?? "rounded-full bg-white px-3 py-1 hover:text-sky-700 dark:bg-slate-950/80 dark:hover:text-sky-300"}
+		>
+			{props.path}
+		</Link>
+	);
+}
 
 const defaultGraphSearch = {
 	adjustSizes: false,
@@ -33,17 +53,32 @@ export function TraceView(props: {
 	search: TraceSearch;
 	onSearchChange: (patch: Partial<TraceSearch>) => void;
 }) {
+	const [draftSearch, setDraftSearch] = useState(props.search);
+	const deferredSearch = useDeferredValue(draftSearch);
+
+	useEffect(() => {
+		setDraftSearch(props.search);
+	}, [props.search]);
+
+	useEffect(() => {
+		const timeoutId = window.setTimeout(() => {
+			props.onSearchChange(draftSearch);
+		}, 180);
+
+		return () => window.clearTimeout(timeoutId);
+	}, [draftSearch, props.onSearchChange]);
+
 	const report = useMemo(() => {
-		if (props.search.package.trim()) {
-			return buildPackageTraceReport(props.bundle.graph, props.search.package);
+		if (deferredSearch.package.trim()) {
+			return buildPackageTraceReport(props.bundle.graph, deferredSearch.package);
 		}
 
-		if (props.search.node.trim()) {
-			return buildNodeTraceReport(props.bundle.graph, props.search.node);
+		if (deferredSearch.node.trim()) {
+			return buildNodeTraceReport(props.bundle.graph, deferredSearch.node);
 		}
 
 		return null;
-	}, [props.bundle.graph, props.search.node, props.search.package]);
+	}, [deferredSearch.node, deferredSearch.package, props.bundle.graph]);
 
 	return (
 		<div className="space-y-6">
@@ -51,21 +86,21 @@ export function TraceView(props: {
 				<div className="grid gap-4 lg:grid-cols-3">
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">External package</label>
-						<Input placeholder="zod, react, lodash-es" value={props.search.package} onChange={(event) => props.onSearchChange({ package: event.currentTarget.value, node: "" })} />
+						<Input placeholder="zod, react, lodash-es" value={draftSearch.package} onChange={(event) => setDraftSearch((previous) => ({ ...previous, package: event.currentTarget.value, node: "" }))} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Node path or name</label>
-						<Input placeholder="src/routes/index.ts" value={props.search.node} onChange={(event) => props.onSearchChange({ node: event.currentTarget.value, package: "" })} />
+						<Input placeholder="src/routes/index.ts" value={draftSearch.node} onChange={(event) => setDraftSearch((previous) => ({ ...previous, node: event.currentTarget.value, package: "" }))} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Chain limit</label>
-						<Input type="number" min="1" max="50" value={String(props.search.limit)} onChange={(event) => props.onSearchChange({ limit: Math.max(1, Number(event.currentTarget.value) || 10) })} />
+						<Input type="number" min="1" max="200" value={String(draftSearch.limit)} onChange={(event) => setDraftSearch((previous) => ({ ...previous, limit: Math.max(1, Number(event.currentTarget.value) || TRACE_RESULT_LIMIT_DEFAULT) }))} />
 					</div>
 				</div>
 				<div className="mt-4 flex flex-wrap gap-2">
-					<Button variant="outline" onClick={() => props.onSearchChange({ package: "react", node: "" })}>Trace React</Button>
-					<Button variant="outline" onClick={() => props.onSearchChange({ package: "", node: props.bundle.graph.metadata.entrypoints[0] ?? "" })}>Trace entrypoint</Button>
-					<Button variant="outline" onClick={() => props.onSearchChange({ package: "", node: "", limit: 10 })}>Reset</Button>
+					<Button variant="outline" onClick={() => setDraftSearch({ package: "react", node: "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace React</Button>
+					<Button variant="outline" onClick={() => setDraftSearch({ package: "", node: props.bundle.graph.metadata.entrypoints[0] ?? "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace entrypoint</Button>
+					<Button variant="outline" onClick={() => setDraftSearch({ package: "", node: "", limit: TRACE_RESULT_LIMIT_DEFAULT })}>Reset</Button>
 				</div>
 				<p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
 					Import search finds matching import statements. Trace explains why a file or external package is reachable by walking upstream importers back toward workspace roots and entrypoints.
@@ -78,7 +113,7 @@ export function TraceView(props: {
 						<div className="flex items-center justify-between gap-4">
 							<div>
 								<h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Trace results</h2>
-								<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Matched {report.matches.length} node(s) across {report.totalChains} origin chain(s).</p>
+									<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Matched {report.matches.length} result(s) across {report.totalChains} origin chain(s). Showing up to {draftSearch.limit} path(s) per section.</p>
 							</div>
 							<div className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-950">{report.kind}</div>
 						</div>
@@ -102,38 +137,41 @@ export function TraceView(props: {
 								<div className="mt-4 grid gap-3 lg:grid-cols-2">
 									<div className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
 										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Introduced through</p>
+										<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Workspace files that first cross into this external dependency chain.</p>
 										<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
-											{match.introducedThrough.length > 0 ? match.introducedThrough.slice(0, props.search.limit).map((segment) => (
-												<span key={`${match.path}-introduced-${segment}`} className="rounded-full bg-white px-3 py-1 dark:bg-slate-950/80">{segment}</span>
+											{match.introducedThrough.length > 0 ? match.introducedThrough.slice(0, draftSearch.limit).map((segment) => (
+												<TracePathLink key={`${match.path}-introduced-${segment}`} path={segment} />
 											)) : <span className="text-slate-500 dark:text-slate-400">No workspace importer path found.</span>}
 										</div>
 									</div>
 									<div className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
 										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Workspace origins</p>
+										<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Workspace roots or entrypoint-side files that can eventually reach this result.</p>
 										<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
-											{match.workspaceOrigins.length > 0 ? match.workspaceOrigins.slice(0, props.search.limit).map((segment) => (
-												<span key={`${match.path}-origin-${segment}`} className="rounded-full bg-white px-3 py-1 dark:bg-slate-950/80">{segment}</span>
+											{match.workspaceOrigins.length > 0 ? match.workspaceOrigins.slice(0, draftSearch.limit).map((segment) => (
+												<TracePathLink key={`${match.path}-origin-${segment}`} path={segment} />
 											)) : <span className="text-slate-500 dark:text-slate-400">No upstream workspace root found.</span>}
 										</div>
 									</div>
 								</div>
-								{match.targetPaths.length > 1 ? (
-									<div className="mt-4 rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
-										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Matching files</p>
-										<div className="mt-2 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-											{match.targetPaths.slice(0, props.search.limit).map((targetPath) => (
-												<div key={`${match.path}-target-${targetPath}`} className="font-mono">{targetPath}</div>
-											))}
-										</div>
+								<div className="mt-4 rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
+									<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Matched files</p>
+									<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Concrete matching files inside the package or node search result.</p>
+									<div className="mt-2 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+										{match.targetPaths.slice(0, draftSearch.limit).map((targetPath) => (
+											<div key={`${match.path}-target-${targetPath}`} className="font-mono">
+												<TracePathLink path={targetPath} className="hover:text-sky-700 dark:hover:text-sky-300" />
+											</div>
+										))}
 									</div>
-								) : null}
+								</div>
 								<div className="mt-4 space-y-3">
-									{match.chains.slice(0, props.search.limit).map((chain, index) => (
+									{match.chains.slice(0, draftSearch.limit).map((chain, index) => (
 										<div key={`${match.path}-${index}`} className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
 											<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Origin chain {index + 1}</p>
 											<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
 												{chain.map((segment, segmentIndex) => (
-													<span key={`${segment}-${segmentIndex}`} className="rounded-full bg-white px-3 py-1 dark:bg-slate-950/80">{segment}</span>
+													<TracePathLink key={`${segment}-${segmentIndex}`} path={segment} />
 												))}
 											</div>
 										</div>
