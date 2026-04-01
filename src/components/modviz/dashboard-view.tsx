@@ -19,14 +19,6 @@ type RouteCard = {
 
 const routes: RouteCard[] = [
 	{
-		to: "/graph",
-		title: "Bubble graph",
-		description:
-			"Open the force-directed view with external packages broken down by name instead of grouped together.",
-		icon: Network,
-		search: { externalGrouping: "package" as const },
-	},
-	{
 		to: "/explorer",
 		title: "File explorer",
 		description:

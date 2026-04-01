@@ -38,6 +38,34 @@ export const useCreateGraph = (props: {
 		() => new Set(props.packages.map((pkg) => pkg.name)),
 		[props.packages],
 	);
+	const clusterAnchors = useMemo(() => {
+		const groups = Array.from(
+			new Set(
+				props.nodes.map((node) =>
+					getNodeGroupingLabel(
+						node,
+						workspacePackageNames,
+						props.externalGrouping ?? "combined",
+					),
+				),
+			),
+		).sort((left, right) => left.localeCompare(right));
+
+		return new Map(
+			groups.map((groupLabel, index) => {
+				const angle = index * 2.399963229728653;
+				const radius = 12 * Math.sqrt(index + 1);
+
+				return [
+					groupLabel,
+					{
+						x: Math.cos(angle) * radius,
+						y: Math.sin(angle) * radius,
+					},
+				] as const;
+			}),
+		);
+	}, [props.externalGrouping, props.nodes, workspacePackageNames]);
 
 	const clusterColors = useMemo(() => {
 		const colorMap = new Map<string, string>();
@@ -89,11 +117,14 @@ export const useCreateGraph = (props: {
 				workspacePackageNames,
 				props.externalGrouping ?? "combined",
 			);
+			const anchor = clusterAnchors.get(groupLabel) ?? { x: 0, y: 0 };
+			const jitterX = (getRandom() - 0.5) * 8;
+			const jitterY = (getRandom() - 0.5) * 8;
 
-			// Position entry node at center, others spread out more
+			// Seed clusters into separate regions so ForceAtlas2 can preserve community structure.
 			const isEntry = props.entryNode === node.path;
-			const x = isEntry ? 0 : Math.abs(getRandom());
-			const y = isEntry ? 0 : Math.abs(getRandom());
+			const x = isEntry ? 0 : anchor.x + jitterX;
+			const y = isEntry ? 0 : anchor.y + jitterY;
 			const label =
 				node.package && node.isBarrelFile
 					? `${node.package?.name}/${node.name}`
@@ -139,6 +170,7 @@ export const useCreateGraph = (props: {
 
 		return graph as Graph<NodeType, EdgeType>;
 	}, [
+		clusterAnchors,
 		clusterColors,
 		edges.list,
 		props.entryNode,

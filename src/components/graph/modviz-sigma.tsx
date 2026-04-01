@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
 import { NodeDetailsModal } from "~/components/dialog/dialog";
+import { clamp } from "~/components/graph/common/clamp";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
 import type {
@@ -343,6 +344,10 @@ const useClusterLabelLayer = (
 	hideClusterLabels: boolean,
 ) => {
 	useEffect(() => {
+		const visibleClusters = Array.from(clusterMap.values())
+			.filter((cluster) => cluster.nodes.length >= 8)
+			.sort((left, right) => right.nodes.length - left.nodes.length)
+			.slice(0, 24);
 		let layer = document.getElementById("cluster-label-layers")!;
 		const hasLayer = Boolean(layer);
 		if (!hasLayer) {
@@ -360,10 +365,10 @@ const useClusterLabelLayer = (
 		layer.className =
 			"absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden data-hovered:hidden data-hidden:hidden";
 		let clusterLabelsDoms = "";
-		clusterMap.forEach((cluster) => {
-			if (cluster.nodes.length < 5) return;
+		visibleClusters.forEach((cluster) => {
 			const viewportPos = sigma.graphToViewport(cluster as Coordinates);
-			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-md text-2xl" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color}">${cluster.inferredName || cluster.name}</div>`;
+			const fontSize = clamp(14, 28, 10 + Math.log2(cluster.nodes.length) * 3);
+			clusterLabelsDoms += `<div id='${cluster.name}' class="absolute -translate-1/2 -translate-y-1/2 text-shadow-md font-semibold whitespace-nowrap" style="top:${viewportPos.y}px;left:${viewportPos.x}px;color:${cluster.color};font-size:${fontSize}px;background:color-mix(in srgb, white 78%, transparent);padding:2px 8px;border-radius:999px;backdrop-filter:blur(2px);opacity:0.92">${cluster.inferredName || cluster.name}</div>`;
 		});
 		layer.innerHTML = clusterLabelsDoms;
 
@@ -375,7 +380,7 @@ const useClusterLabelLayer = (
 
 		// Clusters labels position needs to be updated on each render
 		const listener = () => {
-			clusterMap.forEach((cluster) => {
+			visibleClusters.forEach((cluster) => {
 				const clusterLabel = document.getElementById(cluster.name);
 				if (clusterLabel) {
 					// update position from the viewport
@@ -390,5 +395,5 @@ const useClusterLabelLayer = (
 		return () => {
 			sigma.off("afterRender", listener);
 		};
-	}, [clusterMap, hideClusterLabels]);
+	}, [clusterMap, hideClusterLabels, sigma]);
 };
