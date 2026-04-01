@@ -46,8 +46,8 @@ function ConfigureRoute() {
 	};
 
 	const buildCommand = () => {
-		const basePath = bundle.graph.metadata.entrypoints[0] || "./src/index.ts";
-		let cmd = `pnpm exec modviz ${basePath}`;
+		const basePath = bundle.graph?.metadata.entrypoints[0] || "./src/index.ts";
+		let cmd = `pnpm exec modviz analyze ${basePath}`;
 
 		if (config.outputFile && config.outputFile !== defaultCommandBuilderState.outputFile) {
 			cmd += ` --output-file=${config.outputFile}`;
@@ -71,7 +71,8 @@ function ConfigureRoute() {
 		window.setTimeout(() => setDidCopy(false), 2000);
 	};
 
-	const cmd = useMemo(() => buildCommand(), [bundle.graph.metadata.entrypoints, config]);
+	const cmd = useMemo(() => buildCommand(), [bundle.graph?.metadata.entrypoints, config]);
+	const summary = bundle.summary;
 	const toggleFields = [
 		{
 			key: "enableLlm" as const,
@@ -215,28 +216,31 @@ function ConfigureRoute() {
 						<div>
 							<p className="font-semibold text-slate-500 dark:text-slate-400">Nodes</p>
 							<p className="text-lg font-bold text-slate-900 dark:text-slate-100">
-								{bundle.summary.overview.totalNodes.toLocaleString()}
+								{(summary?.overview.totalNodes ?? 0).toLocaleString()}
 							</p>
 						</div>
 						<div>
 							<p className="font-semibold text-slate-500 dark:text-slate-400">Workspace</p>
 							<p className="text-lg font-bold text-slate-900 dark:text-slate-100">
-								{bundle.summary.overview.workspaceNodes.toLocaleString()}
+								{(summary?.overview.workspaceNodes ?? 0).toLocaleString()}
 							</p>
 						</div>
 						<div>
 							<p className="font-semibold text-slate-500 dark:text-slate-400">Packages</p>
 							<p className="text-lg font-bold text-slate-900 dark:text-slate-100">
-								{bundle.summary.overview.workspacePackages.toLocaleString()}
+								{(summary?.overview.workspacePackages ?? 0).toLocaleString()}
 							</p>
 						</div>
 						<div>
 							<p className="font-semibold text-slate-500 dark:text-slate-400">LLM Report</p>
 							<p className="text-lg font-bold text-slate-900 dark:text-slate-100">
-								{bundle.summary.hasLlm ? "✓" : "—"}
+								{summary?.hasLlm ? "✓" : "—"}
 							</p>
 						</div>
 					</div>
+					{bundle.setup.status !== "ready" ? (
+						<p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{bundle.setup.message}</p>
+					) : null}
 				</section>
 			</div>
 		</ModvizLayout>

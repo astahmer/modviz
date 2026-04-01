@@ -1,23 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { ExplorerView } from "~/components/modviz/explorer-view";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { SetupView } from "~/components/modviz/setup-view";
+import { TraceView } from "~/components/modviz/trace-view";
 import { isModvizBundleReady, useModvizBundle } from "~/utils/modviz-data";
 
-const explorerSearchSchema = z.object({
-	q: z.string().catch(""),
-	selected: z.string().catch(""),
-	scope: z.enum(["all", "workspace", "external"]).catch("workspace"),
+const traceSearchSchema = z.object({
+	limit: z.coerce.number().catch(10),
+	node: z.string().catch(""),
+	package: z.string().catch(""),
 });
 
-export const Route = createFileRoute("/explorer")({
+export const Route = createFileRoute("/trace")({
 	ssr: false,
-	validateSearch: (search) => explorerSearchSchema.parse(search),
-	component: ExplorerRoute,
+	validateSearch: (search) => traceSearchSchema.parse(search),
+	component: TraceRoute,
 });
 
-function ExplorerRoute() {
+function TraceRoute() {
 	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
@@ -25,11 +25,11 @@ function ExplorerRoute() {
 	return (
 		<ModvizLayout
 			projectTitle={bundle.projectTitle}
-			title="File Explorer"
-			description="Browse the monorepo or node_modules tree, select any file, then inspect its direct imports and importers without opening the force-directed graph."
+			title="Trace"
+			description="Explain why a dependency or module is present by reading the stored origin chains in the current snapshot."
 		>
 			{isModvizBundleReady(bundle) ? (
-				<ExplorerView
+				<TraceView
 					bundle={bundle}
 					search={search}
 					onSearchChange={(patch) =>

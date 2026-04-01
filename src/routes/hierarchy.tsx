@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
+import { SetupView } from "~/components/modviz/setup-view";
 import { LoadingState } from "~/components/ui/loading-state";
-import { useModvizBundle } from "~/utils/modviz-data";
+import { isModvizBundleReady, useModvizBundle } from "~/utils/modviz-data";
 
 const Flamegraph = lazy(() =>
 	import("~/components/graph/flamegraph").then((module) => ({
@@ -41,6 +42,19 @@ function HierarchyRoute() {
 	const bundle = useModvizBundle();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
+
+	if (!isModvizBundleReady(bundle)) {
+		return (
+			<ModvizLayout
+				projectTitle={bundle.projectTitle}
+				title="Hierarchy"
+				description="Pruned flamegraph for reading dependency hierarchy without freezing the browser."
+			>
+				<SetupView bundle={bundle} />
+			</ModvizLayout>
+		);
+	}
+
 	const entryNodeId =
 		search.entryNodeId ||
 		bundle.graph.metadata.entrypoints[0] ||

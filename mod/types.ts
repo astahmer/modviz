@@ -7,6 +7,17 @@ export interface ModvizOutput {
 	imports: string[];
 }
 
+export interface ModvizSnapshotHistoryItem {
+	id: string;
+	label: string;
+	graphPath: string;
+	llmPath: string | null;
+	generatedAt: string | null;
+	lastModified: number;
+	totalNodes: number;
+	entrypoints: string[];
+}
+
 export interface ModvizLlmOutput {
 	format: "modviz-llm-v1";
 	metadata: VizMetadata & {

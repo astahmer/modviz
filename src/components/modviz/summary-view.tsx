@@ -2,6 +2,11 @@ import { Link } from "@tanstack/react-router";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 import { formatNumber } from "~/utils/formatting";
 
+type ReadyBundle = ModvizDataBundle & {
+	graph: NonNullable<ModvizDataBundle["graph"]>;
+	summary: NonNullable<ModvizDataBundle["summary"]>;
+};
+
 function MetricCard(props: { label: string; value: number; note: string }) {
 	return (
 		<div className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
@@ -76,7 +81,7 @@ function SummaryTable(props: {
 	);
 }
 
-export function SummaryView(props: { bundle: ModvizDataBundle }) {
+export function SummaryView(props: { bundle: ReadyBundle }) {
 	const { graph, summary } = props.bundle;
 
 	return (
@@ -89,13 +94,13 @@ export function SummaryView(props: { bundle: ModvizDataBundle }) {
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-2">
-				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Graph-derived ranking based on how many unique modules each file can reach through its import chain."} rows={summary.hotspots} valueLabel="Reachable" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
+				<SummaryTable title="Most transitive imports" description={summary.hasLlm ? "Approximate hotspots ranked by reachable modules from the companion report." : "Graph-derived ranking based on how many unique modules each file can reach through its import chain."} rows={summary.hotspots} valueLabel="Reachable" getLink={(row) => ({ to: "/trace", search: { node: row.path, package: "", limit: 10 } })} />
 				<SummaryTable title="Most imported by" description="Files or modules with the highest number of direct importers." rows={summary.topImportedBy} valueLabel="Inbound" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
 			</section>
 
 			<section className="grid gap-4 xl:grid-cols-2">
 				<SummaryTable title="Top importers" description="Files or modules with the highest number of direct outgoing imports." rows={summary.topImporters} valueLabel="Outgoing" getLink={(row) => ({ to: "/explorer", search: { selected: row.path, scope: row.path.includes("node_modules") ? "external" : "workspace" } })} />
-				<SummaryTable title="External packages" description="Distinct external package presence in the current graph." rows={summary.topExternalPackages} valueLabel="Nodes" getLink={(row) => ({ to: "/graph", search: { scope: "external", cluster: row.label, externalGrouping: "package" } })} />
+				<SummaryTable title="External packages" description="Distinct external package presence in the current graph." rows={summary.topExternalPackages} valueLabel="Nodes" getLink={(row) => ({ to: "/trace", search: { package: row.label, node: "", limit: 10 } })} />
 			</section>
 
 			<SummaryTable title="Largest clusters" description="Useful when deciding where to zoom first in the bubble graph or what to scope in import search." rows={summary.topClusters} valueLabel="Nodes" getLink={(row) => ({ to: "/graph", search: { cluster: row.label, externalGrouping: "package" } })} />

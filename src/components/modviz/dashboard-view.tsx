@@ -3,6 +3,11 @@ import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, SquareStack 
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 import { formatNumber } from "~/utils/formatting";
 
+type ReadyBundle = ModvizDataBundle & {
+	graph: NonNullable<ModvizDataBundle["graph"]>;
+	summary: NonNullable<ModvizDataBundle["summary"]>;
+};
+
 type RouteCard = {
 	to:
 		| "/graph"
@@ -127,7 +132,7 @@ function RankingList(props: {
 	);
 }
 
-export function DashboardView(props: { bundle: ModvizDataBundle }) {
+export function DashboardView(props: { bundle: ReadyBundle }) {
 	const { graph, summary } = props.bundle;
 
 	return (

@@ -15,12 +15,14 @@ import {
 } from "~/components/graph/common/use-graph-atoms";
 import { GraphSettingsPanel } from "~/components/graph/graph-settings-panel";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
+import { SetupView } from "~/components/modviz/setup-view";
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/loading-state";
 import {
 	filterNodesByScope,
 	getNodeGroupingLabel,
 	getWorkspacePackageNames,
+	isModvizBundleReady,
 	type ExternalGroupingMode,
 	type ModvizScope,
 	useModvizBundle,
@@ -47,6 +49,7 @@ type GraphSearch = {
 	scalingRatio: number;
 	scope: ModvizScope;
 	strongGravityMode: boolean;
+	preset: string;
 };
 
 const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
@@ -54,7 +57,8 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 	return {
 		adjustSizes: parseSearchParam.boolean(search.adjustSizes, defaults.adjustSizes),
 		cluster: parseSearchParam.string(search.cluster),
-		externalGrouping: "package", // Always default to package grouping for clarity
+		externalGrouping:
+			search.externalGrouping === "combined" ? "combined" : "package",
 		focus: parseSearchParam.string(search.focus),
 		gravity: parseSearchParam.number(search.gravity, defaults.gravity),
 		hideClusterLabels: parseSearchParam.boolean(search.hideClusterLabels, defaults.hideClusterLabels),
@@ -65,6 +69,7 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 			search.outboundAttractionDistribution,
 			defaults.outboundAttractionDistribution,
 		),
+		preset: parseSearchParam.string(search.preset),
 		scalingRatio: parseSearchParam.number(search.scalingRatio, defaults.scalingRatio),
 		scope:
 			search.scope === "workspace" || search.scope === "external"
@@ -88,6 +93,15 @@ function GraphRoute() {
 	const [refreshNonce, setRefreshNonce] = useState(0);
 	const focusedValue = useAtom(focusedNodeIdAtom);
 	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
+
+	if (!isModvizBundleReady(bundle)) {
+		return (
+			<ModvizLayout title="Bubble Graph" description="Force-directed cluster view for spatial exploration.">
+				<SetupView bundle={bundle} />
+			</ModvizLayout>
+		);
+	}
+
 	const workspacePackageNames = useMemo(
 		() => getWorkspacePackageNames(bundle.graph),
 		[bundle.graph],
@@ -167,6 +181,17 @@ function GraphRoute() {
 			}
 		>
 			<div className="flex h-[calc(100vh-14rem)] min-h-[680px] flex-col gap-4">
+				<section className="flex flex-wrap gap-2 rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+					{[
+						{ id: "all-overview", label: "All overview", patch: { preset: "all-overview", scope: "all" as const, cluster: "", externalGrouping: "package" as const } },
+						{ id: "workspace-focus", label: "Workspace only", patch: { preset: "workspace-focus", scope: "workspace" as const, cluster: "", externalGrouping: "package" as const } },
+						{ id: "external-packages", label: "External packages", patch: { preset: "external-packages", scope: "external" as const, cluster: "", externalGrouping: "package" as const } },
+					].map((preset) => (
+						<Button key={preset.id} variant={search.preset === preset.id ? "default" : "outline"} size="sm" onClick={() => updateSearch(preset.patch)}>
+							{preset.label}
+						</Button>
+					))}
+				</section>
 				<section className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 					{([
 						["all", "All nodes"],
@@ -177,7 +202,7 @@ function GraphRoute() {
 							key={value}
 							variant={scope === value ? "default" : "outline"}
 							size="sm"
-							onClick={() => updateSearch({ scope: value, cluster: "" })}
+							onClick={() => updateSearch({ scope: value, cluster: "", preset: "" })}
 						>
 							{label}
 						</Button>
@@ -190,6 +215,7 @@ function GraphRoute() {
 							onChange={(event) =>
 								updateSearch({
 									cluster: "",
+									preset: "",
 									externalGrouping: event.currentTarget
 										.value as ExternalGroupingMode,
 								})

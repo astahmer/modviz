@@ -1,13 +1,15 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
 import {
 	buildCliHelpText,
+	buildSnapshotList,
 	buildCliSummary,
 	parseCliArgs,
 	validateCliArgs,
 } from "./cli-options.ts";
 import { generateAiAnalysis } from "./llm-analysis.ts";
+import { listSnapshotHistory, loadSnapshotGraph, saveSnapshotToHistory } from "./snapshot-history.ts";
 import {
 	buildModvizLlmOutput,
 	inferLlmOutputPaths,
@@ -16,6 +18,11 @@ import {
 	renderModvizLlmMarkdown,
 } from "./llm-output.ts";
 import { startProductionServer } from "./production-server.ts";
+import {
+	buildNodeTraceReport,
+	buildPackageTraceReport,
+	renderTraceReport,
+} from "../shared/modviz-trace.ts";
 import {
 	createModuleGraph,
 	type Module,
@@ -33,22 +40,39 @@ import {
 import { findWorkspaces } from "find-workspaces";
 
 const args = process.argv.slice(2);
-const { entryFile, flags, serveDataFile } = parseCliArgs(args);
-const validationError = validateCliArgs({ entryFile, flags, serveDataFile });
+const parsedArgs = parseCliArgs(args);
+const { command, entryFile, flags, serveDataFile } = parsedArgs;
+const validationError = validateCliArgs(parsedArgs);
 
 if (validationError) {
 	console.error(`Error: ${validationError}`);
 	process.exit(1);
 }
 
-if (flags.help || (!entryFile && !flags.serve)) {
+if (flags.help || (command === "analyze" && !entryFile && !flags.serve)) {
 	console.log(buildCliHelpText());
 	process.exit(0);
 }
 
-// If serving existing data
-if (flags.serve) {
-	await launchWebUI(flags.port, serveDataFile);
+if (command === "serve" || flags.serve) {
+	await launchWebUI(flags.port, serveDataFile ?? flags.graphFile);
+	process.exit(0);
+}
+
+if (command === "report") {
+	const reportGraph = loadGraphForReport(flags);
+	if (flags.listSnapshots) {
+		console.log(buildSnapshotList(listSnapshotHistory()));
+	}
+	if (flags.summary) {
+		console.log(buildCliSummary(reportGraph));
+	}
+	if (flags.packageQuery) {
+		console.log(renderTraceReport(buildPackageTraceReport(reportGraph, flags.packageQuery), flags.limit));
+	}
+	if (flags.nodeQuery) {
+		console.log(renderTraceReport(buildNodeTraceReport(reportGraph, flags.nodeQuery), flags.limit));
+	}
 	process.exit(0);
 }
 
@@ -226,6 +250,25 @@ if (shouldBuildLlmReport) {
 
 	if (flags.packageQuery || flags.nodeQuery) {
 		console.log(focusedDrilldown);
+	}
+
+	if (flags.snapshotName) {
+		const snapshot = saveSnapshotToHistory({
+			graph: outputGraphData,
+			llm: flags.llm || flags.llmAnalyze ? llmOutput : undefined,
+			snapshotName: flags.snapshotName,
+		});
+		if (snapshot) {
+			console.log(`🗂️  Saved named snapshot: ${snapshot.id}`);
+		}
+	}
+} else if (flags.snapshotName) {
+	const snapshot = saveSnapshotToHistory({
+		graph: outputGraphData,
+		snapshotName: flags.snapshotName,
+	});
+	if (snapshot) {
+		console.log(`🗂️  Saved named snapshot: ${snapshot.id}`);
 	}
 }
 
@@ -423,6 +466,20 @@ function findNearestPackageRoot(startDirectory: string) {
 
 function normalizeRelativePath(filePath: string) {
 	return filePath.replace(/\\/g, "/");
+}
+
+function loadGraphForReport(flags: typeof parsedArgs.flags) {
+	if (flags.snapshot) {
+		return loadSnapshotGraph(flags.snapshot);
+	}
+
+	const graphFile = path.resolve(flags.graphFile ?? flags.outputFile);
+	if (!existsSync(graphFile)) {
+		console.error(`Error: Graph file "${graphFile}" does not exist`);
+		process.exit(1);
+	}
+
+	return JSON.parse(readFileSync(graphFile, "utf-8")) as ModvizOutput;
 }
 
 function applyGraphFocus(

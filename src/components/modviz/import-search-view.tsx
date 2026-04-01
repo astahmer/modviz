@@ -6,6 +6,10 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { ImportDisplay } from "~/components/modviz/import-display";
 
+type ReadyBundle = ModvizDataBundle & {
+	graph: NonNullable<ModvizDataBundle["graph"]>;
+};
+
 const formatNumber = new Intl.NumberFormat("en-US");
 
 type MatchMode = "contains" | "exact" | "regex";
@@ -69,7 +73,7 @@ const isWorkspaceImport = (
 };
 
 export function ImportSearchView(props: {
-	bundle: ModvizDataBundle;
+	bundle: ReadyBundle;
 	search: {
 		exclude: string;
 		include: string;

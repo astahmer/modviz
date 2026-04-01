@@ -1,5 +1,10 @@
 import { getRouteApi } from "@tanstack/react-router";
-import type { ModvizLlmOutput, ModvizOutput, VizNode } from "../../mod/types";
+import type {
+	ModvizLlmOutput,
+	ModvizOutput,
+	ModvizSnapshotHistoryItem,
+	VizNode,
+} from "../../mod/types";
 
 export type ModvizScope = "all" | "workspace" | "external";
 export type ExternalGroupingMode = "combined" | "package";
@@ -30,10 +35,16 @@ export type ModvizDerivedSummary = {
 };
 
 export type ModvizDataBundle = {
-	graph: ModvizOutput;
+	graph: ModvizOutput | null;
 	llm: ModvizLlmOutput | null;
 	projectTitle: string | null;
-	summary: ModvizDerivedSummary;
+	summary: ModvizDerivedSummary | null;
+	history: ModvizSnapshotHistoryItem[];
+	setup: {
+		status: "ready" | "missing" | "invalid";
+		graphPath: string;
+		message?: string;
+	};
 };
 
 export type ModvizJsonStatus = {
@@ -43,6 +54,13 @@ export type ModvizJsonStatus = {
 	lastModified: number | null;
 	llmPath: string;
 };
+
+export const isModvizBundleReady = (
+	bundle: ModvizDataBundle,
+): bundle is ModvizDataBundle & {
+	graph: ModvizOutput;
+	summary: ModvizDerivedSummary;
+} => Boolean(bundle.graph && bundle.summary && bundle.setup.status === "ready");
 
 export const isExternalNode = (
 	node: VizNode,
@@ -290,6 +308,12 @@ const fetchJson = async <T>(pathname: string): Promise<T> => {
 
 export const fetchModvizBundle = () =>
 	fetchJson<ModvizDataBundle>("/api/modviz-bundle");
+
+export const fetchSnapshotHistory = () =>
+	fetchJson<ModvizSnapshotHistoryItem[]>("/api/snapshot-history");
+
+export const fetchSnapshotGraph = (snapshotId: string) =>
+	fetchJson<ModvizOutput>(`/api/snapshot-history/${encodeURIComponent(snapshotId)}`);
 
 const rootRouteApi = getRouteApi("__root__");
 

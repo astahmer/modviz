@@ -7,8 +7,10 @@ An interactive CLI and web UI for visualizing module dependency graphs and spott
 - **Interactive Graph Visualization**: Force-directed, hierarchical, and circular layouts
 - **Smart Filtering**: Search by filename, filter by node type, or limit by import depth
 - **Snapshot Comparison**: Compare two graph JSON snapshots to see added or removed modules, edges, and packages
+- **Named Snapshot History**: Save runs into a history directory and reload them in the UI compare view or from the CLI
 - **File Import/Export**: Load existing graph data or export filtered views
 - **Node Inspection**: Detailed view of imports, exports, and unused exports
+- **Dependency Trace View**: Explain why a package or module is present by reading captured origin chains
 - **TypeScript Support**: Fully supports TypeScript projects with proper resolution
 
 ## 📦 Installation
@@ -20,9 +22,9 @@ pnpm add -D modviz
 
 ## 🛠️ Usage
 
-### Generate graph and launch web UI
+### Analyze and launch the web UI
 ```bash
-pnpm run cli -- src/index.ts --ui
+pnpm run modviz analyze src/index.ts --ui
 ```
 
 This serves the prebuilt production UI from `dist/runtime` and launches the packaged Node server instead of rebuilding with Vite on every run.
@@ -36,33 +38,47 @@ pnpm run build
 
 ### Generate graph data only (no UI)
 ```bash
-pnpm run cli -- src/index.ts
+pnpm run modviz analyze src/index.ts
 ```
 
 ### Launch UI with existing data
 ```bash
-pnpm run cli -- --serve ./modviz.json
+pnpm run modviz serve ./modviz.json
 ```
 
 ### Use custom port
 ```bash
-pnpm run cli -- src/index.ts --ui --port=4000
+pnpm run modviz analyze src/index.ts --ui --port=4000
 ```
 
 ### Generate LLM-oriented reports for barrel and import analysis
 ```bash
-pnpm run cli -- src/index.ts --llm --node-modules
+pnpm run modviz analyze src/index.ts --llm --node-modules
 ```
 
 ### Generate an AI-written engineering summary from the structured LLM report
 ```bash
-MODVIZ_LLM_API_KEY=... pnpm run cli -- src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
+MODVIZ_LLM_API_KEY=... pnpm run modviz analyze src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
 ```
 
 ### Focus outputs on one package or node when the summary is not enough
 ```bash
-pnpm run cli -- src/index.ts --node-modules --package=googleapis
-pnpm run cli -- src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
+pnpm run modviz analyze src/index.ts --node-modules --package=googleapis
+pnpm run modviz analyze src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
+```
+
+### Save named snapshots to history
+```bash
+pnpm run modviz analyze src/index.ts --snapshot-name=before-refactor
+pnpm run modviz analyze src/index.ts --snapshot-name=after-refactor
+```
+
+### Report on an existing graph or named snapshot
+```bash
+pnpm run modviz report --summary
+pnpm run modviz report --package=react
+pnpm run modviz report --snapshot=2026-04-01t10-00-00-before-refactor --node=src/routes/index.ts
+pnpm run modviz report --list-snapshots
 ```
 
 ## 🎨 Web UI Features
@@ -91,8 +107,18 @@ pnpm run cli -- src/index.ts --node-modules --node=src/adapter-rest/register-app
 
 ### Snapshot Comparison
 - **Baseline vs current**: Upload a previous graph snapshot and compare it to the currently served graph
+- **History-backed compare**: Load named snapshots directly from `.modviz/history` without uploading files
 - **Delta tables**: Review added or removed modules, direct edges, and package presence
 - **Node-level changes**: See which files changed the most by inbound, outbound, and import-statement counts
+
+### Trace View
+- **Package trace**: Ask why `react`, `zod`, or any external package is present
+- **Node trace**: Follow stored origin chains into one file or module
+- **CLI parity**: The same trace queries work in `modviz report`
+
+### Empty-state Boot Flow
+- **Graceful startup**: If `modviz.json` is missing or invalid, the UI opens into a setup screen instead of failing the app boot
+- **History-first recovery**: Compare can still load named snapshots even when no current graph is active
 
 ## 🔧 Configuration
 
@@ -157,11 +183,15 @@ The generated `modviz.json` contains:
 }
 ```
 
-## CLI flags
+## CLI commands and flags
+
+- `analyze <entryFile>`: generate a new graph snapshot
+- `serve [dataFile]`: launch the UI for an existing graph snapshot
+- `report`: inspect an existing graph snapshot or a named history snapshot
 
 - `--ui`: launch the browser UI after generating the graph
-- `--serve`: launch the UI from an existing JSON graph file
 - `--output-file=<file>`: choose the base output filename
+- `--graph-file=<file>`: choose the graph file used by `report`
 - `--llm`: also emit LLM-oriented JSON and Markdown companion reports
 - `--llm-analyze`: also generate an AI-written Markdown summary from the structured LLM report
 - `--llm-model=<model>`: choose the OpenAI-compatible model for `--llm-analyze`
@@ -173,6 +203,9 @@ The generated `modviz.json` contains:
 - `--ignore-dynamic`: ignore dynamic imports
 - `--module-lexer=rs|es`: choose the import parser
 - `--port=<port>`: choose the UI server port
+- `--snapshot-name=<name>`: save the generated graph into `.modviz/history` as a named snapshot
+- `--snapshot=<id>`: use a named snapshot from history for `report`
+- `--list-snapshots`: print the named snapshot history
 
 ## Use Cases
 

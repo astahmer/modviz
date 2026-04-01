@@ -12,6 +12,10 @@ import {
 	type ModvizScope,
 } from "~/utils/modviz-data";
 
+type ReadyBundle = ModvizDataBundle & {
+	graph: NonNullable<ModvizDataBundle["graph"]>;
+};
+
 type ExplorerSearch = {
 	q: string;
 	selected: string;
@@ -41,6 +45,7 @@ const defaultGraphSearch = {
 	scalingRatio: 0,
 	scope: "all" as const,
 	strongGravityMode: false,
+	preset: "",
 };
 
 const defaultImportSearch = {
@@ -54,7 +59,7 @@ const defaultImportSearch = {
 };
 
 export function ExplorerView(props: {
-	bundle: ModvizDataBundle;
+	bundle: ReadyBundle;
 	search: ExplorerSearch;
 	onSearchChange: (patch: Partial<ExplorerSearch>) => void;
 }) {
@@ -213,6 +218,14 @@ export function ExplorerView(props: {
 								>
 									<ExternalLink className="size-4" />
 									Use as importer filter
+								</Link>
+								<Link
+									to="/trace"
+									search={{ package: "", node: selectedNode.path, limit: 10 }}
+									className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+								>
+									<ExternalLink className="size-4" />
+									Trace origins
 								</Link>
 							</div>
 

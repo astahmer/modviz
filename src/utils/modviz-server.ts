@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ModvizLlmOutput, ModvizOutput } from "../../mod/types";
+import { listSnapshotHistory } from "../../mod/snapshot-history.ts";
 import {
 	buildModvizSummary,
 	type ModvizDataBundle,
@@ -87,18 +88,58 @@ const resolveProjectTitle = (graph: ModvizOutput) => {
 
 export const loadModvizBundle = (): ModvizDataBundle => {
 	const graphPath = resolveGraphPath();
-	const graph = readJsonFile<ModvizOutput>(graphPath);
 	const llmPath = resolveLlmPath(graphPath);
-	const llm = fs.existsSync(llmPath)
-		? readJsonFile<ModvizLlmOutput>(llmPath)
-		: null;
+	const history = listSnapshotHistory();
 
-	return {
-		graph,
-		llm,
-		projectTitle: resolveProjectTitle(graph),
-		summary: buildModvizSummary(graph, llm),
-	};
+	if (!fs.existsSync(graphPath)) {
+		return {
+			graph: null,
+			llm: null,
+			projectTitle: null,
+			summary: null,
+			history,
+			setup: {
+				status: "missing",
+				graphPath,
+				message: `No graph snapshot exists at ${graphPath}. Generate one with modviz analyze <entryFile> or choose a named snapshot from history.`,
+			},
+		};
+	}
+
+	try {
+		const graph = readJsonFile<ModvizOutput>(graphPath);
+		const llm = fs.existsSync(llmPath)
+			? readJsonFile<ModvizLlmOutput>(llmPath)
+			: null;
+
+		return {
+			graph,
+			llm,
+			projectTitle: resolveProjectTitle(graph),
+			summary: buildModvizSummary(graph, llm),
+			history,
+			setup: {
+				status: "ready",
+				graphPath,
+			},
+		};
+	} catch (error) {
+		return {
+			graph: null,
+			llm: null,
+			projectTitle: null,
+			summary: null,
+			history,
+			setup: {
+				status: "invalid",
+				graphPath,
+				message:
+					error instanceof Error
+						? error.message
+						: `Failed to read ${graphPath}.`,
+			},
+		};
+	}
 };
 
 export { resolveProjectTitle };

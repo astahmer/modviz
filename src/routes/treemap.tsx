@@ -4,9 +4,10 @@ import { ChevronLeft, ExternalLink, FolderTree, Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { colors } from "~/components/graph/common/colors";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
+import { SetupView } from "~/components/modviz/setup-view";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { getWorkspacePackageNames, useModvizBundle } from "~/utils/modviz-data";
+import { getWorkspacePackageNames, isModvizBundleReady, useModvizBundle } from "~/utils/modviz-data";
 import { parseSearchParam } from "~/utils/search-params";
 import {
 	buildTreemapModel,
@@ -253,6 +254,18 @@ function TreemapRoute() {
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+	if (!isModvizBundleReady(bundle)) {
+		return (
+			<ModvizLayout
+				projectTitle={bundle.projectTitle}
+				title="Treemap"
+				description="Package and module area map for wide snapshot exploration."
+			>
+				<SetupView bundle={bundle} />
+			</ModvizLayout>
+		);
+	}
 
 	const workspacePackageNames = useMemo(
 		() => getWorkspacePackageNames(bundle.graph),

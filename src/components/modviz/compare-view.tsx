@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight, FileUp, RotateCcw } from "lucide-react";
-import type { ModvizOutput } from "../../../mod/types";
+import type { ModvizOutput, ModvizSnapshotHistoryItem } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
 import {
 	buildModvizGraphComparison,
 	type ChangedNodeSummary,
 } from "~/utils/modviz-compare";
 import { formatNumber } from "~/utils/formatting";
+import { fetchSnapshotGraph } from "~/utils/modviz-data";
 
 type SnapshotState = {
 	graph: ModvizOutput;
@@ -250,25 +251,32 @@ function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
 	);
 }
 
-export function CompareView(props: { currentGraph: ModvizOutput }) {
+export function CompareView(props: {
+	baselineSnapshotId?: string;
+	currentGraph: ModvizOutput | null;
+	history: ModvizSnapshotHistoryItem[];
+}) {
 	const currentServerSnapshot = useMemo(
-		() => ({
-			graph: props.currentGraph,
-			label: "Current served snapshot",
-		}),
+		() =>
+			props.currentGraph
+				? {
+					graph: props.currentGraph,
+					label: "Current served snapshot",
+				}
+				: null,
 		[props.currentGraph],
 	);
 	const [baseline, setBaseline] = useState<SnapshotState | null>(null);
-	const [current, setCurrent] = useState<SnapshotState>(currentServerSnapshot);
+	const [current, setCurrent] = useState<SnapshotState | null>(currentServerSnapshot);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const comparison = useMemo(() => {
-		if (!baseline) {
+		if (!baseline || !current) {
 			return null;
 		}
 
 		return buildModvizGraphComparison(baseline.graph, current.graph);
-	}, [baseline, current.graph]);
+	}, [baseline, current]);
 
 	const loadFileInto = async (slot: SnapshotSlot, file: File) => {
 		try {
@@ -287,8 +295,56 @@ export function CompareView(props: { currentGraph: ModvizOutput }) {
 		}
 	};
 
+	const loadHistorySnapshot = async (slot: SnapshotSlot, snapshotId: string) => {
+		try {
+			setErrorMessage(null);
+			const graph = await fetchSnapshotGraph(snapshotId);
+			const snapshot = { graph, label: snapshotId } satisfies SnapshotState;
+			if (slot === "baseline") {
+				setBaseline(snapshot);
+				return;
+			}
+
+			setCurrent(snapshot);
+		} catch (error) {
+			setErrorMessage(error instanceof Error ? error.message : `Failed to load snapshot ${snapshotId}.`);
+		}
+	};
+
+	useEffect(() => {
+		if (!props.baselineSnapshotId) {
+			return;
+		}
+
+		void loadHistorySnapshot("baseline", props.baselineSnapshotId);
+	}, [props.baselineSnapshotId]);
+
 	return (
 		<div className="space-y-6">
+			{props.history.length > 0 ? (
+				<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
+					<div className="grid gap-4 lg:grid-cols-2">
+						<label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+							<span>Load baseline from history</span>
+							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("baseline", event.currentTarget.value); }} defaultValue={props.baselineSnapshotId ?? ""}>
+								<option value="">Choose snapshot…</option>
+								{props.history.map((snapshot) => (
+									<option key={snapshot.id} value={snapshot.id}>{snapshot.id}</option>
+								))}
+							</select>
+						</label>
+						<label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+							<span>Load current from history</span>
+							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("current", event.currentTarget.value); }} defaultValue="">
+								<option value="">Choose snapshot…</option>
+								{props.history.map((snapshot) => (
+									<option key={snapshot.id} value={snapshot.id}>{snapshot.id}</option>
+								))}
+							</select>
+						</label>
+					</div>
+				</section>
+			) : null}
 			<section className="grid gap-4 xl:grid-cols-2">
 				<SnapshotCard
 					description="Load the older or baseline snapshot you want to compare against."
@@ -299,7 +355,7 @@ export function CompareView(props: { currentGraph: ModvizOutput }) {
 				/>
 				<SnapshotCard
 					description="By default this uses the graph currently served by the modviz UI, but you can replace it with another JSON file."
-					label={current.label}
+					label={current?.label ?? "No current snapshot loaded yet"}
 					onFileChange={(file) => void loadFileInto("current", file)}
 					secondaryAction={
 						<div className="flex gap-2">
@@ -310,6 +366,7 @@ export function CompareView(props: { currentGraph: ModvizOutput }) {
 									setCurrent(currentServerSnapshot);
 									setErrorMessage(null);
 								}}
+								disabled={!currentServerSnapshot}
 							>
 								<RotateCcw className="size-4" />
 								Use served graph
@@ -318,14 +375,14 @@ export function CompareView(props: { currentGraph: ModvizOutput }) {
 								variant="outline"
 								size="sm"
 								onClick={() => {
-									if (!baseline) {
+									if (!baseline || !current) {
 										return;
 									}
 
 									setBaseline(current);
 									setCurrent(baseline);
 								}}
-								disabled={!baseline}
+								disabled={!baseline || !current}
 							>
 								<ArrowLeftRight className="size-4" />
 								Swap
