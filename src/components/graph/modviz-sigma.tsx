@@ -10,11 +10,11 @@ import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
 import { fitViewportToNodes } from "@sigma/utils";
 import { useAtom } from "@xstate/store/react";
-import { Leva, levaStore } from "leva";
 import { useEffect, useMemo, useState } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
 import { NodeDetailsModal } from "~/components/dialog/dialog";
+import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
 import type {
 	EdgeType,
@@ -29,7 +29,9 @@ import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
 
 export const ModvizSigma = (props: {
+	output: ModvizOutput;
 	entryNode?: string;
+	layoutSettings: GraphLayoutSettings;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 }) => {
@@ -42,11 +44,14 @@ export const ModvizSigma = (props: {
 		>
 			<SigmaGraph
 				entryNode={props.entryNode}
+				layoutSettings={props.layoutSettings}
 				packages={props.packages}
 				nodes={props.nodes}
 			/>
 			{sigma && (
 				<WithGraph
+					hideClusterLabels={props.layoutSettings.hideClusterLabels}
+					output={props.output}
 					sigma={sigma as never}
 					nodes={props.nodes}
 					entryNode={props.entryNode}
@@ -58,13 +63,15 @@ export const ModvizSigma = (props: {
 
 const WithGraph = (props: {
 	entryNode?: string;
+	hideClusterLabels: boolean;
+	output: ModvizOutput;
 	sigma: Sigma<NodeType, EdgeType>;
 	nodes: ModvizOutput["nodes"];
 }) => {
 	const sigma = props.sigma;
 	const clusterMap = useClusterMap(sigma);
 	const clusterList = useClusterList(clusterMap);
-	useClusterLabelLayer(sigma, clusterMap);
+	useClusterLabelLayer(sigma, clusterMap, props.hideClusterLabels);
 
 	const graph = sigma.getGraph();
 	const nodes = graph.nodes();
@@ -174,9 +181,8 @@ const WithGraph = (props: {
 			<ControlsContainer position={"bottom-left"}>
 				<MiniMap width="100px" height="100px" />
 			</ControlsContainer>
-			<Leva collapsed hidden />
 
-			<NodeDetailsModal />
+			<NodeDetailsModal output={props.output} />
 			<MoveToHighlightedNode />
 		</>
 	);
@@ -281,11 +287,8 @@ const useClusterList = (clusterMap: Map<string, Cluster>) => {
 const useClusterLabelLayer = (
 	sigma: Sigma<NodeType, EdgeType>,
 	clusterMap: Map<string, Cluster>,
+	hideClusterLabels: boolean,
 ) => {
-	const hideClusterLabels = levaStore.useStore(
-		(s) => (s.data.hideClusterLabels as any).value,
-	);
-
 	useEffect(() => {
 		let layer = document.getElementById("cluster-label-layers")!;
 		const hasLayer = Boolean(layer);

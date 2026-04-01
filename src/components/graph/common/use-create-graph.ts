@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import type { ModvizOutput, VizNode } from "../../../../mod/types";
 import { colors } from "~/components/graph/common/colors";
+import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { getRandom } from "~/components/graph/common/random";
 
 export type NodeType = {
@@ -24,6 +25,7 @@ export type EdgeType = { label: string; hidden?: boolean; color?: string };
 
 export const useCreateGraph = (props: {
 	entryNode?: string;
+	layoutSettings?: GraphLayoutSettings;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
 }) => {
@@ -67,6 +69,7 @@ export const useCreateGraph = (props: {
 	return useCallback(() => {
 		const graph = new DirectedGraph<NodeType, EdgeType>();
 		const nodesMap = new Map<string, VizNode>();
+		const nodeSizeScale = props.layoutSettings?.nodeSizeScale ?? 1;
 
 		props.nodes.forEach((node) => {
 			nodesMap.set(node.path, node);
@@ -91,7 +94,11 @@ export const useCreateGraph = (props: {
 				color:
 					clusterColors.get(node.cluster ?? node.package?.name ?? "") ??
 					colors.default,
-				size: clamp(4, 15, node.importedBy.length),
+				size: clamp(
+					4,
+					18 * nodeSizeScale,
+					Math.max(4, node.importedBy.length * nodeSizeScale),
+				),
 				highlighted: false,
 			});
 		});
@@ -112,5 +119,5 @@ export const useCreateGraph = (props: {
 		// applyHybridClustering(graph, packageColors);
 
 		return graph as Graph<NodeType, EdgeType>;
-	}, [edges.list, clusterColors]);
+	}, [edges.list, clusterColors, props.layoutSettings?.nodeSizeScale]);
 };

@@ -70,6 +70,11 @@ export function GraphCommandMenuDialog(props: {
 									<CommandItem
 										key={node.path}
 										value={node.path}
+										keywords={[
+											node.name,
+											node.package?.name,
+											node.cluster,
+										].filter(Boolean) as string[]}
 										onMouseEnter={() => {
 											props.onHighlight(node.path);
 										}}
@@ -78,7 +83,12 @@ export function GraphCommandMenuDialog(props: {
 											setOpen(false);
 										}}
 									>
-										{node.name}
+										<div className="flex min-w-0 flex-col">
+											<span className="truncate">{node.name}</span>
+											<span className="truncate text-xs text-slate-500">
+												{node.path}
+											</span>
+										</div>
 									</CommandItem>
 								))}
 								<CommandSeparator />
@@ -142,6 +152,11 @@ export function GraphCommandMenu(props: {
 										<CommandItem
 											key={node.path}
 											value={node.path}
+											keywords={[
+												node.name,
+												node.package?.name,
+												node.cluster,
+											].filter(Boolean) as string[]}
 											onMouseEnter={() => {
 												props.onHighlight(node.path);
 											}}
@@ -150,7 +165,12 @@ export function GraphCommandMenu(props: {
 												setOpen(false);
 											}}
 										>
-											{node.name}
+											<div className="flex min-w-0 flex-col">
+												<span className="truncate">{node.name}</span>
+												<span className="truncate text-xs text-slate-500">
+													{node.path}
+												</span>
+											</div>
 										</CommandItem>
 									))}
 									<CommandSeparator />
@@ -168,12 +188,18 @@ const useNodesByClusterMap = (nodes: ModvizOutput["nodes"]) => {
 	const nodesByClusterMap = useMemo(() => {
 		const map = new Map<string, VizNode[]>();
 		nodes.forEach((node) => {
-			if (node.cluster) {
-				const nodes = map.get(node.cluster) ?? [];
-				nodes.push(node);
-				map.set(node.cluster, nodes);
-			}
+			const group =
+				node.cluster ??
+				node.package?.name ??
+				(node.path.includes("node_modules") ? "node_modules" : "workspace");
+			const existingNodes = map.get(group) ?? [];
+			existingNodes.push(node);
+			map.set(group, existingNodes);
 		});
+
+		for (const [, groupedNodes] of map) {
+			groupedNodes.sort((left, right) => left.path.localeCompare(right.path));
+		}
 		return map;
 	}, [nodes]);
 

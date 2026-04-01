@@ -3,7 +3,6 @@
 import { Dialog } from "@ark-ui/react/dialog";
 import { Portal } from "@ark-ui/react/portal";
 import { Tabs } from "@ark-ui/react/tabs";
-import { useLoaderData } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
 import { useMemo, useState } from "react";
 import { LuMaximize, LuMinimize } from "react-icons/lu";
@@ -29,15 +28,14 @@ import {
 	SelectValueText,
 	createListCollection,
 } from "~/components/ui/select";
-import type { VizNode } from "../../../mod/types";
+import type { ModvizOutput, VizNode } from "../../../mod/types";
 
-export function NodeDetailsModal() {
+export function NodeDetailsModal(props: { output: ModvizOutput }) {
 	const isOpened = useAtom(isFocusedModalOpenedAtom);
 	const focusedNodeId = useAtom(focusedNodeIdAtom);
 
-	const output = useLoaderData({ from: "/" });
 	const node =
-		isOpened && output.nodes.find((node) => node.path === focusedNodeId);
+		isOpened && props.output.nodes.find((node) => node.path === focusedNodeId);
 
 	return (
 		<Dialog.Root
@@ -53,7 +51,8 @@ export function NodeDetailsModal() {
 					{node && (
 						<NodeDetailsModalContent
 							node={node}
-							entryNodeId={output.metadata.entrypoints.at(0)!}
+							output={props.output}
+							entryNodeId={props.output.metadata.entrypoints.at(0)!}
 						/>
 					)}
 				</Dialog.Positioner>
@@ -64,11 +63,10 @@ export function NodeDetailsModal() {
 
 const NodeDetailsModalContent = (props: {
 	node: VizNode;
+	output: ModvizOutput;
 	entryNodeId: string;
 }) => {
 	const [isMaximized, setIsMaximized] = useState(false);
-
-	const output = useLoaderData({ from: "/" });
 	const [viewMode, setViewMode] =
 		useState<(typeof viewModeCollection)["items"][0]["value"]>("tree-search");
 
@@ -155,10 +153,10 @@ const NodeDetailsModalContent = (props: {
 						className="w-full h-full min-h-0 text-gray-600 dark:text-gray-300"
 					>
 						{viewMode === "tree-search" && (
-							<TransitiveImportsTab node={props.node} />
+							<TransitiveImportsTab node={props.node} output={props.output} />
 						)}
 						{viewMode === "flamegraph" && (
-							<Flamegraph output={output} entryNodeId={props.node.path} />
+							<Flamegraph output={props.output} entryNodeId={props.node.path} />
 						)}
 					</Tabs.Content>
 
@@ -166,7 +164,7 @@ const NodeDetailsModalContent = (props: {
 						value="imports-chain"
 						className="w-full h-full min-h-0 text-gray-600 dark:text-gray-300"
 					>
-						<ImportsChainTab node={props.node} />
+						<ImportsChainTab node={props.node} output={props.output} />
 					</Tabs.Content>
 				</Tabs.Root>
 			</div>
@@ -183,12 +181,14 @@ const NodeDetailsModalContent = (props: {
 	);
 };
 
-const TransitiveImportsTab = (props: { node: VizNode }) => {
-	const output = useLoaderData({ from: "/" });
-
+const TransitiveImportsTab = (props: {
+	node: VizNode;
+	output: ModvizOutput;
+}) => {
 	const initialCollection = useMemo(
-		() => mapModvizOutputToImporteesTreeCollection(output, props.node.path),
-		[output.nodes, props.node.path],
+		() =>
+			mapModvizOutputToImporteesTreeCollection(props.output, props.node.path),
+		[props.output, props.node.path],
 	);
 	if (!initialCollection) return;
 
@@ -219,9 +219,7 @@ const TransitiveImportsTab = (props: { node: VizNode }) => {
 	);
 };
 
-const ImportsChainTab = (props: { node: VizNode }) => {
-	const output = useLoaderData({ from: "/" });
-
+const ImportsChainTab = (props: { node: VizNode; output: ModvizOutput }) => {
 	const [direction, setDirection] = useState<ImportsChainDirection>(
 		"from-entrypoint-to-current-node",
 	);
@@ -229,15 +227,17 @@ const ImportsChainTab = (props: { node: VizNode }) => {
 	const initialCollection = useMemo(
 		() =>
 			mapModvizOutputToImportsChainTreeCollection(
-				output,
+				props.output,
 				props.node.path,
 				direction,
 			),
-		[output.nodes, props.node.path, direction],
+		[props.output, props.node.path, direction],
 	);
 	if (!initialCollection) return;
 
-	const rootNode = output.nodes.find((node) => node.path === props.node.path)!;
+	const rootNode = props.output.nodes.find(
+		(node) => node.path === props.node.path,
+	)!;
 	const chain = rootNode.chain.at(0) ?? [];
 
 	return (

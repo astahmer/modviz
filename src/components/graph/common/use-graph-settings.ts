@@ -5,7 +5,6 @@ import {
 	useSigma,
 } from "@react-sigma/core";
 import { useAtom } from "@xstate/store/react";
-import { useControls } from "leva";
 import { useEffect, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import { colors } from "~/components/graph/common/colors";
@@ -83,24 +82,13 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 		});
 	}, [registerEvents, draggedNodeId, sigma, focusedNodeIdAtom]);
 
-	useControls({
-		renderLabels: {
-			value: Boolean(hoveredNodeId),
-			onChange: (value) => {
-				setSettings({
-					renderLabels: value,
-				});
-			},
-		},
-	});
-
 	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			// renderLabels: Boolean(hoveredNodeId),
+			renderLabels: Boolean(hoveredNodeId),
 			// hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
 			// This function tells sigma to grow sizes linearly with the zoom, instead
