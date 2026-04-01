@@ -1,5 +1,4 @@
 import {
-	useCamera,
 	useRegisterEvents,
 	useSetSettings,
 	useSigma,
@@ -48,21 +47,14 @@ export const useGraphSettings = () => {
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-	const { gotoNode } = useCamera();
-
 	useEffect(() => {
 		registerEvents({
 			enterNode: (event) => setHoveredNodeId(event.node),
 			leaveNode: () => setHoveredNodeId(null),
 			clickNode: (event) => {
-				gotoNode(event.node);
 				currentNodeIdAtom.set(event.node);
-				highlightedNodeIdAtom.set(event.node);
-				selectedNodeIdsAtom.set((previous) =>
-					previous.includes(event.node)
-						? previous.filter((nodeId) => nodeId !== event.node)
-						: [...previous, event.node],
-				);
+				highlightedNodeIdAtom.set(null);
+				selectedNodeIdsAtom.set([event.node]);
 			},
 			downStage: () => {
 				highlightedNodeIdAtom.set(null);
@@ -71,7 +63,7 @@ export const useGraphSettings = () => {
 				if (!sigma.getCustomBBox()) sigma.setCustomBBox(sigma.getBBox());
 			},
 		});
-	}, [gotoNode, registerEvents, sigma]);
+	}, [registerEvents, sigma]);
 
 	useEffect(() => {
 		setSettings({

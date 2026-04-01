@@ -218,9 +218,7 @@ const WithGraph = (props: {
 					const node = props.nodes.find((node) => node.path === value);
 					if (!node) return;
 					currentNodeIdAtom.set(value);
-					selectedNodeIdsAtom.set((previous) =>
-						previous.includes(value) ? previous : [...previous, value],
-					);
+					selectedNodeIdsAtom.set([value]);
 				}}
 			/>
 

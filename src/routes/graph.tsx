@@ -167,9 +167,7 @@ function GraphRoute() {
 
 		highlightedNodeIdAtom.set(search.focus);
 		currentNodeIdAtom.set(search.focus);
-		selectedNodeIdsAtom.set((previous) =>
-			previous.includes(search.focus) ? previous : [...previous, search.focus],
-		);
+		selectedNodeIdsAtom.set([search.focus]);
 	}, [search.focus]);
 
 	return (
@@ -230,9 +228,7 @@ function GraphRoute() {
 								if (!value) return currentNodeIdAtom.set(null);
 								updateSearch({ focus: value });
 								currentNodeIdAtom.set(value);
-								selectedNodeIdsAtom.set((previous) =>
-									previous.includes(value) ? previous : [...previous, value],
-								);
+								selectedNodeIdsAtom.set([value]);
 							}}
 						/>
 					</div>
