@@ -19,13 +19,8 @@ export const Flamegraph = (props: {
 		if (!containerRef.current) return;
 
 		// Convert data to nanovis format
-		const entryNodeId =
-			props.entryNodeId ?? props.output.metadata.entrypoints[0]!;
-		const data = convertToNanovisHierarchyData(
-			props.output,
-			entryNodeId,
-			props.options,
-		);
+		const entryNodeId = props.entryNodeId ?? props.output.metadata.entrypoints[0]!;
+		const data = convertToNanovisHierarchyData(props.output, entryNodeId, props.options);
 
 		// Normalize the tree data for nanovis
 		const normalizedTree = normalizeTreeNode(data as any);
@@ -43,23 +38,21 @@ export const Flamegraph = (props: {
 			});
 		});
 
-		const unsubHover = flamegraph.events.on(
-			"hover",
-			(node: any, event?: MouseEvent) => {
-				if (!tooltipRef.current) return;
+		const unsubHover = flamegraph.events.on("hover", (node: any, event?: MouseEvent) => {
+			if (!tooltipRef.current) return;
 
-				if (node && node.meta) {
-					// Show tooltip
-					tooltipRef.current.style.display = "block";
+			if (node && node.meta) {
+				// Show tooltip
+				tooltipRef.current.style.display = "block";
 
-					// Position tooltip based on mouse position if available
-					if (event) {
-						tooltipRef.current.style.left = `${event.clientX + 10}px`;
-						tooltipRef.current.style.top = `${event.clientY - 10}px`;
-					}
+				// Position tooltip based on mouse position if available
+				if (event) {
+					tooltipRef.current.style.left = `${event.clientX + 10}px`;
+					tooltipRef.current.style.top = `${event.clientY - 10}px`;
+				}
 
-					// Update tooltip content
-					tooltipRef.current.innerHTML = `
+				// Update tooltip content
+				tooltipRef.current.innerHTML = `
 					<div style="font-weight: bold; margin-bottom: 8px; color: #4CAF50;">
 						${node.text || "root"}
 					</div>
@@ -72,12 +65,11 @@ export const Flamegraph = (props: {
 					${node.meta.imports !== undefined ? `<div style="margin-bottom: 4px;">Imports: <span style="color: #F0E68C;">${node.meta.imports}</span></div>` : ""}
 					${node.meta.exports !== undefined ? `<div>Exports: <span style="color: #F0E68C;">${node.meta.exports}</span></div>` : ""}
 				`;
-				} else {
-					// Hide tooltip
-					tooltipRef.current.style.display = "none";
-				}
-			},
-		);
+			} else {
+				// Hide tooltip
+				tooltipRef.current.style.display = "none";
+			}
+		});
 
 		// Clear container and mount the flamegraph
 		containerRef.current.innerHTML = "";
@@ -95,11 +87,7 @@ export const Flamegraph = (props: {
 
 	return (
 		<div className="relative w-full h-full min-h-0 flex flex-col">
-			<div
-				ref={containerRef}
-				className="flex-1 min-h-0"
-				style={{ minHeight: "400px" }}
-			/>
+			<div ref={containerRef} className="flex-1 min-h-0" style={{ minHeight: "400px" }} />
 
 			<div
 				ref={tooltipRef}

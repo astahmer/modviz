@@ -1,15 +1,18 @@
-import { json } from "@tanstack/react-start";
-import { createServerFileRoute } from "@tanstack/react-start/server";
+import { createFileRoute } from "@tanstack/react-router";
 import { getModvizJsonStatus } from "~/utils/modviz-server";
 
-export const ServerRoute = createServerFileRoute("/api/json-status").methods({
-	GET: async ({ request }) => {
-		const url = new URL(request.url);
-		return json(
-			getModvizJsonStatus({
-				graphPath: url.searchParams.get("graphPath"),
-				snapshotId: url.searchParams.get("snapshotId"),
-			}),
-		);
+export const Route = createFileRoute("/api/json-status")({
+	server: {
+		handlers: {
+			GET: async ({ request }) => {
+				const url = new URL(request.url);
+				return Response.json(
+					getModvizJsonStatus({
+						graphPath: url.searchParams.get("graphPath"),
+						snapshotId: url.searchParams.get("snapshotId"),
+					}),
+				);
+			},
+		},
 	},
 });

@@ -116,10 +116,7 @@ const SelectItemGroupLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<SelectPrimitive.ItemGroupLabel
 		ref={ref}
-		className={cn(
-			"py-1.5 ps-8 pe-2 font-medium text-muted-foreground text-xs",
-			className,
-		)}
+		className={cn("py-1.5 ps-8 pe-2 font-medium text-muted-foreground text-xs", className)}
 		{...props}
 	/>
 ));
@@ -148,10 +145,7 @@ const SelectList = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<SelectPrimitive.List
 		ref={ref}
-		className={cn(
-			"max-h-[min(24rem,var(--available-height))] overflow-y-auto",
-			className,
-		)}
+		className={cn("max-h-[min(24rem,var(--available-height))] overflow-y-auto", className)}
 		{...props}
 	/>
 ));

@@ -1,16 +1,9 @@
 import type { ReactNode } from "react";
 
-export function Card(props: {
-	children: ReactNode;
-	className?: string;
-}) {
+export function Card(props: { children: ReactNode; className?: string }) {
 	const baseClass =
 		"rounded-[16px] border border-slate-200/70 bg-white/90 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70";
-	return (
-		<div className={`${baseClass} ${props.className || ""}`}>
-			{props.children}
-		</div>
-	);
+	return <div className={`${baseClass} ${props.className || ""}`}>{props.children}</div>;
 }
 
 export function StatCard(props: { label: string; value: number; detail: string }) {

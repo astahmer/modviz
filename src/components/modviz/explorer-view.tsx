@@ -1,5 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, ExternalLink, FileCode2, Folder, FolderOpen } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	ExternalLink,
+	FileCode2,
+	Folder,
+	FolderOpen,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import type { VizNode } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
@@ -64,25 +71,17 @@ export function ExplorerView(props: {
 	onSearchChange: (patch: Partial<ExplorerSearch>) => void;
 }) {
 	const { graph } = props.bundle;
-	const workspacePackageNames = useMemo(
-		() => getWorkspacePackageNames(graph),
-		[graph],
-	);
+	const workspacePackageNames = useMemo(() => getWorkspacePackageNames(graph), [graph]);
 	const scopedNodes = useMemo(
 		() => filterNodesByScope(graph.nodes, workspacePackageNames, props.search.scope),
 		[graph.nodes, props.search.scope, workspacePackageNames],
 	);
 	const tree = useMemo(() => buildFileTree(scopedNodes), [scopedNodes]);
 	const selectedNode = useMemo(
-		() =>
-			scopedNodes.find((node) => node.path === props.search.selected) ??
-				scopedNodes[0] ??
-				null,
+		() => scopedNodes.find((node) => node.path === props.search.selected) ?? scopedNodes[0] ?? null,
 		[props.search.selected, scopedNodes],
 	);
-	const [manuallyExpandedPaths, setManuallyExpandedPaths] = useState<Set<string>>(
-		() => new Set(),
-	);
+	const [manuallyExpandedPaths, setManuallyExpandedPaths] = useState<Set<string>>(() => new Set());
 	const expandedPaths = useMemo(
 		() =>
 			new Set([
@@ -92,25 +91,22 @@ export function ExplorerView(props: {
 		[manuallyExpandedPaths, selectedNode],
 	);
 	const selectedNodeScope =
-		selectedNode == null
-			? "workspace"
-			: getNodeScope(selectedNode, workspacePackageNames);
+		selectedNode == null ? "workspace" : getNodeScope(selectedNode, workspacePackageNames);
 
 	const normalizedQuery = props.search.q.trim().toLowerCase();
-	const visibleTree = useMemo(
-		() => filterTree(tree, normalizedQuery),
-		[normalizedQuery, tree],
-	);
+	const visibleTree = useMemo(() => filterTree(tree, normalizedQuery), [normalizedQuery, tree]);
 
 	return (
 		<div className="flex h-screen flex-col gap-6 lg:flex-row lg:h-auto">
 			<section className="flex flex-col rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 lg:w-[35%]">
 				<div className="flex flex-wrap gap-2">
-					{([
-						["all", "All files"],
-						["workspace", "Monorepo"],
-						["external", "node_modules"],
-					] as const).map(([value, label]) => (
+					{(
+						[
+							["all", "All files"],
+							["workspace", "Monorepo"],
+							["external", "node_modules"],
+						] as const
+					).map(([value, label]) => (
 						<Button
 							key={value}
 							variant={props.search.scope === value ? "default" : "outline"}
@@ -125,21 +121,14 @@ export function ExplorerView(props: {
 					<Input
 						placeholder="Search file or folder path"
 						value={props.search.q}
-						onChange={(event) =>
-							props.onSearchChange({ q: event.currentTarget.value })
-						}
+						onChange={(event) => props.onSearchChange({ q: event.currentTarget.value })}
 					/>
-					<Button
-						variant="outline"
-						onClick={() => setManuallyExpandedPaths(new Set())}
-					>
+					<Button variant="outline" onClick={() => setManuallyExpandedPaths(new Set())}>
 						Collapse
 					</Button>
 					<Button
 						variant="outline"
-						onClick={() =>
-							setManuallyExpandedPaths(new Set(flattenFolderPaths(visibleTree)))
-						}
+						onClick={() => setManuallyExpandedPaths(new Set(flattenFolderPaths(visibleTree)))}
 					>
 						Expand
 					</Button>
@@ -181,9 +170,7 @@ export function ExplorerView(props: {
 								{selectedNode.path}
 							</h2>
 							<p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-								{selectedNode.package?.name
-									? `${selectedNode.package.name} • `
-									: ""}
+								{selectedNode.package?.name ? `${selectedNode.package.name} • ` : ""}
 								{selectedNode.cluster ?? selectedNode.type}
 							</p>
 						</div>
@@ -197,30 +184,30 @@ export function ExplorerView(props: {
 								}}
 								className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
 							>
-									<ExternalLink className="size-4" />
-									Open in graph
-								</Link>
-								<Link
-									to="/imports"
-									search={{
-										...defaultImportSearch,
-										include: selectedNode.path,
-										scope: selectedNodeScope,
-									}}
-									className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-								>
-									<ExternalLink className="size-4" />
-									Use as importer filter
-								</Link>
-								<Link
-									to="/trace"
-									search={{ package: "", node: selectedNode.path, limit: 10 }}
-									className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-								>
-									<ExternalLink className="size-4" />
-									Trace origins
-								</Link>
-							</div>
+								<ExternalLink className="size-4" />
+								Open in graph
+							</Link>
+							<Link
+								to="/imports"
+								search={{
+									...defaultImportSearch,
+									include: selectedNode.path,
+									scope: selectedNodeScope,
+								}}
+								className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+							>
+								<ExternalLink className="size-4" />
+								Use as importer filter
+							</Link>
+							<Link
+								to="/trace"
+								search={{ package: "", node: selectedNode.path, limit: 10 }}
+								className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+							>
+								<ExternalLink className="size-4" />
+								Trace origins
+							</Link>
+						</div>
 
 						<div className="grid gap-4 md:grid-cols-3">
 							<Metric label="Direct imports" value={selectedNode.imports.length} />
@@ -228,11 +215,21 @@ export function ExplorerView(props: {
 							<Metric label="Exports" value={selectedNode.exports.length} />
 						</div>
 
-						<CollapsibleSection title="Imports" description="Grouped into import statements so scanning looks closer to the source file.">
-							<ImportDisplay imports={selectedNode.imports} emptyMessage="No direct imports recorded for this file." showViewToggle />
+						<CollapsibleSection
+							title="Imports"
+							description="Grouped into import statements so scanning looks closer to the source file."
+						>
+							<ImportDisplay
+								imports={selectedNode.imports}
+								emptyMessage="No direct imports recorded for this file."
+								showViewToggle
+							/>
 						</CollapsibleSection>
 
-						<CollapsibleSection title="Imported by" description="Direct inbound edges into this file.">
+						<CollapsibleSection
+							title="Imported by"
+							description="Direct inbound edges into this file."
+						>
 							<ImportedByCard
 								items={selectedNode.importedBy}
 								onSelect={(path) => props.onSearchChange({ selected: path })}
@@ -278,9 +275,7 @@ function CollapsibleSection(props: {
 					<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
 						{props.title}
 					</h3>
-					<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-						{props.description}
-					</p>
+					<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{props.description}</p>
 				</div>
 			</summary>
 			<div className="mt-4">{props.children}</div>
@@ -288,10 +283,7 @@ function CollapsibleSection(props: {
 	);
 }
 
-function ImportedByCard(props: {
-	items: string[];
-	onSelect: (path: string) => void;
-}) {
+function ImportedByCard(props: { items: string[]; onSelect: (path: string) => void }) {
 	return (
 		<div className="max-h-[28rem] space-y-2 overflow-auto pr-1">
 			{props.items.length ? (
@@ -423,14 +415,16 @@ function filterTree(node: TreeNode, query: string): TreeNode {
 	}
 
 	if (node.kind === "file") {
-		return node.path.toLowerCase().includes(query)
-			? node
-			: { ...node, children: [] };
+		return node.path.toLowerCase().includes(query) ? node : { ...node, children: [] };
 	}
 
 	const children = node.children
 		.map((child) => filterTree(child, query))
-		.filter((child) => child.kind === "file" ? child.path.toLowerCase().includes(query) : child.children.length || child.path.toLowerCase().includes(query));
+		.filter((child) =>
+			child.kind === "file"
+				? child.path.toLowerCase().includes(query)
+				: child.children.length || child.path.toLowerCase().includes(query),
+		);
 
 	return { ...node, children };
 }

@@ -1,10 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type {
-	ModvizLlmOutput,
-	ModvizOutput,
-	ModvizSnapshotHistoryItem,
-} from "./types.ts";
+import type { ModvizLlmOutput, ModvizOutput, ModvizSnapshotHistoryItem } from "./types.ts";
 
 const SNAPSHOT_NAME_SANITIZER = /[^a-z0-9-_]+/gi;
 
@@ -18,7 +14,13 @@ export const resolveSnapshotHistoryDir = () =>
 
 const toSnapshotId = (snapshotName: string, generatedAt?: string) => {
 	const timestamp = new Date(generatedAt ?? Date.now()).toISOString().replace(/[:.]/g, "-");
-	const normalizedName = snapshotName.trim().replace(SNAPSHOT_NAME_SANITIZER, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "snapshot";
+	const normalizedName =
+		snapshotName
+			.trim()
+			.replace(SNAPSHOT_NAME_SANITIZER, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-|-$/g, "")
+			.toLowerCase() || "snapshot";
 	return `${timestamp}-${normalizedName}`;
 };
 

@@ -1,11 +1,7 @@
 "use client";
 
 import { useFilter } from "@ark-ui/react/locale";
-import {
-	TreeView,
-	useTreeView,
-	type TreeCollection,
-} from "@ark-ui/react/tree-view";
+import { TreeView, useTreeView, type TreeCollection } from "@ark-ui/react/tree-view";
 import { ChevronRight, File } from "lucide-react";
 import { useState } from "react";
 import {
@@ -20,11 +16,7 @@ import { type TreeNodeData } from "~/components/tree-view/map-modviz-output-to-t
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import {
 	currentNodeIdAtom,
 	isNodeDetailsOpenAtom,
@@ -44,8 +36,7 @@ const TreeNodeName = (props: {
 		<span
 			className={cn(
 				"font-medium whitespace-nowrap",
-				node.original.isBarrelFile &&
-					"underline decoration-amber-600 decoration-2",
+				node.original.isBarrelFile && "underline decoration-amber-600 decoration-2",
 				// node.original.isBarrelFile && "outline-2 outline-amber-600",
 				props.isCircular && "text-red-400",
 			)}
@@ -53,8 +44,7 @@ const TreeNodeName = (props: {
 			{/* TODO tooltip full path here and other node.name place */}
 			{(node.original.isBarrelFile || props.isCircular) && "⚠️ "}
 			{node.name}
-			{node.original.isBarrelFile &&
-				` (barrel ${node.original.exports.length} exports)`}
+			{node.original.isBarrelFile && ` (barrel ${node.original.exports.length} exports)`}
 			{props.isCircular && " (circular)"}
 			{props.hasReachedMaxDepth && " (max depth reached)"}
 		</span>
@@ -249,10 +239,9 @@ export function TreeViewBasic(props: {
 	});
 
 	const flattened = treeView.collection.flatten();
-	const visible = treeView.getVisibleNodes().map((node) => node.id);
+	const visible = treeView.getVisibleNodes().map(({ node }) => node.id);
 	const flattenedUniqueNodeIds = new Set(flattened.map((node) => node.id));
-	const isAllExpanded =
-		treeView.expandedValue.length === flattenedUniqueNodeIds.size;
+	const isAllExpanded = treeView.expandedValue.length === flattenedUniqueNodeIds.size;
 
 	return (
 		<div className="w-full h-full min-h-0 flex flex-col gap-2">
@@ -260,11 +249,7 @@ export function TreeViewBasic(props: {
 				<Input placeholder="Search" onChange={(e) => filter(e.target.value)} />
 				<div className="ml-auto">
 					{isAllExpanded ? (
-						<Button
-							variant="outline"
-							className="px-2 py-1"
-							onClick={() => treeView.collapse()}
-						>
+						<Button variant="outline" className="px-2 py-1" onClick={() => treeView.collapse()}>
 							<LuArrowUpToLine className="h-4 w-4 text-slate-400">
 								<span className="sr-only">Collapse all</span>
 							</LuArrowUpToLine>

@@ -1,9 +1,10 @@
-import { json } from "@tanstack/react-start";
-import { createServerFileRoute } from "@tanstack/react-start/server";
+import { createFileRoute } from "@tanstack/react-router";
 import { listSnapshotHistory } from "../../../mod/snapshot-history.ts";
 
-export const ServerRoute = createServerFileRoute("/api/snapshot-history").methods({
-	GET: async () => {
-		return json(listSnapshotHistory());
+export const Route = createFileRoute("/api/snapshot-history")({
+	server: {
+		handlers: {
+			GET: async () => Response.json(listSnapshotHistory()),
+		},
 	},
 });

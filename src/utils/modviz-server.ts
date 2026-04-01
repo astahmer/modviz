@@ -128,9 +128,7 @@ export const loadModvizBundle = (selection?: ModvizBundleSelection): ModvizDataB
 				status: "missing",
 				graphPath: selection?.graphPath?.trim() ?? resolveGraphPath(),
 				message:
-					error instanceof Error
-						? error.message
-						: "The selected snapshot could not be resolved.",
+					error instanceof Error ? error.message : "The selected snapshot could not be resolved.",
 			},
 		};
 	}
@@ -154,9 +152,7 @@ export const loadModvizBundle = (selection?: ModvizBundleSelection): ModvizDataB
 
 	try {
 		const graph = readJsonFile<ModvizOutput>(graphPath);
-		const llm = fs.existsSync(llmPath)
-			? readJsonFile<ModvizLlmOutput>(llmPath)
-			: null;
+		const llm = fs.existsSync(llmPath) ? readJsonFile<ModvizLlmOutput>(llmPath) : null;
 
 		return {
 			graph,
@@ -179,10 +175,7 @@ export const loadModvizBundle = (selection?: ModvizBundleSelection): ModvizDataB
 			setup: {
 				status: "invalid",
 				graphPath,
-				message:
-					error instanceof Error
-						? error.message
-						: `Failed to read ${graphPath}.`,
+				message: error instanceof Error ? error.message : `Failed to read ${graphPath}.`,
 			},
 		};
 	}

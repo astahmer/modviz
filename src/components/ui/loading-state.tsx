@@ -1,10 +1,6 @@
 import { LoaderCircle } from "lucide-react";
 
-export function LoadingState(props: {
-	label: string;
-	description?: string;
-	className?: string;
-}) {
+export function LoadingState(props: { label: string; description?: string; className?: string }) {
 	return (
 		<div
 			className={[
@@ -18,13 +14,9 @@ export function LoadingState(props: {
 				<LoaderCircle className="size-5 animate-spin" />
 			</div>
 			<div className="space-y-1">
-				<p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-					{props.label}
-				</p>
+				<p className="text-sm font-medium text-slate-700 dark:text-slate-200">{props.label}</p>
 				{props.description ? (
-					<p className="text-xs text-slate-500 dark:text-slate-400">
-						{props.description}
-					</p>
+					<p className="text-xs text-slate-500 dark:text-slate-400">{props.description}</p>
 				) : null}
 			</div>
 		</div>

@@ -52,9 +52,7 @@ export function mapModvizOutputToImporteesTreeCollection(
 
 		node.importees.forEach((importee) => {
 			if (visited.has(importee)) {
-				const importeeNode = output.nodes.find(
-					(node) => node.path === importee,
-				);
+				const importeeNode = output.nodes.find((node) => node.path === importee);
 				if (!importeeNode) return;
 
 				const importeeTreeNode: TreeNodeData = {
@@ -98,8 +96,7 @@ export function mapModvizOutputToImportsChainTreeCollection(
 	if (!entryNode) return null;
 
 	const chain = entryNode.chain.at(0) ?? [];
-	const importChain =
-		direction === "from-entrypoint-to-current-node" ? chain : chain.reverse();
+	const importChain = direction === "from-entrypoint-to-current-node" ? chain : chain.reverse();
 	const rootId = importChain[0];
 	if (!rootId) return null;
 

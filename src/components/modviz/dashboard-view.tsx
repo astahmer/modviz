@@ -1,5 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, SquareStack } from "lucide-react";
+import {
+	ArrowRight,
+	BarChart3,
+	FolderTree,
+	GitBranchPlus,
+	Network,
+	SquareStack,
+} from "lucide-react";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 import { formatNumber } from "~/utils/formatting";
 
@@ -9,13 +16,7 @@ type ReadyBundle = ModvizDataBundle & {
 };
 
 type RouteCard = {
-	to:
-		| "/graph"
-		| "/explorer"
-		| "/summary"
-		| "/imports"
-		| "/hierarchy"
-		| "/compare";
+	to: "/graph" | "/explorer" | "/summary" | "/imports" | "/hierarchy" | "/compare";
 	title: string;
 	description: string;
 	icon: typeof Network;
@@ -96,9 +97,7 @@ function RankingList(props: {
 					<h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
 						{props.title}
 					</h2>
-					<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-						{props.description}
-					</p>
+					<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{props.description}</p>
 				</div>
 			</div>
 			<div className="mt-4 space-y-3">
@@ -115,9 +114,7 @@ function RankingList(props: {
 								<p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
 									{item.label}
 								</p>
-								<p className="truncate text-xs text-slate-500 dark:text-slate-400">
-									{item.path}
-								</p>
+								<p className="truncate text-xs text-slate-500 dark:text-slate-400">{item.path}</p>
 								{item.description ? (
 									<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
 										{item.description}
@@ -170,17 +167,37 @@ export function DashboardView(props: { bundle: ReadyBundle }) {
 
 			{/* Key metrics - compact view */}
 			<section className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-				<StatCard label="Total nodes" value={summary.overview.totalNodes} detail={`${formatNumber.format(summary.overview.workspaceNodes)} workspace, ${formatNumber.format(summary.overview.externalNodes)} external`} />
-				<StatCard label="Workspace packages" value={summary.overview.workspacePackages} detail={`+${formatNumber.format(summary.overview.externalPackages)} external packages`} />
-				<StatCard label="Barrel files" value={summary.overview.barrelFiles} detail="Re-export hubs in the analyzer." />
-				<StatCard label="Entrypoints" value={summary.overview.entrypoints} detail={graph.metadata.entrypoints.slice(0, 2).join(" • ") || "No metadata"} />
+				<StatCard
+					label="Total nodes"
+					value={summary.overview.totalNodes}
+					detail={`${formatNumber.format(summary.overview.workspaceNodes)} workspace, ${formatNumber.format(summary.overview.externalNodes)} external`}
+				/>
+				<StatCard
+					label="Workspace packages"
+					value={summary.overview.workspacePackages}
+					detail={`+${formatNumber.format(summary.overview.externalPackages)} external packages`}
+				/>
+				<StatCard
+					label="Barrel files"
+					value={summary.overview.barrelFiles}
+					detail="Re-export hubs in the analyzer."
+				/>
+				<StatCard
+					label="Entrypoints"
+					value={summary.overview.entrypoints}
+					detail={graph.metadata.entrypoints.slice(0, 2).join(" • ") || "No metadata"}
+				/>
 			</section>
 
 			{/* Data-driven rankings - actionable insights */}
 			<section className="grid gap-4 xl:grid-cols-3">
 				<RankingList
 					title="Hotspots"
-					description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Graph-derived hotspots ranked by transitive reach."}
+					description={
+						summary.hasLlm
+							? "Reachable-module hotspots from the companion report."
+							: "Graph-derived hotspots ranked by transitive reach."
+					}
 					items={summary.hotspots.slice(0, 6)}
 					getLink={getExplorerSummaryLink}
 				/>
@@ -204,14 +221,13 @@ export function DashboardView(props: { bundle: ReadyBundle }) {
 	);
 }
 
-
 const getExplorerSummaryLink = (item: SummaryListItem) => ({
-		to: "/explorer",
-		search: {
-			selected: item.path,
-			scope: item.path.includes("node_modules") ? "external" : "workspace",
-		},
-	});
+	to: "/explorer",
+	search: {
+		selected: item.path,
+		scope: item.path.includes("node_modules") ? "external" : "workspace",
+	},
+});
 
 const presetRoutes: RouteCard[] = [
 	{
@@ -225,14 +241,16 @@ const presetRoutes: RouteCard[] = [
 		to: "/graph",
 		search: { scope: "external" as const, externalGrouping: "package" as const },
 		title: "node_modules graph",
-		description: "Open a dependency-package view where external files are grouped by package instead of one big node_modules blob.",
+		description:
+			"Open a dependency-package view where external files are grouped by package instead of one big node_modules blob.",
 		icon: Network,
 	},
 	{
 		to: "/imports",
 		search: { scope: "external" as const },
 		title: "External import hunt",
-		description: "Jump straight into package-focused search when you are tracking third-party usage.",
+		description:
+			"Jump straight into package-focused search when you are tracking third-party usage.",
 		icon: GitBranchPlus,
 	},
 ] as const;

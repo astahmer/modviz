@@ -12,9 +12,7 @@ import { useGraphSettings } from "~/components/graph/common/use-graph-settings";
 import type { ModvizOutput } from "../../../../mod/types";
 import type { ExternalGroupingMode } from "~/utils/modviz-data";
 
-type ForceAtlas2SynchronousLayoutParameters = Parameters<
-	typeof useWorkerLayoutForceAtlas2
->[0];
+type ForceAtlas2SynchronousLayoutParameters = Parameters<typeof useWorkerLayoutForceAtlas2>[0];
 
 export const SigmaGraph = (props: {
 	entryNode?: string;
@@ -38,8 +36,7 @@ export const SigmaGraph = (props: {
 				strongGravityMode: props.layoutSettings.strongGravityMode,
 				linLogMode: props.layoutSettings.linLogMode,
 				adjustSizes: props.layoutSettings.adjustSizes,
-				outboundAttractionDistribution:
-					props.layoutSettings.outboundAttractionDistribution,
+				outboundAttractionDistribution: props.layoutSettings.outboundAttractionDistribution,
 			},
 		}),
 		[
@@ -131,10 +128,7 @@ export const SigmaGraph = (props: {
 			hasLoadedGraphRef.current = true;
 			layout.stop();
 			layout.start();
-			stopLayoutAfterDelay(
-				Math.max(900, props.layoutSettings.iterations * 12),
-				runId,
-			);
+			stopLayoutAfterDelay(Math.max(900, props.layoutSettings.iterations * 12), runId);
 		});
 
 		return () => {
@@ -142,7 +136,14 @@ export const SigmaGraph = (props: {
 				cancelActiveUpdate();
 			}
 		};
-	}, [createGraph, layout.start, layout.stop, loadGraph, props.layoutSettings.iterations, props.onBusyChange]);
+	}, [
+		createGraph,
+		layout.start,
+		layout.stop,
+		loadGraph,
+		props.layoutSettings.iterations,
+		props.onBusyChange,
+	]);
 
 	// Restart layout when runtime settings change, but only after the graph has loaded.
 	useEffect(() => {

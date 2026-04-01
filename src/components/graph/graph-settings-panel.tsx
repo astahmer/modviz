@@ -19,9 +19,7 @@ function NumberField(props: {
 		<label className="space-y-2 text-sm text-slate-700 dark:text-slate-200">
 			<span className="flex items-center justify-between gap-3 font-medium">
 				<span>{props.label}</span>
-				<span className="text-xs text-slate-500 dark:text-slate-400">
-					{props.value}
-				</span>
+				<span className="text-xs text-slate-500 dark:text-slate-400">{props.value}</span>
 			</span>
 			<Input
 				type="number"
@@ -31,9 +29,7 @@ function NumberField(props: {
 				step={props.step}
 				onChange={(event) => props.onChange(Number(event.currentTarget.value))}
 			/>
-			<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-				{props.help}
-			</p>
+			<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{props.help}</p>
 		</label>
 	);
 }
@@ -146,11 +142,7 @@ export function GraphSettingsPanel(props: {
 									<Button size="sm" onClick={applyChanges} disabled={!hasChanges}>
 										Apply
 									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => props.onOpenChange(false)}
-									>
+									<Button variant="ghost" size="icon" onClick={() => props.onOpenChange(false)}>
 										<X className="size-4" />
 									</Button>
 								</div>
@@ -158,16 +150,75 @@ export function GraphSettingsPanel(props: {
 						</FloatingPanel.DragTrigger>
 						<FloatingPanel.Body className="flex-1 overflow-y-auto px-4 py-4">
 							<div className="space-y-5">
-								<NumberField label="Iterations" value={draftSettings.iterations} min={10} max={500} step={10} onChange={(value) => updateSetting("iterations", Math.max(10, value || 10))} help="Higher values let ForceAtlas2 settle longer before the graph renders." />
-								<NumberField label="Gravity" value={draftSettings.gravity} min={0} max={1500} step={1} onChange={(value) => updateSetting("gravity", Math.max(0, value || 0))} help="Pulls nodes back toward the center. Lower gravity spreads clusters out more." />
-								<NumberField label="Scaling ratio" value={draftSettings.scalingRatio} min={1} max={500} step={1} onChange={(value) => updateSetting("scalingRatio", Math.max(1, value || 1))} help="Primary spacing control. Higher values increase separation between nodes and clusters." />
-								<NumberField label="Node size scale" value={draftSettings.nodeSizeScale} min={0.5} max={4} step={0.1} onChange={(value) => updateSetting("nodeSizeScale", Math.max(0.5, Number(value.toFixed(1)) || 1))} help="Amplifies the node size derived from inbound edge count." />
+								<NumberField
+									label="Iterations"
+									value={draftSettings.iterations}
+									min={10}
+									max={500}
+									step={10}
+									onChange={(value) => updateSetting("iterations", Math.max(10, value || 10))}
+									help="Higher values let ForceAtlas2 settle longer before the graph renders."
+								/>
+								<NumberField
+									label="Gravity"
+									value={draftSettings.gravity}
+									min={0}
+									max={1500}
+									step={1}
+									onChange={(value) => updateSetting("gravity", Math.max(0, value || 0))}
+									help="Pulls nodes back toward the center. Lower gravity spreads clusters out more."
+								/>
+								<NumberField
+									label="Scaling ratio"
+									value={draftSettings.scalingRatio}
+									min={1}
+									max={500}
+									step={1}
+									onChange={(value) => updateSetting("scalingRatio", Math.max(1, value || 1))}
+									help="Primary spacing control. Higher values increase separation between nodes and clusters."
+								/>
+								<NumberField
+									label="Node size scale"
+									value={draftSettings.nodeSizeScale}
+									min={0.5}
+									max={4}
+									step={0.1}
+									onChange={(value) =>
+										updateSetting("nodeSizeScale", Math.max(0.5, Number(value.toFixed(1)) || 1))
+									}
+									help="Amplifies the node size derived from inbound edge count."
+								/>
 								<div className="grid gap-3">
-									<ToggleField label="Strong gravity mode" checked={draftSettings.strongGravityMode} onChange={(checked) => updateSetting("strongGravityMode", checked)} help="Keeps distant nodes from drifting too far out of frame." />
-									<ToggleField label="LinLog mode" checked={draftSettings.linLogMode} onChange={(checked) => updateSetting("linLogMode", checked)} help="Often improves community separation in clustered graphs." />
-									<ToggleField label="Adjust sizes" checked={draftSettings.adjustSizes} onChange={(checked) => updateSetting("adjustSizes", checked)} help="Uses node size during layout to reduce collisions." />
-									<ToggleField label="Outbound attraction distribution" checked={draftSettings.outboundAttractionDistribution} onChange={(checked) => updateSetting("outboundAttractionDistribution", checked)} help="Balances attraction when hubs create too much pull." />
-									<ToggleField label="Hide cluster labels" checked={draftSettings.hideClusterLabels} onChange={(checked) => updateSetting("hideClusterLabels", checked)} help="Useful when labels cover dense areas during exploration." />
+									<ToggleField
+										label="Strong gravity mode"
+										checked={draftSettings.strongGravityMode}
+										onChange={(checked) => updateSetting("strongGravityMode", checked)}
+										help="Keeps distant nodes from drifting too far out of frame."
+									/>
+									<ToggleField
+										label="LinLog mode"
+										checked={draftSettings.linLogMode}
+										onChange={(checked) => updateSetting("linLogMode", checked)}
+										help="Often improves community separation in clustered graphs."
+									/>
+									<ToggleField
+										label="Adjust sizes"
+										checked={draftSettings.adjustSizes}
+										onChange={(checked) => updateSetting("adjustSizes", checked)}
+										help="Uses node size during layout to reduce collisions."
+									/>
+									<ToggleField
+										label="Outbound attraction distribution"
+										checked={draftSettings.outboundAttractionDistribution}
+										onChange={(checked) => updateSetting("outboundAttractionDistribution", checked)}
+										help="Balances attraction when hubs create too much pull."
+									/>
+									<ToggleField
+										label="Hide cluster labels"
+										checked={draftSettings.hideClusterLabels}
+										onChange={(checked) => updateSetting("hideClusterLabels", checked)}
+										help="Useful when labels cover dense areas during exploration."
+									/>
 								</div>
 							</div>
 						</FloatingPanel.Body>

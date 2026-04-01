@@ -128,11 +128,7 @@ test("inferPathsLabel - unknown", () => {
 });
 
 test("inferPathsLabel ignores node_modules wrapper segments", () => {
-	const paths = [
-		"node_modules//index.js",
-		"node_modules//v4.js",
-		"node_modules//package.json",
-	];
+	const paths = ["node_modules//index.js", "node_modules//v4.js", "node_modules//package.json"];
 
 	expect(inferPathsLabel(paths)).toMatchInlineSnapshot(`undefined`);
 });

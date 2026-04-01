@@ -11,16 +11,8 @@ import {
 	CommandItem,
 	CommandList,
 } from "~/components/ui/command";
-import {
-	Tooltip,
-	TooltipArrow,
-	TooltipContent,
-	TooltipTrigger,
-} from "~/components/ui/tooltip";
-import {
-	buildModvizGraphComparison,
-	type ChangedNodeSummary,
-} from "~/utils/modviz-compare";
+import { Tooltip, TooltipArrow, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { buildModvizGraphComparison, type ChangedNodeSummary } from "~/utils/modviz-compare";
 import { formatNumber } from "~/utils/formatting";
 import { fetchSnapshotGraph, fetchSnapshotHistory } from "~/utils/modviz-data";
 
@@ -38,9 +30,7 @@ const isModvizOutput = (value: unknown): value is ModvizOutput => {
 
 	const candidate = value as Partial<ModvizOutput>;
 	return Boolean(
-		candidate.metadata &&
-			Array.isArray(candidate.nodes) &&
-			Array.isArray(candidate.imports),
+		candidate.metadata && Array.isArray(candidate.nodes) && Array.isArray(candidate.imports),
 	);
 };
 
@@ -162,16 +152,11 @@ function SnapshotCard(props: {
 					<MetricCard label="Nodes" value={props.snapshot.graph.nodes.length} />
 					<MetricCard
 						label="Edges"
-						value={props.snapshot.graph.nodes.reduce(
-							(sum, node) => sum + node.importees.length,
-							0,
-						)}
+						value={props.snapshot.graph.nodes.reduce((sum, node) => sum + node.importees.length, 0)}
 					/>
 					<MetricCard
 						label="Generated"
-						valueLabel={new Date(
-							props.snapshot.graph.metadata.generatedAt,
-						).toLocaleString()}
+						valueLabel={new Date(props.snapshot.graph.metadata.generatedAt).toLocaleString()}
 					/>
 				</div>
 			) : null}
@@ -192,12 +177,7 @@ function MetricCard(props: { label: string; value?: number; valueLabel?: string 
 	);
 }
 
-function DeltaCard(props: {
-	baseline: number;
-	current: number;
-	label: string;
-	note: string;
-}) {
+function DeltaCard(props: { baseline: number; current: number; label: string; note: string }) {
 	const delta = props.current - props.baseline;
 	const tone =
 		delta === 0
@@ -220,30 +200,22 @@ function DeltaCard(props: {
 						was {formatNumber.format(props.baseline)}
 					</p>
 				</div>
-				<p className={`text-sm font-semibold ${tone}`}>{deltaLabel(props.baseline, props.current)}</p>
+				<p className={`text-sm font-semibold ${tone}`}>
+					{deltaLabel(props.baseline, props.current)}
+				</p>
 			</div>
-			<p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-				{props.note}
-			</p>
+			<p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">{props.note}</p>
 		</div>
 	);
 }
 
-function ChangeList(props: {
-	emptyMessage: string;
-	items: string[];
-	title: string;
-}) {
+function ChangeList(props: { emptyMessage: string; items: string[]; title: string }) {
 	return (
 		<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-			<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-				{props.title}
-			</h3>
+			<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{props.title}</h3>
 			<div className="mt-4 max-h-[20rem] space-y-2 overflow-auto pr-2">
 				{props.items.length === 0 ? (
-					<p className="text-sm text-slate-500 dark:text-slate-400">
-						{props.emptyMessage}
-					</p>
+					<p className="text-sm text-slate-500 dark:text-slate-400">{props.emptyMessage}</p>
 				) : (
 					props.items.slice(0, 80).map((item) => (
 						<div
@@ -260,7 +232,11 @@ function ChangeList(props: {
 }
 
 function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
-	const headerWithTooltip = (label: string, description: string, align: "left" | "right" = "left") => (
+	const headerWithTooltip = (
+		label: string,
+		description: string,
+		align: "left" | "right" = "left",
+	) => (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<button
@@ -283,7 +259,8 @@ function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
 				Modules with the largest direct-graph deltas
 			</h3>
 			<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-				Inbound counts are direct importers of a file, outbound counts are direct importees, and imports are the number of import statements declared in that file.
+				Inbound counts are direct importers of a file, outbound counts are direct importees, and
+				imports are the number of import statements declared in that file.
 			</p>
 			<div className="mt-4 overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800">
 				<table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
@@ -293,23 +270,32 @@ function ChangedNodesTable(props: { rows: ChangedNodeSummary[] }) {
 								Path
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								{headerWithTooltip("Inbound", "How many direct importers point at this file or module path in each snapshot.", "right")}
+								{headerWithTooltip(
+									"Inbound",
+									"How many direct importers point at this file or module path in each snapshot.",
+									"right",
+								)}
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								{headerWithTooltip("Outbound", "How many direct importee targets this file imports in each snapshot.", "right")}
+								{headerWithTooltip(
+									"Outbound",
+									"How many direct importee targets this file imports in each snapshot.",
+									"right",
+								)}
 							</th>
 							<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-								{headerWithTooltip("Imports", "How many import statements were parsed in that file, even if multiple statements resolve to the same outbound module.", "right")}
+								{headerWithTooltip(
+									"Imports",
+									"How many import statements were parsed in that file, even if multiple statements resolve to the same outbound module.",
+									"right",
+								)}
 							</th>
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-950/60">
 						{props.rows.length === 0 ? (
 							<tr>
-								<td
-									colSpan={4}
-									className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400"
-								>
+								<td colSpan={4} className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
 									No direct node-level count changes were detected between these snapshots.
 								</td>
 							</tr>
@@ -349,9 +335,9 @@ export function CompareView(props: {
 		() =>
 			props.currentGraph
 				? {
-					graph: props.currentGraph,
-					label: "Current served snapshot",
-				}
+						graph: props.currentGraph,
+						label: "Current served snapshot",
+					}
 				: null,
 		[props.currentGraph],
 	);
@@ -370,9 +356,7 @@ export function CompareView(props: {
 			setHistory(await fetchSnapshotHistory());
 		} catch (error) {
 			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: "Failed to refresh snapshot history.",
+				error instanceof Error ? error.message : "Failed to refresh snapshot history.",
 			);
 		} finally {
 			setHistoryLoading(false);
@@ -416,7 +400,9 @@ export function CompareView(props: {
 
 			setCurrent(snapshot);
 		} catch (error) {
-			setErrorMessage(error instanceof Error ? error.message : `Failed to load snapshot ${snapshotId}.`);
+			setErrorMessage(
+				error instanceof Error ? error.message : `Failed to load snapshot ${snapshotId}.`,
+			);
 		}
 	};
 
@@ -574,8 +560,16 @@ export function CompareView(props: {
 			) : (
 				<section className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 p-6 text-sm leading-6 text-slate-500 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-400">
 					<div className="flex flex-wrap items-center justify-between gap-3">
-						<p>Load a baseline snapshot to compare it with the currently served graph or another uploaded JSON file.</p>
-						<Button variant="outline" size="sm" onClick={() => void refreshHistory()} disabled={historyLoading}>
+						<p>
+							Load a baseline snapshot to compare it with the currently served graph or another
+							uploaded JSON file.
+						</p>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => void refreshHistory()}
+							disabled={historyLoading}
+						>
 							<RotateCcw className="size-4" />
 							{historyLoading ? "Refreshing history..." : "Refresh history"}
 						</Button>

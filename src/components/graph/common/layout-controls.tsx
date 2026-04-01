@@ -1,23 +1,10 @@
 import { useSigma } from "@react-sigma/core";
 import { useLayoutCirclepack } from "@react-sigma/layout-circlepack";
 import { useLayoutCircular } from "@react-sigma/layout-circular";
-import {
-	LayoutHook,
-	LayoutWorkerHook,
-	WorkerLayoutControl,
-} from "@react-sigma/layout-core";
-import {
-	useLayoutForce,
-	useWorkerLayoutForce,
-} from "@react-sigma/layout-force";
-import {
-	useLayoutForceAtlas2,
-	useWorkerLayoutForceAtlas2,
-} from "@react-sigma/layout-forceatlas2";
-import {
-	useLayoutNoverlap,
-	useWorkerLayoutNoverlap,
-} from "@react-sigma/layout-noverlap";
+import { LayoutHook, LayoutWorkerHook, WorkerLayoutControl } from "@react-sigma/layout-core";
+import { useLayoutForce, useWorkerLayoutForce } from "@react-sigma/layout-force";
+import { useLayoutForceAtlas2, useWorkerLayoutForceAtlas2 } from "@react-sigma/layout-forceatlas2";
+import { useLayoutNoverlap, useWorkerLayoutNoverlap } from "@react-sigma/layout-noverlap";
 import { useLayoutRandom } from "@react-sigma/layout-random";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FaProjectDiagram } from "react-icons/fa";

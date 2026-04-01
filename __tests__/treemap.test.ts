@@ -54,7 +54,7 @@ test("buildTreemapModel keeps module ids stable for workspace drilldown", () => 
 		? getTreemapAncestors(routeModule, model.nodesById).map((node) => node.label)
 		: [];
 	expect(ancestors).toEqual(["All Modules", "Workspace", "src", "routes", "treemap.tsx"]);
-	});
+});
 
 test("buildTreemapModel groups external modules by package", () => {
 	const nodes = [
@@ -75,7 +75,7 @@ test("buildTreemapModel groups external modules by package", () => {
 	expect(collectTreemapModules(packageNode!).map((node) => node.sourcePath)).toEqual([
 		"node_modules/@tanstack/react-router/dist/esm/index.js",
 	]);
-	});
+});
 
 test("layoutTreemap partitions immediate children without losing area", () => {
 	const nodes = [
@@ -90,4 +90,4 @@ test("layoutTreemap partitions immediate children without losing area", () => {
 	expect(rectangles.length).toBeGreaterThan(0);
 	const totalArea = rectangles.reduce((sum, rect) => sum + rect.width * rect.height, 0);
 	expect(totalArea).toBeCloseTo(1000 * 600, 5);
-	});
+});

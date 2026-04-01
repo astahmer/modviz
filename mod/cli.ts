@@ -10,7 +10,11 @@ import {
 	validateCliArgs,
 } from "./cli-options.ts";
 import { generateAiAnalysis } from "./llm-analysis.ts";
-import { listSnapshotHistory, loadSnapshotGraph, saveSnapshotToHistory } from "./snapshot-history.ts";
+import {
+	listSnapshotHistory,
+	loadSnapshotGraph,
+	saveSnapshotToHistory,
+} from "./snapshot-history.ts";
 import {
 	buildModvizLlmOutput,
 	inferLlmOutputPaths,
@@ -24,11 +28,7 @@ import {
 	buildPackageTraceReport,
 	renderTraceReport,
 } from "../shared/modviz-trace.ts";
-import {
-	createModuleGraph,
-	type Module,
-	type Plugin,
-} from "@astahmer/module-graph";
+import { createModuleGraph, type Module, type Plugin } from "@astahmer/module-graph";
 import type { ModuleGraph } from "@astahmer/module-graph/ModuleGraph.js";
 import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
 import { exports } from "@astahmer/module-graph/plugins/exports.js";
@@ -69,7 +69,9 @@ if (command === "report") {
 		console.log(buildCliSummary(reportGraph));
 	}
 	if (flags.packageQuery) {
-		console.log(renderTraceReport(buildPackageTraceReport(reportGraph, flags.packageQuery), flags.limit));
+		console.log(
+			renderTraceReport(buildPackageTraceReport(reportGraph, flags.packageQuery), flags.limit),
+		);
 	}
 	if (flags.nodeQuery) {
 		console.log(renderTraceReport(buildNodeTraceReport(reportGraph, flags.nodeQuery), flags.limit));
@@ -93,9 +95,7 @@ console.log(`🔍 Analyzing dependency graph for: ${entryFileAbsolute}`);
 
 const workspaces = findWorkspaces(entryFileAbsolute) ?? [];
 const basePath = deriveAnalysisBasePath(entryFileAbsolute, workspaces);
-const entryFileForGraph = normalizeRelativePath(
-	path.relative(basePath, entryFileAbsolute),
-);
+const entryFileForGraph = normalizeRelativePath(path.relative(basePath, entryFileAbsolute));
 const workspaceList = (workspaces ?? []).map((workspace) => ({
 	relativePath: path.relative(basePath, workspace.location),
 	absolutePath: workspace.location,
@@ -103,8 +103,7 @@ const workspaceList = (workspaces ?? []).map((workspace) => ({
 	imports: workspace.package.imports,
 }));
 
-const replaceImportTypeToImport = (source: string) =>
-	source.replace(/import type/g, "import");
+const replaceImportTypeToImport = (source: string) => source.replace(/import type/g, "import");
 // Needed so rs-module-lexer will resolve the import (it would ignore type-only imports otherwise)
 const replaceImportTypeToImportPlugin: Plugin = {
 	name: "replace-import-type-to-import",
@@ -131,9 +130,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 	createModuleGraph(entryFileForGraph, {
 		basePath,
 		// TODO configurable flag to allow this
-		exclude: flags.nodeModules
-			? undefined
-			: [(importee) => importee.includes("node_modules")],
+		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 		ignoreDynamicImport: flags.ignoreDynamic,
 		moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 		plugins: [
@@ -162,22 +159,13 @@ const focusOptions = {
 	nodeQuery: flags.nodeQuery,
 	limit: Number.isFinite(flags.limit) ? flags.limit : 20,
 };
-const shouldResolveFocus = Boolean(
-	focusOptions.packageName || focusOptions.nodeQuery,
-);
+const shouldResolveFocus = Boolean(focusOptions.packageName || focusOptions.nodeQuery);
 const shouldBuildLlmReport =
-	flags.llm ||
-	flags.llmAnalyze ||
-	Boolean(flags.packageQuery) ||
-	Boolean(flags.nodeQuery);
+	flags.llm || flags.llmAnalyze || Boolean(flags.packageQuery) || Boolean(flags.nodeQuery);
 const fullLlmOutput =
-	shouldResolveFocus || shouldBuildLlmReport
-		? buildModvizLlmOutput(webGraphData)
-		: undefined;
+	shouldResolveFocus || shouldBuildLlmReport ? buildModvizLlmOutput(webGraphData) : undefined;
 const focusResolution =
-	shouldResolveFocus && fullLlmOutput
-		? resolveModvizFocus(fullLlmOutput, focusOptions)
-		: undefined;
+	shouldResolveFocus && fullLlmOutput ? resolveModvizFocus(fullLlmOutput, focusOptions) : undefined;
 const outputGraphData =
 	shouldResolveFocus && focusResolution
 		? applyGraphFocus(webGraphData, focusResolution, focusOptions)
@@ -197,13 +185,9 @@ if (focusResolution && shouldResolveFocus) {
 		focusResolution.matchedPackageNames.length === 0 &&
 		focusResolution.matchedNodePaths.length === 0
 	) {
-		console.warn(
-			"⚠️  No focus match found; wrote the full graph output instead.",
-		);
+		console.warn("⚠️  No focus match found; wrote the full graph output instead.");
 	} else {
-		console.log(
-			`🎯 Applied focus filter (${outputGraphData.nodes.length} nodes kept)`,
-		);
+		console.log(`🎯 Applied focus filter (${outputGraphData.nodes.length} nodes kept)`);
 	}
 }
 if (shouldBuildLlmReport) {
@@ -230,9 +214,7 @@ if (shouldBuildLlmReport) {
 		writeFileSync(llmOutputPaths.json, JSON.stringify(llmOutput, null, 2));
 		writeFileSync(llmOutputPaths.markdown, llmMarkdown);
 
-		console.log(
-			`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`,
-		);
+		console.log(`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`);
 	}
 
 	if (flags.llmAnalyze) {
@@ -244,9 +226,7 @@ if (shouldBuildLlmReport) {
 				outputFile: flags.outputFile,
 			}),
 		);
-		console.log(
-			`🤖 AI analysis saved to: ${analysis.analysisPath} (model: ${analysis.modelName})`,
-		);
+		console.log(`🤖 AI analysis saved to: ${analysis.analysisPath} (model: ${analysis.modelName})`);
 	}
 
 	if (flags.packageQuery || flags.nodeQuery) {
@@ -332,9 +312,7 @@ async function withProgress<T>(label: string, work: () => Promise<T> | T) {
 			await spinnerWorker.terminate().catch(() => undefined);
 			process.stdout.write(`\r❌ ${label} failed after ${formatDuration(Date.now() - start)}\n`);
 		} else {
-			console.error(
-				`❌ ${label} failed after ${formatDuration(Date.now() - start)}`,
-			);
+			console.error(`❌ ${label} failed after ${formatDuration(Date.now() - start)}`);
 		}
 		throw error;
 	}
@@ -362,9 +340,7 @@ function processModuleGraphForWeb(
 			name: path.basename(filePath),
 			path: filePath,
 			type: getNodeType(filePath, module, entryFile),
-			package: workspaces.find((workspace) =>
-				filePath.startsWith(workspace.path),
-			),
+			package: workspaces.find((workspace) => filePath.startsWith(workspace.path)),
 			cluster: module.cluster,
 			imports,
 			exports,
@@ -385,14 +361,11 @@ function processModuleGraphForWeb(
 
 	return {
 		metadata: {
-			entrypoints: moduleGraph.entrypoints.map((entrypoint) =>
-				normalizeRelativePath(entrypoint),
-			),
+			entrypoints: moduleGraph.entrypoints.map((entrypoint) => normalizeRelativePath(entrypoint)),
 			basePath: basePath,
 			totalFiles: moduleGraph.getUniqueModules().length,
 			generatedAt: new Date().toISOString(),
-			nodeModulesCount: nodeList.filter((n) => n.path.includes("node_modules"))
-				.length,
+			nodeModulesCount: nodeList.filter((n) => n.path.includes("node_modules")).length,
 			packages,
 		},
 		nodes: nodeList,
@@ -400,22 +373,14 @@ function processModuleGraphForWeb(
 	};
 }
 
-function getNodeType(
-	filePath: string,
-	module: VizModule,
-	entryPoint: string,
-): string {
+function getNodeType(filePath: string, module: VizModule, entryPoint: string): string {
 	if (filePath === entryPoint) return "entry";
 	if (filePath.includes("node_modules")) return "external";
 	if (module.isBarrelFile) return "barrel";
 	return "internal";
 }
 
-async function launchWebUI(
-	port: string | undefined,
-	dataFile?: string,
-	open = true,
-) {
+async function launchWebUI(port: string | undefined, dataFile?: string, open = true) {
 	const resolvedPort = port ? Number.parseInt(port, 10) : 3000;
 	console.log(`🚀 Launching production web UI on port ${resolvedPort}...`);
 	await startProductionServer({
@@ -440,10 +405,7 @@ function deriveAnalysisBasePath(
 ) {
 	const workspaceLocations = workspaces.map((workspace) => workspace.location);
 	if (workspaceLocations.length > 0) {
-		return getCommonAncestorPath([
-			path.dirname(entryFileAbsolute),
-			...workspaceLocations,
-		]);
+		return getCommonAncestorPath([path.dirname(entryFileAbsolute), ...workspaceLocations]);
 	}
 
 	return findNearestPackageRoot(path.dirname(entryFileAbsolute));
@@ -529,17 +491,11 @@ function applyGraphFocus(
 		.filter((node) => includedPaths.has(node.path))
 		.map((node) => ({
 			...node,
-			importees: node.importees.filter((importee) =>
-				includedPaths.has(importee),
-			),
-			importedBy: node.importedBy.filter((importer) =>
-				includedPaths.has(importer),
-			),
+			importees: node.importees.filter((importee) => includedPaths.has(importee)),
+			importedBy: node.importedBy.filter((importer) => includedPaths.has(importer)),
 			chain: dedupeChains(
 				node.chain
-					.map((chain) =>
-						chain.filter((chainNode) => includedPaths.has(chainNode)),
-					)
+					.map((chain) => chain.filter((chainNode) => includedPaths.has(chainNode)))
 					.filter((chain) => chain.length > 0),
 			),
 		}));
@@ -552,9 +508,7 @@ function applyGraphFocus(
 		metadata: {
 			...output.metadata,
 			totalFiles: filteredNodes.length,
-			nodeModulesCount: filteredNodes.filter((node) =>
-				node.path.includes("node_modules"),
-			).length,
+			nodeModulesCount: filteredNodes.filter((node) => node.path.includes("node_modules")).length,
 			focus: {
 				packageName: focusOptions.packageName,
 				nodeQuery: focusOptions.nodeQuery,
@@ -632,9 +586,7 @@ function buildLlmCommandHints(
 		flags.nodeModules ? "--node-modules" : undefined,
 		flags.ignoreDynamic ? "--ignore-dynamic" : undefined,
 		flags.llm || flags.llmAnalyze ? "--llm" : undefined,
-		flags.outputFile !== "./modviz.json"
-			? `--output-file=${flags.outputFile}`
-			: undefined,
+		flags.outputFile !== "./modviz.json" ? `--output-file=${flags.outputFile}` : undefined,
 		flags.moduleLexer ? `--module-lexer=${flags.moduleLexer}` : undefined,
 	]
 		.filter(Boolean)

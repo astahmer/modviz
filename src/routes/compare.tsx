@@ -6,10 +6,7 @@ import { useModvizBundle } from "~/utils/modviz-data";
 export const Route = createFileRoute("/compare")({
 	ssr: false,
 	validateSearch: (search: Record<string, unknown>) => ({
-		baselineSnapshot:
-			typeof search.baselineSnapshot === "string"
-				? search.baselineSnapshot
-				: "",
+		baselineSnapshot: typeof search.baselineSnapshot === "string" ? search.baselineSnapshot : "",
 	}),
 	component: CompareRoute,
 });

@@ -15,11 +15,9 @@ rmSync(targetRuntimeDir, { force: true, recursive: true });
 mkdirSync(targetRuntimeDir, { recursive: true });
 
 for (const entryName of ["nitro.json", "public", "server"]) {
-	cpSync(
-		path.join(sourceRuntimeDir, entryName),
-		path.join(targetRuntimeDir, entryName),
-		{ recursive: true },
-	);
+	cpSync(path.join(sourceRuntimeDir, entryName), path.join(targetRuntimeDir, entryName), {
+		recursive: true,
+	});
 }
 
 console.log(`Packaged production runtime into ${path.relative(packageRoot, targetRuntimeDir)}`);

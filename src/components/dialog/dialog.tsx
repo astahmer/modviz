@@ -203,13 +203,9 @@ const getNodeTraceSearch = (node: VizNode) => {
 	return { node: node.path, package: "", limit: 25 };
 };
 
-const TransitiveImportsTab = (props: {
-	node: VizNode;
-	output: ModvizOutput;
-}) => {
+const TransitiveImportsTab = (props: { node: VizNode; output: ModvizOutput }) => {
 	const initialCollection = useMemo(
-		() =>
-			mapModvizOutputToImporteesTreeCollection(props.output, props.node.path),
+		() => mapModvizOutputToImporteesTreeCollection(props.output, props.node.path),
 		[props.output, props.node.path],
 	);
 	if (!initialCollection) return;
@@ -228,8 +224,7 @@ const TransitiveImportsTab = (props: {
 						)
 					}
 				>
-					{transitiveImports.size} file imported (transitively) from current
-					node
+					{transitiveImports.size} file imported (transitively) from current node
 				</span>
 				<TreeViewBasic
 					key={props.node.path}
@@ -247,44 +242,28 @@ const ImportsChainTab = (props: { node: VizNode; output: ModvizOutput }) => {
 	);
 
 	const initialCollection = useMemo(
-		() =>
-			mapModvizOutputToImportsChainTreeCollection(
-				props.output,
-				props.node.path,
-				direction,
-			),
+		() => mapModvizOutputToImportsChainTreeCollection(props.output, props.node.path, direction),
 		[props.output, props.node.path, direction],
 	);
 	if (!initialCollection) return;
 
-	const rootNode = props.output.nodes.find(
-		(node) => node.path === props.node.path,
-	)!;
+	const rootNode = props.output.nodes.find((node) => node.path === props.node.path)!;
 	const chain = rootNode.chain.at(0) ?? [];
 
 	return (
 		<>
 			<div className="h-full min-h-0 flex flex-col p-2 gap-2">
 				<div className="flex gap-2 items-center">
-					<span
-						onClick={() =>
-							console.log(props.node, initialCollection.rootNode, chain)
-						}
-					>
+					<span onClick={() => console.log(props.node, initialCollection.rootNode, chain)}>
 						<span>
 							Reached{" "}
-							{direction === "from-entrypoint-to-current-node"
-								? "current node"
-								: "entrypoint"}{" "}
+							{direction === "from-entrypoint-to-current-node" ? "current node" : "entrypoint"}{" "}
 							after
 						</span>
 						<span> {chain.length} imports</span>
 					</span>
 					<div className="ml-auto">
-						<ImportsChainDirection
-							value={direction}
-							onValueChange={setDirection}
-						/>
+						<ImportsChainDirection value={direction} onValueChange={setDirection} />
 					</div>
 				</div>
 				<TreeViewBasic
@@ -332,9 +311,7 @@ function ImportsChainDirection(props: {
 		<Select
 			className="min-w-64 *:not-first:mt-2"
 			value={[props.value]}
-			onValueChange={(details) =>
-				props.onValueChange(details.value.at(0) as ImportsChainDirection)
-			}
+			onValueChange={(details) => props.onValueChange(details.value.at(0) as ImportsChainDirection)}
 			collection={directionCollection}
 			positioning={{ sameWidth: true }}
 		>

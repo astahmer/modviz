@@ -28,7 +28,7 @@ export type FlamegraphBuildOptions = {
 export function convertToNanovisHierarchyData(
 	output: ModvizOutput,
 	entryNodeId: string,
- 	options: FlamegraphBuildOptions = {},
+	options: FlamegraphBuildOptions = {},
 ): NanovisTreeNode {
 	const maxDepth = options.maxDepth ?? 6;
 	const maxChildren = options.maxChildren ?? 24;
@@ -72,11 +72,7 @@ export function convertToNanovisHierarchyData(
 		} as NanovisTreeNode;
 	}
 
-	const rootNode: NanovisTreeNode = Object.assign(
-		{},
-		nodeMap.get(entryNodeId)!,
-		{ children: [] },
-	);
+	const rootNode: NanovisTreeNode = Object.assign({}, nodeMap.get(entryNodeId)!, { children: [] });
 	const allVisited = new Set<string>();
 	const stack = [
 		{

@@ -38,10 +38,7 @@ test("resolveProjectTitle reads the closest package.json from the first entrypoi
 	const packageRoot = path.join(tempDir, "apps", "web");
 	const entrypointDir = path.join(packageRoot, "src");
 	mkdirSync(entrypointDir, { recursive: true });
-	writeFileSync(
-		path.join(packageRoot, "package.json"),
-		JSON.stringify({ name: "workspace-web" }),
-	);
+	writeFileSync(path.join(packageRoot, "package.json"), JSON.stringify({ name: "workspace-web" }));
 	writeFileSync(path.join(entrypointDir, "main.ts"), "export {}\n");
 
 	const graph = createGraph(tempDir, ["apps/web/src/main.ts"]);

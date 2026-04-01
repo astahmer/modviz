@@ -43,9 +43,7 @@ const sortStrings = (values: Iterable<string>) =>
 
 const getEdgeSet = (graph: ModvizOutput) =>
 	new Set(
-		graph.nodes.flatMap((node) =>
-			node.importees.map((importee) => `${node.path} -> ${importee}`),
-		),
+		graph.nodes.flatMap((node) => node.importees.map((importee) => `${node.path} -> ${importee}`)),
 	);
 
 const getExternalPackageSet = (graph: ModvizOutput) =>
@@ -56,8 +54,7 @@ const getExternalPackageSet = (graph: ModvizOutput) =>
 			.filter(Boolean),
 	);
 
-const getNodeMap = (graph: ModvizOutput) =>
-	new Map(graph.nodes.map((node) => [node.path, node]));
+const getNodeMap = (graph: ModvizOutput) => new Map(graph.nodes.map((node) => [node.path, node]));
 
 const setDifference = (left: Set<string>, right: Set<string>) => {
 	const values = new Set<string>();
@@ -79,12 +76,8 @@ export const buildModvizGraphComparison = (
 	const currentNodePaths = new Set(currentNodes.keys());
 	const baselineEdges = getEdgeSet(baseline);
 	const currentEdges = getEdgeSet(current);
-	const baselineWorkspacePackages = new Set(
-		baseline.metadata.packages.map((pkg) => pkg.name),
-	);
-	const currentWorkspacePackages = new Set(
-		current.metadata.packages.map((pkg) => pkg.name),
-	);
+	const baselineWorkspacePackages = new Set(baseline.metadata.packages.map((pkg) => pkg.name));
+	const currentWorkspacePackages = new Set(current.metadata.packages.map((pkg) => pkg.name));
 	const baselineExternalPackages = getExternalPackageSet(baseline);
 	const currentExternalPackages = getExternalPackageSet(current);
 
@@ -127,18 +120,12 @@ export const buildModvizGraphComparison = (
 		summary: {
 			baselineEdges: baselineEdges.size,
 			baselineExternalPackages: baselineExternalPackages.size,
-			baselineImportStatements: baseline.nodes.reduce(
-				(sum, node) => sum + node.imports.length,
-				0,
-			),
+			baselineImportStatements: baseline.nodes.reduce((sum, node) => sum + node.imports.length, 0),
 			baselineNodes: baseline.nodes.length,
 			baselineWorkspacePackages: baselineWorkspacePackages.size,
 			currentEdges: currentEdges.size,
 			currentExternalPackages: currentExternalPackages.size,
-			currentImportStatements: current.nodes.reduce(
-				(sum, node) => sum + node.imports.length,
-				0,
-			),
+			currentImportStatements: current.nodes.reduce((sum, node) => sum + node.imports.length, 0),
 			currentNodes: current.nodes.length,
 			currentWorkspacePackages: currentWorkspacePackages.size,
 		},

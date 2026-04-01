@@ -15,11 +15,7 @@ import {
 	CommandList,
 	CommandSeparator,
 } from "~/components/ui/command";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "~/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
 import { getExternalPackageName } from "~/utils/modviz-data";
 
@@ -30,15 +26,13 @@ type GraphCommandMenuProps = {
 };
 
 const getActiveCommandItemValue = () => {
-	const item = document.querySelector(
-		'[cmdk-item][data-selected="true"]',
-	) as HTMLElement | undefined;
+	const item = document.querySelector('[cmdk-item][data-selected="true"]') as
+		| HTMLElement
+		| undefined;
 	return item?.dataset.value;
 };
 
-const handleArrowKeyHighlight = (
-	onHighlight: (value: string | undefined) => void,
-) => {
+const handleArrowKeyHighlight = (onHighlight: (value: string | undefined) => void) => {
 	return (event: React.KeyboardEvent<HTMLInputElement>) => {
 		if (!event.key.startsWith("Arrow")) {
 			return;
@@ -65,13 +59,15 @@ function NodeCommandList(props: GraphCommandMenuProps & { onClose?: () => void }
 							<CommandItem
 								key={node.path}
 								value={node.path}
-								keywords={[
-									node.name,
-									node.package?.name,
-									node.cluster,
-									node.path,
-									...node.path.split("/"),
-								].filter(Boolean) as string[]}
+								keywords={
+									[
+										node.name,
+										node.package?.name,
+										node.cluster,
+										node.path,
+										...node.path.split("/"),
+									].filter(Boolean) as string[]
+								}
 								onMouseEnter={() => {
 									props.onHighlight(node.path);
 								}}
@@ -82,9 +78,7 @@ function NodeCommandList(props: GraphCommandMenuProps & { onClose?: () => void }
 							>
 								<div className="flex min-w-0 flex-col">
 									<span className="truncate">{node.name}</span>
-									<span className="truncate text-xs text-slate-500">
-										{node.path}
-									</span>
+									<span className="truncate text-xs text-slate-500">{node.path}</span>
 								</div>
 							</CommandItem>
 						))}
@@ -149,7 +143,7 @@ const useNodesByClusterMap = (nodes: ModvizOutput["nodes"]) => {
 		nodes.forEach((node) => {
 			const group = node.path.includes("node_modules")
 				? `node_modules/${getExternalPackageName(node)}`
-				: node.cluster ?? node.package?.name ?? "workspace";
+				: (node.cluster ?? node.package?.name ?? "workspace");
 			const existingNodes = map.get(group) ?? [];
 			existingNodes.push(node);
 			map.set(group, existingNodes);
@@ -159,9 +153,7 @@ const useNodesByClusterMap = (nodes: ModvizOutput["nodes"]) => {
 			groupedNodes.sort((left, right) => left.path.localeCompare(right.path));
 		}
 		return new Map(
-			Array.from(map.entries()).sort((left, right) =>
-				left[0].localeCompare(right[0]),
-			),
+			Array.from(map.entries()).sort((left, right) => left[0].localeCompare(right[0])),
 		);
 	}, [nodes]);
 

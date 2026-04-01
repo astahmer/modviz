@@ -57,11 +57,13 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 	return {
 		adjustSizes: parseSearchParam.boolean(search.adjustSizes, defaults.adjustSizes),
 		cluster: parseSearchParam.string(search.cluster),
-		externalGrouping:
-			search.externalGrouping === "combined" ? "combined" : "package",
+		externalGrouping: search.externalGrouping === "combined" ? "combined" : "package",
 		focus: parseSearchParam.string(search.focus),
 		gravity: parseSearchParam.number(search.gravity, defaults.gravity),
-		hideClusterLabels: parseSearchParam.boolean(search.hideClusterLabels, defaults.hideClusterLabels),
+		hideClusterLabels: parseSearchParam.boolean(
+			search.hideClusterLabels,
+			defaults.hideClusterLabels,
+		),
 		iterations: Math.round(parseSearchParam.number(search.iterations, defaults.iterations)),
 		linLogMode: parseSearchParam.boolean(search.linLogMode, defaults.linLogMode),
 		nodeSizeScale: parseSearchParam.number(search.nodeSizeScale, defaults.nodeSizeScale),
@@ -70,11 +72,11 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 			defaults.outboundAttractionDistribution,
 		),
 		scalingRatio: parseSearchParam.number(search.scalingRatio, defaults.scalingRatio),
-		scope:
-			search.scope === "workspace" || search.scope === "external"
-				? search.scope
-				: "all",
-		strongGravityMode: parseSearchParam.boolean(search.strongGravityMode, defaults.strongGravityMode),
+		scope: search.scope === "workspace" || search.scope === "external" ? search.scope : "all",
+		strongGravityMode: parseSearchParam.boolean(
+			search.strongGravityMode,
+			defaults.strongGravityMode,
+		),
 	};
 };
 
@@ -96,7 +98,10 @@ function GraphRoute() {
 
 	if (!isModvizBundleReady(bundle)) {
 		return (
-			<ModvizLayout title="Bubble Graph" description="Force-directed cluster view for spatial exploration.">
+			<ModvizLayout
+				title="Bubble Graph"
+				description="Force-directed cluster view for spatial exploration."
+			>
 				<SetupView bundle={bundle} />
 			</ModvizLayout>
 		);
@@ -137,8 +142,7 @@ function GraphRoute() {
 
 		return filteredByScope.filter(
 			(node) =>
-				getNodeGroupingLabel(node, workspacePackageNames, externalGrouping) ===
-				search.cluster,
+				getNodeGroupingLabel(node, workspacePackageNames, externalGrouping) === search.cluster,
 		);
 	}, [externalGrouping, filteredByScope, search.cluster, workspacePackageNames]);
 	const sigmaKey = useMemo(
@@ -152,9 +156,7 @@ function GraphRoute() {
 			}),
 		[externalGrouping, layoutSettings, refreshNonce, scope, search.cluster],
 	);
-	const updateSearch = (
-		patch: Partial<GraphSearch>,
-	) =>
+	const updateSearch = (patch: Partial<GraphSearch>) =>
 		navigate({
 			replace: true,
 			search: (previous) => ({ ...previous, ...patch }),
@@ -183,11 +185,13 @@ function GraphRoute() {
 		>
 			<div className="flex h-[calc(100vh-14rem)] min-h-[680px] flex-col gap-4">
 				<section className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-					{([
-						["all", "All nodes"],
-						["workspace", "Monorepo only"],
-						["external", "node_modules only"],
-					] as const).map(([value, label]) => (
+					{(
+						[
+							["all", "All nodes"],
+							["workspace", "Monorepo only"],
+							["external", "node_modules only"],
+						] as const
+					).map(([value, label]) => (
 						<Button
 							key={value}
 							variant={scope === value ? "default" : "outline"}
@@ -205,8 +209,7 @@ function GraphRoute() {
 							onChange={(event) =>
 								updateSearch({
 									cluster: "",
-									externalGrouping: event.currentTarget
-										.value as ExternalGroupingMode,
+									externalGrouping: event.currentTarget.value as ExternalGroupingMode,
 								})
 							}
 						>
@@ -247,10 +250,7 @@ function GraphRoute() {
 					>
 						Clear selection ({selectedNodeIds.length})
 					</Button>
-					<Button
-						variant="outline"
-						onClick={() => setRefreshNonce((value) => value + 1)}
-					>
+					<Button variant="outline" onClick={() => setRefreshNonce((value) => value + 1)}>
 						<RotateCcw className="size-4" />
 						Refresh canvas
 					</Button>
@@ -273,7 +273,14 @@ function GraphRoute() {
 					</div>
 				</section>
 				<section className="min-h-0 flex-1 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_70px_-36px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-					<Suspense fallback={<LoadingState label="Loading graph…" description="Preparing the Sigma canvas and layout pass." />}>
+					<Suspense
+						fallback={
+							<LoadingState
+								label="Loading graph…"
+								description="Preparing the Sigma canvas and layout pass."
+							/>
+						}
+					>
 						<Sigma
 							key={sigmaKey}
 							output={{ ...bundle.graph, nodes: filteredNodes }}

@@ -61,9 +61,7 @@ export const getTracePackageName = (node: VizNode) => {
 		return null;
 	}
 
-	return scopeOrName.startsWith("@") && maybeName
-		? `${scopeOrName}/${maybeName}`
-		: scopeOrName;
+	return scopeOrName.startsWith("@") && maybeName ? `${scopeOrName}/${maybeName}` : scopeOrName;
 };
 
 const uniqueChains = (chains: string[][]) => {
@@ -169,10 +167,7 @@ const getIntroducedThrough = (chain: string[]) => {
 	return chain.at(-1) ?? null;
 };
 
-const createTraceMatch = (
-	node: VizNode,
-	chains: string[][],
-): ModvizTraceMatch => ({
+const createTraceMatch = (node: VizNode, chains: string[][]): ModvizTraceMatch => ({
 	path: node.path,
 	label: node.name,
 	packageName: getTracePackageName(node),
@@ -251,11 +246,11 @@ export const buildPackageTraceReport = (
 			existing.chains = uniqueChains([...existing.chains, ...chains]);
 			existing.workspaceOrigins = uniqueSorted([
 				...existing.workspaceOrigins,
-				...chains.map((chain) => getWorkspaceOrigin(chain)).filter(Boolean) as string[],
+				...(chains.map((chain) => getWorkspaceOrigin(chain)).filter(Boolean) as string[]),
 			]);
 			existing.introducedThrough = uniqueSorted([
 				...existing.introducedThrough,
-				...chains.map((chain) => getIntroducedThrough(chain)).filter(Boolean) as string[],
+				...(chains.map((chain) => getIntroducedThrough(chain)).filter(Boolean) as string[]),
 			]);
 		});
 
@@ -308,10 +303,7 @@ export const buildNodeTraceReport = (
 		})
 		.slice(0, maxNodeMatches)
 		.map((node) =>
-			createTraceMatch(
-				node,
-				buildUpstreamChains(graph, node.path, maxChainsPerTarget, maxDepth),
-			),
+			createTraceMatch(node, buildUpstreamChains(graph, node.path, maxChainsPerTarget, maxDepth)),
 		);
 
 	const report: ModvizTraceReport = {
@@ -331,10 +323,7 @@ export const buildNodeTraceReport = (
 	return report;
 };
 
-export const renderTraceReport = (
-	report: ModvizTraceReport,
-	limit = 10,
-) => {
+export const renderTraceReport = (report: ModvizTraceReport, limit = 10) => {
 	const lines = [
 		`${report.kind === "package" ? "Package" : "Node"} trace for: ${report.query}`,
 		`Matched ${report.matches.length} node(s) across ${report.totalChains} origin chain(s).`,

@@ -18,7 +18,11 @@ function Home() {
 			title="Overview"
 			description="Start from a lightweight dashboard, then choose the graph, summary, import-search, or hierarchy view based on the question you are asking."
 		>
-			{isModvizBundleReady(bundle) ? <DashboardView bundle={bundle} /> : <SetupView bundle={bundle} />}
+			{isModvizBundleReady(bundle) ? (
+				<DashboardView bundle={bundle} />
+			) : (
+				<SetupView bundle={bundle} />
+			)}
 		</ModvizLayout>
 	);
 }

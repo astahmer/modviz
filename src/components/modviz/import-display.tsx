@@ -17,7 +17,8 @@ type ImportDisplayProps = {
 
 export function ImportDisplay(props: ImportDisplayProps) {
 	const [viewMode, setViewMode] = useState<"code" | "table">("code");
-	const isFormatted = Array.isArray(props.imports) && props.imports.length > 0 && "code" in props.imports[0];
+	const isFormatted =
+		Array.isArray(props.imports) && props.imports.length > 0 && "code" in props.imports[0];
 	const blocks = useMemo(() => {
 		if (isFormatted) {
 			return props.imports as ImportBlock[];
@@ -72,7 +73,10 @@ export function ImportDisplay(props: ImportDisplayProps) {
 			{viewMode === "code" ? (
 				<div className="space-y-3">
 					{blocks.map((block, idx) => (
-						<div key={idx} className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+						<div
+							key={idx}
+							className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60"
+						>
 							{blocks.length > 1 && (
 								<p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
 									{block.module}
@@ -89,8 +93,12 @@ export function ImportDisplay(props: ImportDisplayProps) {
 					<table className="w-full text-sm">
 						<thead className="border-b border-slate-200/70 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/80">
 							<tr>
-								<th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Module</th>
-								<th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Name</th>
+								<th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
+									Module
+								</th>
+								<th className="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
+									Name
+								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
@@ -113,10 +121,7 @@ export function ImportDisplay(props: ImportDisplayProps) {
 }
 
 function formatImportBlocks(matches: VizImport[]) {
-	const grouped = new Map<
-		string,
-		{ names: Set<string>; hasBareImport: boolean }
-	>();
+	const grouped = new Map<string, { names: Set<string>; hasBareImport: boolean }>();
 
 	for (const match of matches) {
 		const current = grouped.get(match.module) ?? {
@@ -139,9 +144,7 @@ function formatImportBlocks(matches: VizImport[]) {
 	Array.from(grouped.entries())
 		.sort(([a], [b]) => a.localeCompare(b))
 		.forEach(([module, details]) => {
-			const names = Array.from(details.names).sort((left, right) =>
-				left.localeCompare(right),
-			);
+			const names = Array.from(details.names).sort((left, right) => left.localeCompare(right));
 
 			if (!names.length) {
 				importLines.push(`import ${JSON.stringify(module)};`);
@@ -182,7 +185,7 @@ function extractNamesFromCode(code: string): string[] {
 				...match[1]
 					.split(",")
 					.map((name) => name.trim())
-					.filter(Boolean)
+					.filter(Boolean),
 			);
 		}
 	}

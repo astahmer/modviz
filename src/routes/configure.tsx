@@ -32,19 +32,12 @@ const defaultCommandBuilderState: CommandBuilderState = {
 	snapshotName: "",
 };
 
-const quoteCliValue = (value: string) =>
-	/\s/.test(value) ? JSON.stringify(value) : value;
+const quoteCliValue = (value: string) => (/\s/.test(value) ? JSON.stringify(value) : value);
 
-const buildAnalyzeCommand = (
-	entryFile: string,
-	config: CommandBuilderState,
-) => {
+const buildAnalyzeCommand = (entryFile: string, config: CommandBuilderState) => {
 	const parts = ["pnpm", "exec", "modviz", "analyze", quoteCliValue(entryFile)];
 
-	if (
-		config.outputFile &&
-		config.outputFile !== defaultCommandBuilderState.outputFile
-	) {
+	if (config.outputFile && config.outputFile !== defaultCommandBuilderState.outputFile) {
 		parts.push(`--output-file=${quoteCliValue(config.outputFile)}`);
 	}
 	if (config.launchUi) {
@@ -288,7 +281,9 @@ function ConfigureRoute() {
 						</div>
 					</div>
 					{bundle.setup.status !== "ready" ? (
-						<p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{bundle.setup.message}</p>
+						<p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+							{bundle.setup.message}
+						</p>
 					) : null}
 				</section>
 			</div>

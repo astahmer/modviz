@@ -5,10 +5,7 @@ import type { ModvizOutput, VizNode } from "../../../../mod/types";
 import { colors } from "~/components/graph/common/colors";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { getRandom } from "~/components/graph/common/random";
-import {
-	getNodeGroupingLabel,
-	type ExternalGroupingMode,
-} from "~/utils/modviz-data";
+import { getNodeGroupingLabel, type ExternalGroupingMode } from "~/utils/modviz-data";
 
 export type NodeType = {
 	x: number;
@@ -43,11 +40,7 @@ export const useCreateGraph = (props: {
 		const groups = Array.from(
 			new Set(
 				props.nodes.map((node) =>
-					getNodeGroupingLabel(
-						node,
-						workspacePackageNames,
-						props.externalGrouping ?? "combined",
-					),
+					getNodeGroupingLabel(node, workspacePackageNames, props.externalGrouping ?? "combined"),
 				),
 			),
 		).sort((left, right) => left.localeCompare(right));
@@ -73,19 +66,12 @@ export const useCreateGraph = (props: {
 		const clusters = new Set<string>();
 		props.nodes.forEach((node) => {
 			clusters.add(
-				getNodeGroupingLabel(
-					node,
-					workspacePackageNames,
-					props.externalGrouping ?? "combined",
-				),
+				getNodeGroupingLabel(node, workspacePackageNames, props.externalGrouping ?? "combined"),
 			);
 		});
 		let index = 0;
 		clusters.forEach((cluster) => {
-			colorMap.set(
-				cluster,
-				colors.list[++index] ?? colors.deterministic(cluster),
-			);
+			colorMap.set(cluster, colors.list[++index] ?? colors.deterministic(cluster));
 		});
 		return colorMap;
 	}, [props.externalGrouping, props.nodes, workspacePackageNames]);
@@ -128,9 +114,7 @@ export const useCreateGraph = (props: {
 			const x = isEntry ? 0 : anchor.x + jitterX;
 			const y = isEntry ? 0 : anchor.y + jitterY;
 			const label =
-				node.package && node.isBarrelFile
-					? `${node.package?.name}/${node.name}`
-					: node.name;
+				node.package && node.isBarrelFile ? `${node.package?.name}/${node.name}` : node.name;
 
 			graph.addNode(node.path, {
 				x,
@@ -140,14 +124,8 @@ export const useCreateGraph = (props: {
 				modType: node.type,
 				cluster: groupLabel,
 				clusterPath: node.package?.path ?? groupLabel,
-				color:
-					clusterColors.get(groupLabel) ??
-					colors.default,
-				size: clamp(
-					4,
-					18 * nodeSizeScale,
-					Math.max(4, node.importedBy.length * nodeSizeScale),
-				),
+				color: clusterColors.get(groupLabel) ?? colors.default,
+				size: clamp(4, 18 * nodeSizeScale, Math.max(4, node.importedBy.length * nodeSizeScale)),
 				highlighted: false,
 			});
 		});
@@ -162,8 +140,7 @@ export const useCreateGraph = (props: {
 				);
 				graph.addEdge(edge.source, edge.target, {
 					label: edge.source,
-					color:
-						clusterColors.get(sourceGroup) ?? colors.default,
+					color: clusterColors.get(sourceGroup) ?? colors.default,
 				});
 			}
 		});

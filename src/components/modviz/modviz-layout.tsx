@@ -5,12 +5,12 @@ import {
 	Boxes,
 	FolderTree,
 	GitBranchPlus,
+	LayoutGrid,
 	Network,
 	RefreshCw,
 	Route,
 	Settings,
 	SquareStack,
-	Trello,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { PropsWithChildren, ReactNode } from "react";
@@ -31,15 +31,17 @@ const navigationItems = [
 	{ to: "/trace", label: "Trace", icon: Route },
 	{ to: "/explorer", label: "Explorer", icon: FolderTree },
 	{ to: "/hierarchy", label: "Hierarchy", icon: SquareStack },
-	{ to: "/treemap", label: "Treemap", icon: Trello },
+	{ to: "/treemap", label: "Treemap", icon: LayoutGrid },
 ] as const;
 
-export function ModvizLayout(props: PropsWithChildren<{
-	title?: string;
-	description?: string;
-	actions?: ReactNode;
-	projectTitle?: string | null;
-}>) {
+export function ModvizLayout(
+	props: PropsWithChildren<{
+		title?: string;
+		description?: string;
+		actions?: ReactNode;
+		projectTitle?: string | null;
+	}>,
+) {
 	const bundle = useModvizBundle();
 	const router = useRouter();
 	const { isRefreshing, status } = useJsonUpdates();
@@ -161,7 +163,7 @@ export function ModvizLayout(props: PropsWithChildren<{
 								</Link>
 							);
 						})}
-						</nav>
+					</nav>
 					<div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
 						<div
 							className={cn(

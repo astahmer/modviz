@@ -30,10 +30,7 @@ export function inferPathsLabel(filePaths: string[]): string | undefined {
 	});
 
 	// Count frequency of each segment and its position
-	const segmentFrequency = new Map<
-		string,
-		{ count: number; positions: number[] }
-	>();
+	const segmentFrequency = new Map<string, { count: number; positions: number[] }>();
 
 	allSegments.forEach((segments) => {
 		segments.forEach((segment, index) => {
@@ -80,14 +77,12 @@ export function inferPathsLabel(filePaths: string[]): string | undefined {
 
 		// Calculate score based on frequency and position consistency
 		const frequencyRatio = data.count / filePaths.length;
-		const avgPosition =
-			data.positions.reduce((sum, pos) => sum + pos, 0) / data.positions.length;
+		const avgPosition = data.positions.reduce((sum, pos) => sum + pos, 0) / data.positions.length;
 		const positionConsistency =
 			1 - (Math.max(...data.positions) - Math.min(...data.positions)) / 10;
 
 		// Prefer segments that appear in most files, are reasonably positioned, and have consistent positioning
-		const score =
-			frequencyRatio * 0.6 + positionConsistency * 0.4 - avgPosition * 0.1;
+		const score = frequencyRatio * 0.6 + positionConsistency * 0.4 - avgPosition * 0.1;
 
 		if (score > bestCandidate.score && frequencyRatio >= 0.5) {
 			bestCandidate = { segment, score };
@@ -97,9 +92,7 @@ export function inferPathsLabel(filePaths: string[]): string | undefined {
 	// If no good candidate found, try to extract from the longest common path
 	if (!bestCandidate.segment) {
 		const commonPath = findLongestCommonPath(filePaths);
-		const pathSegments = commonPath
-			.split("/")
-			.filter((s) => s && !s.includes("."));
+		const pathSegments = commonPath.split("/").filter((s) => s && !s.includes("."));
 
 		// Take the last non-generic segment from common path
 		for (let i = pathSegments.length - 1; i >= 0; i--) {

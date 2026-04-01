@@ -1,16 +1,9 @@
-import {
-	useRegisterEvents,
-	useSetSettings,
-	useSigma,
-} from "@react-sigma/core";
+import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
 import { useAtom } from "@xstate/store/react";
 import { useEffect, useMemo, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import { colors } from "~/components/graph/common/colors";
-import type {
-	EdgeType,
-	NodeType,
-} from "~/components/graph/common/use-create-graph";
+import type { EdgeType, NodeType } from "~/components/graph/common/use-create-graph";
 import {
 	currentNodeIdAtom,
 	highlightedNodeIdAtom,
@@ -70,11 +63,7 @@ export const useGraphSettings = () => {
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			renderLabels: Boolean(
-				hoveredNodeId ||
-					hoveredClusterName ||
-					selectedNodeSet.size > 0,
-			),
+			renderLabels: Boolean(hoveredNodeId || hoveredClusterName || selectedNodeSet.size > 0),
 			// hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
 			// This function tells sigma to grow sizes linearly with the zoom, instead
@@ -109,10 +98,7 @@ export const useGraphSettings = () => {
 						updated.size = node.size + clamp(4, 10, node.size * 0.25);
 					}
 
-					if (
-						nodeId === hoveredNodeId ||
-						graph.neighbors(hoveredNodeId).includes(nodeId)
-					) {
+					if (nodeId === hoveredNodeId || graph.neighbors(hoveredNodeId).includes(nodeId)) {
 						// Show labels for active node and neighbors
 						updated.label = node.label;
 						updated.highlighted = true;
@@ -148,10 +134,7 @@ export const useGraphSettings = () => {
 					return updated;
 				}
 
-				if (
-					hoveredNodeId &&
-					graph.extremities(edgeId).includes(hoveredNodeId)
-				) {
+				if (hoveredNodeId && graph.extremities(edgeId).includes(hoveredNodeId)) {
 					// Otheriwse show hovered node edges
 					const activeNode = graph.getNodeAttributes(hoveredNodeId);
 					updated.hidden = false;

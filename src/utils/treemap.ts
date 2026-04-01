@@ -135,20 +135,8 @@ export const buildTreemapModel = (
 	const root = createTreeNode("root", "All Modules", "root", null, ROOT_COLOR);
 	const nodesById = new Map<string, TreemapTreeNode>([[root.id, root]]);
 
-	const workspaceRoot = createTreeNode(
-		"scope:workspace",
-		"Workspace",
-		"scope",
-		root.id,
-		"#2563eb",
-	);
-	const externalRoot = createTreeNode(
-		"scope:external",
-		"External",
-		"scope",
-		root.id,
-		"#0f766e",
-	);
+	const workspaceRoot = createTreeNode("scope:workspace", "Workspace", "scope", root.id, "#2563eb");
+	const externalRoot = createTreeNode("scope:external", "External", "scope", root.id, "#0f766e");
 
 	root.children.push(workspaceRoot, externalRoot);
 	nodesById.set(workspaceRoot.id, workspaceRoot);
@@ -158,9 +146,10 @@ export const buildTreemapModel = (
 		const scope = getNodeScope(node, workspacePackageNames);
 		const parentRoot = scope === "workspace" ? workspaceRoot : externalRoot;
 		const packageName = scope === "external" ? getExternalPackageName(node) : null;
-		const segments = scope === "workspace"
-			? getWorkspaceSegments(node)
-			: getExternalSegments(node, packageName ?? "external");
+		const segments =
+			scope === "workspace"
+				? getWorkspaceSegments(node)
+				: getExternalSegments(node, packageName ?? "external");
 		const groupSegments = segments.slice(0, -1);
 		const leafLabel = segments.at(-1) ?? node.name;
 		const color = getNodeColor(node, colorMap);
@@ -172,25 +161,11 @@ export const buildTreemapModel = (
 			const isPackage = scope === "external" && index === 0;
 			const groupKind: TreemapNodeKind = isPackage ? "package" : "folder";
 			const id = `${groupKind}:${keyParts.join("/")}`;
-			currentParent = ensureChild(
-				currentParent,
-				nodesById,
-				id,
-				segment,
-				groupKind,
-				color,
-			);
+			currentParent = ensureChild(currentParent, nodesById, id, segment, groupKind, color);
 		}
 
 		const leafId = `module:${node.path}`;
-		const leaf = ensureChild(
-			currentParent,
-			nodesById,
-			leafId,
-			leafLabel,
-			"module",
-			color,
-		);
+		const leaf = ensureChild(currentParent, nodesById, leafId, leafLabel, "module", color);
 		leaf.sourceNode = node;
 		leaf.sourcePath = node.path;
 	}
@@ -286,4 +261,11 @@ export const layoutTreemap = (
 	y: number,
 	width: number,
 	height: number,
-) => partitionTreemap([...nodes].sort((left, right) => right.size - left.size), x, y, width, height);
+) =>
+	partitionTreemap(
+		[...nodes].sort((left, right) => right.size - left.size),
+		x,
+		y,
+		width,
+		height,
+	);

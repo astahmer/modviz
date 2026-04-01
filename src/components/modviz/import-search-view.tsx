@@ -52,19 +52,13 @@ const matchesSourceToken = (node: VizNode, token: string, mode: MatchMode) => {
 		.some((value) => matcher(String(value)));
 };
 
-const isWorkspaceImport = (
-	importItem: VizImport,
-	workspacePackageNames: Set<string>,
-) => {
+const isWorkspaceImport = (importItem: VizImport, workspacePackageNames: Set<string>) => {
 	if (importItem.module.startsWith(".") || importItem.module.startsWith("/")) {
 		return true;
 	}
 
 	for (const packageName of workspacePackageNames) {
-		if (
-			importItem.module === packageName ||
-			importItem.module.startsWith(`${packageName}/`)
-		) {
+		if (importItem.module === packageName || importItem.module.startsWith(`${packageName}/`)) {
 			return true;
 		}
 	}
@@ -134,13 +128,10 @@ export function ImportSearchView(props: {
 						const moduleMatches = moduleMatcher(importItem.module);
 						const symbolMatches = symbolQuery.trim()
 							? [importItem.name, importItem.declaration]
-								.filter(Boolean)
-								.some((value) => symbolMatcher(String(value)))
+									.filter(Boolean)
+									.some((value) => symbolMatcher(String(value)))
 							: true;
-						const workspaceImport = isWorkspaceImport(
-							importItem,
-							workspacePackageNames,
-						);
+						const workspaceImport = isWorkspaceImport(importItem, workspacePackageNames);
 						const scopeMatches =
 							targetScope === "all" ||
 							(targetScope === "workspace" && workspaceImport) ||
@@ -152,15 +143,11 @@ export function ImportSearchView(props: {
 					if (!matches.length) return null;
 					if (
 						includeTokens.length &&
-						!includeTokens.every((token) =>
-							matchesSourceToken(node, token, matchMode),
-						)
+						!includeTokens.every((token) => matchesSourceToken(node, token, matchMode))
 					) {
 						return null;
 					}
-					if (
-						excludeTokens.some((token) => matchesSourceToken(node, token, matchMode))
-					) {
+					if (excludeTokens.some((token) => matchesSourceToken(node, token, matchMode))) {
 						return null;
 					}
 
@@ -212,8 +199,7 @@ export function ImportSearchView(props: {
 					preset: "workspace-path-regex",
 					scope: "workspace",
 					mode: "regex",
-					include:
-						includeSources || "(@weliihq/backend|apps/backend).*(routers|organization)",
+					include: includeSources || "(@weliihq/backend|apps/backend).*(routers|organization)",
 				}),
 		},
 		{
@@ -321,7 +307,8 @@ export function ImportSearchView(props: {
 								}
 							/>
 							<p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-								Regex helpers: use <code>routers/organization</code>, <code>(router|service)</code>, or <code>^apps/backend/</code> when match mode is regex.
+								Regex helpers: use <code>routers/organization</code>, <code>(router|service)</code>,
+								or <code>^apps/backend/</code> when match mode is regex.
 							</p>
 						</div>
 						<div className="space-y-2">
@@ -368,7 +355,8 @@ export function ImportSearchView(props: {
 							Reset filters
 						</Button>
 						<span>
-							Try: module = lodash-es, symbol = omit, include = @weliihq/backend and routers/organization.
+							Try: module = lodash-es, symbol = omit, include = @weliihq/backend and
+							routers/organization.
 						</span>
 					</div>
 				</div>
@@ -377,9 +365,7 @@ export function ImportSearchView(props: {
 			<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div>
-						<h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-							Matches
-						</h2>
+						<h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Matches</h2>
 						<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
 							Importer files or modules whose import list matches the current filters.
 						</p>
@@ -405,9 +391,7 @@ export function ImportSearchView(props: {
 										{result.node.path}
 									</h3>
 									<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-										{result.node.package?.name
-											? `${result.node.package.name} • `
-											: ""}
+										{result.node.package?.name ? `${result.node.package.name} • ` : ""}
 										{result.node.cluster ?? result.node.type}
 									</p>
 								</div>
@@ -430,4 +414,3 @@ export function ImportSearchView(props: {
 		</div>
 	);
 }
-

@@ -17,10 +17,7 @@ import { NodeDetailsModal } from "~/components/dialog/dialog";
 import { clamp } from "~/components/graph/common/clamp";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { SigmaGraph } from "~/components/graph/common/render-sigma-graph";
-import type {
-	EdgeType,
-	NodeType,
-} from "~/components/graph/common/use-create-graph";
+import type { EdgeType, NodeType } from "~/components/graph/common/use-create-graph";
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/loading-state";
 import {
@@ -105,10 +102,7 @@ const WithGraph = (props: {
 	const clusterMap = useClusterMap(sigma);
 	const clusterList = useClusterList(clusterMap);
 	const externalNodeIds = useMemo(
-		() =>
-			props.nodes
-				.filter((node) => node.path.includes("node_modules"))
-				.map((node) => node.path),
+		() => props.nodes.filter((node) => node.path.includes("node_modules")).map((node) => node.path),
 		[props.nodes],
 	);
 	useClusterLabelLayer(sigma, clusterMap, props.hideClusterLabels);
@@ -172,9 +166,7 @@ const WithGraph = (props: {
 										onClick={() => {
 											fitViewportToNodes(
 												sigma as never,
-												graph.filterNodes(
-													(_, attrs) => attrs.cluster === cluster.name,
-												),
+												graph.filterNodes((_, attrs) => attrs.cluster === cluster.name),
 												{ animate: true },
 											);
 										}}
@@ -185,12 +177,8 @@ const WithGraph = (props: {
 											hoveredClusterNameAtom.set(null);
 										}}
 									>
-										<div
-											className="w-2 h-2"
-											style={{ backgroundColor: cluster.color }}
-										/>
-										{cluster.inferredName || cluster.name}(
-										{cluster.nodes.length})
+										<div className="w-2 h-2" style={{ backgroundColor: cluster.color }} />
+										{cluster.inferredName || cluster.name}({cluster.nodes.length})
 									</button>
 								);
 							})}
@@ -301,12 +289,8 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 				}
 
 				// calculate the cluster's nodes barycenter to use this as cluster label position
-				cluster.x =
-					cluster.positions.reduce((acc, p) => acc + p.x, 0) /
-					cluster.positions.length;
-				cluster.y =
-					cluster.positions.reduce((acc, p) => acc + p.y, 0) /
-					cluster.positions.length;
+				cluster.x = cluster.positions.reduce((acc, p) => acc + p.x, 0) / cluster.positions.length;
+				cluster.y = cluster.positions.reduce((acc, p) => acc + p.y, 0) / cluster.positions.length;
 			});
 
 			setClusterMap(map);

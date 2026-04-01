@@ -10,9 +10,7 @@ export type GraphLayoutSettings = {
 	nodeSizeScale: number;
 };
 
-export const getDefaultGraphLayoutSettings = (
-	nodeCount: number,
-): GraphLayoutSettings => {
+export const getDefaultGraphLayoutSettings = (nodeCount: number): GraphLayoutSettings => {
 	const safeNodeCount = Math.max(nodeCount, 1);
 	const densityFactor = Math.max(1, Math.sqrt(safeNodeCount));
 

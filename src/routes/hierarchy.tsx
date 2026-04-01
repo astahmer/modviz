@@ -27,9 +27,7 @@ const validateHierarchySearch = (search: Record<string, unknown>): HierarchySear
 	maxChildren: Number.isFinite(Number(search.maxChildren))
 		? Math.round(Number(search.maxChildren))
 		: 24,
-	maxDepth: Number.isFinite(Number(search.maxDepth))
-		? Math.round(Number(search.maxDepth))
-		: 6,
+	maxDepth: Number.isFinite(Number(search.maxDepth)) ? Math.round(Number(search.maxDepth)) : 6,
 });
 
 export const Route = createFileRoute("/hierarchy")({
@@ -56,10 +54,7 @@ function HierarchyRoute() {
 	}
 
 	const entryNodeId =
-		search.entryNodeId ||
-		bundle.graph.metadata.entrypoints[0] ||
-		bundle.graph.nodes[0]?.path ||
-		"";
+		search.entryNodeId || bundle.graph.metadata.entrypoints[0] || bundle.graph.nodes[0]?.path || "";
 	const updateSearch = (patch: Partial<HierarchySearch>) =>
 		navigate({
 			replace: true,
@@ -80,9 +75,7 @@ function HierarchyRoute() {
 							<select
 								className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 								value={entryNodeId}
-								onChange={(event) =>
-									updateSearch({ entryNodeId: event.currentTarget.value })
-								}
+								onChange={(event) => updateSearch({ entryNodeId: event.currentTarget.value })}
 							>
 								{bundle.graph.metadata.entrypoints.map((entrypoint) => (
 									<option key={entrypoint} value={entrypoint}>
@@ -124,15 +117,20 @@ function HierarchyRoute() {
 						<input
 							type="checkbox"
 							checked={search.includeExternal}
-							onChange={(event) =>
-								updateSearch({ includeExternal: event.currentTarget.checked })
-							}
+							onChange={(event) => updateSearch({ includeExternal: event.currentTarget.checked })}
 						/>
 						<span>Include node_modules in the hierarchy slice</span>
 					</label>
 				</section>
 				<section className="min-h-0 flex-1 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/90 shadow-[0_20px_70px_-36px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-					<Suspense fallback={<LoadingState label="Loading hierarchy…" description="Building a pruned dependency slice for the selected entrypoint." />}>
+					<Suspense
+						fallback={
+							<LoadingState
+								label="Loading hierarchy…"
+								description="Building a pruned dependency slice for the selected entrypoint."
+							/>
+						}
+					>
 						<Flamegraph
 							output={bundle.graph}
 							entryNodeId={entryNodeId}

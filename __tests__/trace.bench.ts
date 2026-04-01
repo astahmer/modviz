@@ -46,10 +46,7 @@ const buildLargeGraph = (): ModvizOutput => {
 	const WORKSPACE_COUNT = 240;
 	const REACT_NODE_COUNT = 60;
 
-	const entrypoints = Array.from(
-		{ length: 5 },
-		(_, i) => `apps/app-${i}/src/main.ts`,
-	);
+	const entrypoints = Array.from({ length: 5 }, (_, i) => `apps/app-${i}/src/main.ts`);
 
 	const workspacePaths = [
 		...entrypoints,
@@ -60,10 +57,7 @@ const buildLargeGraph = (): ModvizOutput => {
 	];
 
 	const reactPaths = [
-		...Array.from(
-			{ length: REACT_NODE_COUNT },
-			(_, i) => `node_modules/react/node-${i}.js`,
-		),
+		...Array.from({ length: REACT_NODE_COUNT }, (_, i) => `node_modules/react/node-${i}.js`),
 	];
 
 	// Build importedBy:  each workspace node (beyond the first few) is imported
@@ -87,7 +81,11 @@ const buildLargeGraph = (): ModvizOutput => {
 	for (let i = 0; i < reactPaths.length; i++) {
 		const importers: string[] = [];
 		const step = Math.max(1, Math.floor(workspacePaths.length / 8));
-		for (let j = (i * 3) % workspacePaths.length; importers.length < 5; j = (j + step) % workspacePaths.length) {
+		for (
+			let j = (i * 3) % workspacePaths.length;
+			importers.length < 5;
+			j = (j + step) % workspacePaths.length
+		) {
 			importers.push(workspacePaths[j]);
 			if (importers.length >= 5) break;
 		}
@@ -101,9 +99,7 @@ const buildLargeGraph = (): ModvizOutput => {
 		return makeNode(path, {
 			type: isEntry ? "entry" : isExternal ? "external" : "internal",
 			importedBy: importedByMap.get(path) ?? [],
-			package: isExternal
-				? { name: "react", path: "node_modules/react" }
-				: undefined,
+			package: isExternal ? { name: "react", path: "node_modules/react" } : undefined,
 			chain: isEntry ? [[path]] : [],
 		});
 	});

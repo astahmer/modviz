@@ -15,9 +15,7 @@ export const inlinePackageJsonImportsPlugin = (
 	name: "inline-package.json-imports",
 	transformSource: ({ filename, source }) => {
 		// return source;
-		const pkg = workspaceList.find((workspace) =>
-			filename.startsWith(workspace.absolutePath),
-		);
+		const pkg = workspaceList.find((workspace) => filename.startsWith(workspace.absolutePath));
 		if (!pkg) return source;
 
 		const importFromRegex = /import\s+.*?from\s+['"](.{3,}?)['"]/gi;

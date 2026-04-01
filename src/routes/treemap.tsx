@@ -7,7 +7,11 @@ import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { SetupView } from "~/components/modviz/setup-view";
 import { Button } from "~/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { getWorkspacePackageNames, isModvizBundleReady, useModvizBundle } from "~/utils/modviz-data";
+import {
+	getWorkspacePackageNames,
+	isModvizBundleReady,
+	useModvizBundle,
+} from "~/utils/modviz-data";
 import { parseSearchParam } from "~/utils/search-params";
 import {
 	buildTreemapModel,
@@ -54,9 +58,9 @@ const INLINE_LABEL_HINT_MAX_LINES = 2;
 const TITLE_LINE_HEIGHT = 18;
 const CAPTION_LINE_HEIGHT = 16;
 const HINT_LINE_HEIGHT = 14;
-const TITLE_FONT = '600 14px ui-sans-serif, system-ui, sans-serif';
-const CAPTION_FONT = '400 12px ui-sans-serif, system-ui, sans-serif';
-const HINT_FONT = '400 11px ui-sans-serif, system-ui, sans-serif';
+const TITLE_FONT = "600 14px ui-sans-serif, system-ui, sans-serif";
+const CAPTION_FONT = "400 12px ui-sans-serif, system-ui, sans-serif";
+const HINT_FONT = "400 11px ui-sans-serif, system-ui, sans-serif";
 
 type InlineLabelLayout = {
 	titleLines: string[];
@@ -116,8 +120,7 @@ const getRectCaption = (node: TreemapTreeNode) => {
 	return `${formatCount(node.moduleCount, "module")}`;
 };
 
-const getRectNumberVisibility = (width: number, height: number) =>
-	width > 32 && height > 24;
+const getRectNumberVisibility = (width: number, height: number) => width > 32 && height > 24;
 
 const isDenseTailRect = (rect: {
 	width: number;
@@ -139,17 +142,8 @@ const getOverlayStyle = (x: number, y: number, width: number, height: number) =>
 	height: `${(height / TREEMAP_LAYOUT_HEIGHT) * 100}%`,
 });
 
-const getTextLines = (
-	text: string,
-	font: string,
-	maxWidth: number,
-	lineHeight: number,
-) =>
-	layoutWithLines(
-		prepareWithSegments(text, font),
-		Math.max(1, maxWidth),
-		lineHeight,
-	);
+const getTextLines = (text: string, font: string, maxWidth: number, lineHeight: number) =>
+	layoutWithLines(prepareWithSegments(text, font), Math.max(1, maxWidth), lineHeight);
 
 const getInlineLabelLayout = (
 	node: TreemapTreeNode,
@@ -173,10 +167,7 @@ const getInlineLabelLayout = (
 		availableWidth,
 		CAPTION_LINE_HEIGHT,
 	);
-	if (
-		captionLayout.lineCount === 0 ||
-		captionLayout.lineCount > INLINE_LABEL_CAPTION_MAX_LINES
-	) {
+	if (captionLayout.lineCount === 0 || captionLayout.lineCount > INLINE_LABEL_CAPTION_MAX_LINES) {
 		return null;
 	}
 
@@ -214,7 +205,7 @@ const isNodeInBranch = (
 		if (current.id === branchId) {
 			return true;
 		}
-		current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+		current = current.parentId ? (nodesById.get(current.parentId) ?? null) : null;
 	}
 	return false;
 };
@@ -223,7 +214,7 @@ const getExplorerSearchForNode = (
 	node: TreemapTreeNode,
 	preservedModule?: TreemapTreeNode | null,
 ) => {
-	const selected = preservedModule?.kind === "module" ? preservedModule.sourcePath ?? "" : "";
+	const selected = preservedModule?.kind === "module" ? (preservedModule.sourcePath ?? "") : "";
 	if (node.kind === "module" && node.sourcePath) {
 		return {
 			selected: node.sourcePath,
@@ -277,10 +268,7 @@ function TreemapRoute() {
 		bundle.graph.nodes.forEach((node) => {
 			const colorKey = node.cluster ?? node.package?.name ?? node.type ?? node.path;
 			if (!colorMap.has(colorKey)) {
-				colorMap.set(
-					colorKey,
-					colors.list[colorMap.size] ?? colors.deterministic(colorKey),
-				);
+				colorMap.set(colorKey, colors.list[colorMap.size] ?? colors.deterministic(colorKey));
 			}
 		});
 		return colorMap;
@@ -293,10 +281,7 @@ function TreemapRoute() {
 
 	const focusNodeId = search.focus || "root";
 	const activeNodeId = search.selected || focusNodeId;
-	const updateTreemapSearch = (
-		patch: Partial<TreemapSearch>,
-		options?: { replace?: boolean },
-	) => {
+	const updateTreemapSearch = (patch: Partial<TreemapSearch>, options?: { replace?: boolean }) => {
 		void navigate({
 			replace: options?.replace ?? false,
 			resetScroll: false,
@@ -311,13 +296,14 @@ function TreemapRoute() {
 		[resolvedFocusNode, treemap.nodesById],
 	);
 	const parentNode = resolvedFocusNode.parentId
-		? treemap.nodesById.get(resolvedFocusNode.parentId) ?? null
+		? (treemap.nodesById.get(resolvedFocusNode.parentId) ?? null)
 		: null;
-	const hoveredNode = hoveredNodeId
-		? treemap.nodesById.get(hoveredNodeId) ?? null
-		: null;
+	const hoveredNode = hoveredNodeId ? (treemap.nodesById.get(hoveredNodeId) ?? null) : null;
 	const preservedExplorerModule = useMemo(() => {
-		if (hoveredNode?.kind === "module" && isNodeInBranch(hoveredNode, resolvedFocusNode.id, treemap.nodesById)) {
+		if (
+			hoveredNode?.kind === "module" &&
+			isNodeInBranch(hoveredNode, resolvedFocusNode.id, treemap.nodesById)
+		) {
 			return hoveredNode;
 		}
 		if (
@@ -333,9 +319,8 @@ function TreemapRoute() {
 		[preservedExplorerModule, resolvedFocusNode],
 	);
 
-	const visibleNodes = resolvedFocusNode.children.length > 0
-		? resolvedFocusNode.children
-		: [resolvedFocusNode];
+	const visibleNodes =
+		resolvedFocusNode.children.length > 0 ? resolvedFocusNode.children : [resolvedFocusNode];
 	const sortedVisibleNodes = useMemo(
 		() => [...visibleNodes].sort((left, right) => right.size - left.size),
 		[visibleNodes],
@@ -347,10 +332,7 @@ function TreemapRoute() {
 	const pagedVisibleNodes = useMemo(
 		() =>
 			paginationEnabled
-				? sortedVisibleNodes.slice(
-					pageStart,
-					pageStart + TREEMAP_PAGE_SIZE,
-				)
+				? sortedVisibleNodes.slice(pageStart, pageStart + TREEMAP_PAGE_SIZE)
 				: sortedVisibleNodes,
 		[pageStart, paginationEnabled, sortedVisibleNodes],
 	);
@@ -365,11 +347,13 @@ function TreemapRoute() {
 
 	const rectangles = useMemo(
 		() =>
-			layoutTreemap(pagedVisibleNodes, 0, 0, TREEMAP_LAYOUT_WIDTH, TREEMAP_LAYOUT_HEIGHT).map((rect, index) => ({
-				...rect,
-				legendIndex: pageStart + index + 1,
-				inlineLabel: getInlineLabelLayout(rect.node, rect.width, rect.height),
-			})),
+			layoutTreemap(pagedVisibleNodes, 0, 0, TREEMAP_LAYOUT_WIDTH, TREEMAP_LAYOUT_HEIGHT).map(
+				(rect, index) => ({
+					...rect,
+					legendIndex: pageStart + index + 1,
+					inlineLabel: getInlineLabelLayout(rect.node, rect.width, rect.height),
+				}),
+			),
 		[pagedVisibleNodes, pageStart],
 	);
 	const denseTailGrid = useMemo<DenseTailGrid | null>(() => {
@@ -401,7 +385,8 @@ function TreemapRoute() {
 		const maxRows = Math.max(1, Math.floor((availableHeight + gap) / (minTileSize + gap)));
 		const capacity = Math.max(1, maxColumns * maxRows);
 		const hiddenCount = Math.max(0, denseTailRects.length - capacity);
-		const visibleRects = hiddenCount > 0 ? denseTailRects.slice(0, capacity - 1) : denseTailRects.slice(0, capacity);
+		const visibleRects =
+			hiddenCount > 0 ? denseTailRects.slice(0, capacity - 1) : denseTailRects.slice(0, capacity);
 		const tileCount = visibleRects.length + (hiddenCount > 0 ? 1 : 0);
 		const columns = Math.min(maxColumns, Math.max(1, Math.ceil(Math.sqrt(tileCount))));
 		const rows = Math.max(1, Math.ceil(tileCount / columns));
@@ -508,11 +493,7 @@ function TreemapRoute() {
 							</Button>
 						)}
 						{resolvedFocusNode.id !== treemap.root.id && (
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => handleNavigateTo(treemap.root.id)}
-							>
+							<Button variant="outline" size="sm" onClick={() => handleNavigateTo(treemap.root.id)}>
 								Reset view
 							</Button>
 						)}
@@ -524,8 +505,8 @@ function TreemapRoute() {
 						</Button>
 					</div>
 					<p className="mt-2 text-slate-600 dark:text-slate-400">
-						Size reflects total direct dependency edges for each branch or file.
-						Click folders or packages to drill in, then click files to inspect the hotspot.
+						Size reflects total direct dependency edges for each branch or file. Click folders or
+						packages to drill in, then click files to inspect the hotspot.
 					</p>
 				</div>
 
@@ -585,10 +566,7 @@ function TreemapRoute() {
 								variant="outline"
 								size="sm"
 								onClick={() =>
-									updateTreemapSearch(
-										{ paginate: !paginationEnabled, page: 0 },
-										{ replace: true },
-									)
+									updateTreemapSearch({ paginate: !paginationEnabled, page: 0 }, { replace: true })
 								}
 							>
 								{paginationEnabled ? "Show global overview" : "Enable pagination"}
@@ -597,10 +575,7 @@ function TreemapRoute() {
 								variant="outline"
 								size="sm"
 								onClick={() =>
-									updateTreemapSearch(
-										{ page: Math.max(0, pageIndex - 1) },
-										{ replace: true },
-									)
+									updateTreemapSearch({ page: Math.max(0, pageIndex - 1) }, { replace: true })
 								}
 								disabled={!paginationEnabled || totalPages <= 1 || pageIndex === 0}
 							>
@@ -629,116 +604,118 @@ function TreemapRoute() {
 							viewBox={`0 0 ${TREEMAP_LAYOUT_WIDTH} ${TREEMAP_LAYOUT_HEIGHT}`}
 							className="absolute inset-0 h-full w-full"
 						>
-						{rectangles.map((rect) => {
-							if (denseTailGrid && isDenseTailRect(rect)) {
-								return null;
-							}
+							{rectangles.map((rect) => {
+								if (denseTailGrid && isDenseTailRect(rect)) {
+									return null;
+								}
 
-							const isActive = rect.node.id === resolvedActiveNode.id;
-							const isHovered = rect.node.id === hoveredNodeId;
-							return (
-								<g
-									key={rect.id}
-									onClick={() => handleRectClick(rect.node)}
-									className="cursor-pointer transition-opacity hover:opacity-90"
-									onMouseEnter={() => setHoveredNodeId(rect.node.id)}
-									onMouseLeave={() => setHoveredNodeId((current) => (current === rect.node.id ? null : current))}
-								>
-									<title>
-										#{rect.legendIndex} {getNodeTitle(rect.node)}
-										{`\n${getNodeSubtitle(rect.node)}`}
-										{`\n${getRectCaption(rect.node)}`}
-									</title>
-									<rect
-										x={rect.x + 2}
-										y={rect.y + 2}
-										width={Math.max(0, rect.width - 4)}
-										height={Math.max(0, rect.height - 4)}
-										fill={rect.node.color}
-										stroke={isActive || isHovered ? "#0f172a" : "rgba(255,255,255,0.92)"}
-										strokeWidth={isActive ? 4 : isHovered ? 3 : 2}
-										rx={10}
-										opacity={rect.node.kind === "module" ? 0.9 : 0.84}
-									/>
-									{getRectNumberVisibility(rect.width, rect.height) && (
-										<g>
-											<rect
-												x={rect.x + 10}
-												y={rect.y + 10}
-												width={Math.min(34, Math.max(24, rect.width - 20))}
-												height={20}
-												rx={10}
-												fill="rgba(15,23,42,0.72)"
-											/>
-											<text
-												x={rect.x + 10 + Math.min(34, Math.max(24, rect.width - 20)) / 2}
-												y={rect.y + 24}
-												textAnchor="middle"
-												fontSize="11"
-												fontWeight="700"
-												fill="white"
+								const isActive = rect.node.id === resolvedActiveNode.id;
+								const isHovered = rect.node.id === hoveredNodeId;
+								return (
+									<g
+										key={rect.id}
+										onClick={() => handleRectClick(rect.node)}
+										className="cursor-pointer transition-opacity hover:opacity-90"
+										onMouseEnter={() => setHoveredNodeId(rect.node.id)}
+										onMouseLeave={() =>
+											setHoveredNodeId((current) => (current === rect.node.id ? null : current))
+										}
+									>
+										<title>
+											#{rect.legendIndex} {getNodeTitle(rect.node)}
+											{`\n${getNodeSubtitle(rect.node)}`}
+											{`\n${getRectCaption(rect.node)}`}
+										</title>
+										<rect
+											x={rect.x + 2}
+											y={rect.y + 2}
+											width={Math.max(0, rect.width - 4)}
+											height={Math.max(0, rect.height - 4)}
+											fill={rect.node.color}
+											stroke={isActive || isHovered ? "#0f172a" : "rgba(255,255,255,0.92)"}
+											strokeWidth={isActive ? 4 : isHovered ? 3 : 2}
+											rx={10}
+											opacity={rect.node.kind === "module" ? 0.9 : 0.84}
+										/>
+										{getRectNumberVisibility(rect.width, rect.height) && (
+											<g>
+												<rect
+													x={rect.x + 10}
+													y={rect.y + 10}
+													width={Math.min(34, Math.max(24, rect.width - 20))}
+													height={20}
+													rx={10}
+													fill="rgba(15,23,42,0.72)"
+												/>
+												<text
+													x={rect.x + 10 + Math.min(34, Math.max(24, rect.width - 20)) / 2}
+													y={rect.y + 24}
+													textAnchor="middle"
+													fontSize="11"
+													fontWeight="700"
+													fill="white"
+												>
+													#{rect.legendIndex}
+												</text>
+											</g>
+										)}
+										{rect.inlineLabel && (
+											<foreignObject
+												x={rect.x + 14}
+												y={rect.y + 36}
+												width={Math.max(0, rect.width - 28)}
+												height={Math.max(0, rect.height - 50)}
 											>
-												#{rect.legendIndex}
-											</text>
-										</g>
-									)}
-									{rect.inlineLabel && (
-										<foreignObject
-											x={rect.x + 14}
-											y={rect.y + 36}
-											width={Math.max(0, rect.width - 28)}
-											height={Math.max(0, rect.height - 50)}
-										>
-											<div className="flex h-full flex-col justify-between overflow-hidden text-white">
-												<div>
-													<div
-														className="space-y-0 text-sm font-semibold"
-														style={{ lineHeight: `${TITLE_LINE_HEIGHT}px` }}
-													>
-														{rect.inlineLabel.titleLines.map((line, index) => (
-															<p
-																key={`${rect.id}-title-${index}`}
-																className="overflow-hidden text-ellipsis whitespace-nowrap"
-															>
-																{line}
-															</p>
-														))}
+												<div className="flex h-full flex-col justify-between overflow-hidden text-white">
+													<div>
+														<div
+															className="space-y-0 text-sm font-semibold"
+															style={{ lineHeight: `${TITLE_LINE_HEIGHT}px` }}
+														>
+															{rect.inlineLabel.titleLines.map((line, index) => (
+																<p
+																	key={`${rect.id}-title-${index}`}
+																	className="overflow-hidden text-ellipsis whitespace-nowrap"
+																>
+																	{line}
+																</p>
+															))}
+														</div>
+														<div
+															className="mt-1 space-y-0 text-xs opacity-90"
+															style={{ lineHeight: `${CAPTION_LINE_HEIGHT}px` }}
+														>
+															{rect.inlineLabel.captionLines.map((line, index) => (
+																<p
+																	key={`${rect.id}-caption-${index}`}
+																	className="overflow-hidden text-ellipsis whitespace-nowrap"
+																>
+																	{line}
+																</p>
+															))}
+														</div>
 													</div>
-													<div
-														className="mt-1 space-y-0 text-xs opacity-90"
-														style={{ lineHeight: `${CAPTION_LINE_HEIGHT}px` }}
-													>
-														{rect.inlineLabel.captionLines.map((line, index) => (
-															<p
-																key={`${rect.id}-caption-${index}`}
-																className="overflow-hidden text-ellipsis whitespace-nowrap"
-															>
-																{line}
-															</p>
-														))}
-													</div>
+													{rect.inlineLabel.hintLines.length > 0 && (
+														<div
+															className="space-y-0 text-[11px] opacity-80"
+															style={{ lineHeight: `${HINT_LINE_HEIGHT}px` }}
+														>
+															{rect.inlineLabel.hintLines.map((line, index) => (
+																<p
+																	key={`${rect.id}-hint-${index}`}
+																	className="overflow-hidden text-ellipsis whitespace-nowrap"
+																>
+																	{line}
+																</p>
+															))}
+														</div>
+													)}
 												</div>
-												{rect.inlineLabel.hintLines.length > 0 && (
-													<div
-														className="space-y-0 text-[11px] opacity-80"
-														style={{ lineHeight: `${HINT_LINE_HEIGHT}px` }}
-													>
-														{rect.inlineLabel.hintLines.map((line, index) => (
-															<p
-																key={`${rect.id}-hint-${index}`}
-																className="overflow-hidden text-ellipsis whitespace-nowrap"
-															>
-																{line}
-															</p>
-														))}
-													</div>
-												)}
-											</div>
-										</foreignObject>
-									)}
-								</g>
-							);
-						})}
+											</foreignObject>
+										)}
+									</g>
+								);
+							})}
 						</svg>
 						<div className="pointer-events-none absolute inset-0">
 							{rectangles
@@ -773,7 +750,9 @@ function TreemapRoute() {
 											<Portal>
 												<TooltipContent className="max-w-80">
 													<div className="space-y-1">
-														<p className="font-semibold">#{rect.legendIndex} {getNodeTitle(rect.node)}</p>
+														<p className="font-semibold">
+															#{rect.legendIndex} {getNodeTitle(rect.node)}
+														</p>
 														<p className="text-xs opacity-80">{getNodeSubtitle(rect.node)}</p>
 														<p className="text-xs opacity-80">{getRectCaption(rect.node)}</p>
 													</div>
@@ -799,7 +778,9 @@ function TreemapRoute() {
 													<button
 														key={tile.id}
 														type="button"
-														onClick={() => updateTreemapSearch({ paginate: true, page: 0 }, { replace: true })}
+														onClick={() =>
+															updateTreemapSearch({ paginate: true, page: 0 }, { replace: true })
+														}
 														className="absolute flex items-center justify-center rounded-[10px] text-[10px] font-semibold text-white shadow-sm transition hover:scale-[1.03]"
 														style={{
 															left: tile.x,
@@ -834,7 +815,9 @@ function TreemapRoute() {
 													<Portal>
 														<TooltipContent className="max-w-80">
 															<div className="space-y-1">
-																<p className="font-semibold">#{tile.legendIndex} {tile.label}</p>
+																<p className="font-semibold">
+																	#{tile.legendIndex} {tile.label}
+																</p>
 																<p className="text-xs opacity-80">{tile.caption}</p>
 															</div>
 														</TooltipContent>
@@ -890,12 +873,12 @@ function TreemapRoute() {
 
 						{resolvedActiveNode.kind === "module" && resolvedActiveNode.sourceNode && (
 							<div className="mt-4 rounded-lg bg-slate-50/80 p-4 text-sm text-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
-								<p>
-									Named imports in source: {resolvedActiveNode.totalNamedImports}
-								</p>
+								<p>Named imports in source: {resolvedActiveNode.totalNamedImports}</p>
 								<p className="mt-1">
-									Imported by {formatCount(resolvedActiveNode.sourceNode.importedBy.length, "module")}
-									 and imports {formatCount(resolvedActiveNode.sourceNode.importees.length, "module")}.
+									Imported by{" "}
+									{formatCount(resolvedActiveNode.sourceNode.importedBy.length, "module")}
+									and imports{" "}
+									{formatCount(resolvedActiveNode.sourceNode.importees.length, "module")}.
 								</p>
 							</div>
 						)}
@@ -917,7 +900,9 @@ function TreemapRoute() {
 									type="button"
 									onClick={() => handleRectClick(rect.node)}
 									onMouseEnter={() => setHoveredNodeId(rect.node.id)}
-									onMouseLeave={() => setHoveredNodeId((current) => (current === rect.node.id ? null : current))}
+									onMouseLeave={() =>
+										setHoveredNodeId((current) => (current === rect.node.id ? null : current))
+									}
 									className="block w-full rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700 dark:hover:bg-slate-900"
 								>
 									<div className="flex items-start gap-3">
@@ -983,9 +968,9 @@ function TreemapRoute() {
 						<div className="text-sm text-blue-800 dark:text-blue-200">
 							<p className="font-semibold">About this view</p>
 							<p className="mt-1">
-								The treemap now groups workspace code by folders and third-party code by package,
-								so the first click reveals structure instead of dropping you into a broken leaf.
-								Area reflects direct dependency pressure using incoming plus outgoing edges.
+								The treemap now groups workspace code by folders and third-party code by package, so
+								the first click reveals structure instead of dropping you into a broken leaf. Area
+								reflects direct dependency pressure using incoming plus outgoing edges.
 							</p>
 						</div>
 					</div>

@@ -62,9 +62,7 @@ const outputFixture: ModvizOutput = {
 			importees: ["src/features/foo/foo.ts", "node_modules/lodash-es/index.js"],
 			importedBy: ["src/shared/api.ts"],
 			isBarrelFile: true,
-			chain: [
-				["src/main.ts", "src/shared/api.ts", "src/features/foo/index.ts"],
-			],
+			chain: [["src/main.ts", "src/shared/api.ts", "src/features/foo/index.ts"]],
 		}),
 		baseNode({
 			name: "foo.ts",
@@ -83,10 +81,7 @@ const outputFixture: ModvizOutput = {
 		baseNode({
 			name: "index.ts",
 			path: "packages/core/src/index.ts",
-			importees: [
-				"packages/core/src/helper.ts",
-				"node_modules/lodash-es/index.js",
-			],
+			importees: ["packages/core/src/helper.ts", "node_modules/lodash-es/index.js"],
 			importedBy: ["src/main.ts"],
 			chain: [["src/main.ts", "packages/core/src/index.ts"]],
 		}),
@@ -94,13 +89,7 @@ const outputFixture: ModvizOutput = {
 			name: "helper.ts",
 			path: "packages/core/src/helper.ts",
 			importedBy: ["packages/core/src/index.ts"],
-			chain: [
-				[
-					"src/main.ts",
-					"packages/core/src/index.ts",
-					"packages/core/src/helper.ts",
-				],
-			],
+			chain: [["src/main.ts", "packages/core/src/index.ts", "packages/core/src/helper.ts"]],
 		}),
 		baseNode({
 			name: "index.ts",
@@ -109,9 +98,7 @@ const outputFixture: ModvizOutput = {
 			importees: ["src/features/bar/bar.ts", "node_modules/lodash-es/index.js"],
 			importedBy: ["src/shared/api.ts"],
 			isBarrelFile: true,
-			chain: [
-				["src/main.ts", "src/shared/api.ts", "src/features/bar/index.ts"],
-			],
+			chain: [["src/main.ts", "src/shared/api.ts", "src/features/bar/index.ts"]],
 		}),
 		baseNode({
 			name: "bar.ts",
@@ -131,9 +118,7 @@ const outputFixture: ModvizOutput = {
 			path: "node_modules/date-fns/index.js",
 			type: "external",
 			importedBy: ["src/shared/api.ts"],
-			chain: [
-				["src/main.ts", "src/shared/api.ts", "node_modules/date-fns/index.js"],
-			],
+			chain: [["src/main.ts", "src/shared/api.ts", "node_modules/date-fns/index.js"]],
 		}),
 		baseNode({
 			name: "lodash-es",
@@ -145,11 +130,7 @@ const outputFixture: ModvizOutput = {
 				"src/features/bar/index.ts",
 			],
 			chain: [
-				[
-					"src/main.ts",
-					"packages/core/src/index.ts",
-					"node_modules/lodash-es/index.js",
-				],
+				["src/main.ts", "packages/core/src/index.ts", "node_modules/lodash-es/index.js"],
 				[
 					"src/main.ts",
 					"src/shared/api.ts",
@@ -208,11 +189,7 @@ test("buildModvizLlmOutput highlights barrel impact and multiple origins", () =>
 		{
 			path: "packages/core/src/index.ts",
 			originChains: [
-				[
-					"src/main.ts",
-					"packages/core/src/index.ts",
-					"node_modules/lodash-es/index.js",
-				],
+				["src/main.ts", "packages/core/src/index.ts", "node_modules/lodash-es/index.js"],
 			],
 		},
 		{
@@ -251,9 +228,7 @@ test("buildModvizLlmOutput highlights barrel impact and multiple origins", () =>
 	});
 	expect(fooBarrel?.nodeModulesIntroduced).toHaveLength(2);
 
-	const lodashPackage = report.externalPackages.find(
-		(pkg) => pkg.packageName === "lodash-es",
-	);
+	const lodashPackage = report.externalPackages.find((pkg) => pkg.packageName === "lodash-es");
 	expect(lodashPackage).toMatchObject({
 		sourceCount: 4,
 		sourceGroupCount: 4,
@@ -332,15 +307,11 @@ test("renderModvizLlmDrilldown prints focused package and node details", () => {
 	expect(markdown).toContain("## Package: lodash-es");
 	expect(markdown).toContain("- Source files: 4");
 	expect(markdown).toContain("### Source groups");
-	expect(markdown).toContain(
-		"- @weliihq/core (1 file): packages/core/src/index.ts",
-	);
+	expect(markdown).toContain("- @weliihq/core (1 file): packages/core/src/index.ts");
 	expect(markdown).toContain("### Representative modules");
 	expect(markdown).toContain("- index.js");
 	expect(markdown).toContain("- omit.js");
-	expect(markdown).toContain(
-		"## Node: @weliihq/core (packages/core/src/index.ts)",
-	);
+	expect(markdown).toContain("## Node: @weliihq/core (packages/core/src/index.ts)");
 	expect(markdown).toContain("- Direct importers: 1");
 	expect(markdown).toContain("### Direct importers");
 	expect(markdown).toContain("- src/main.ts");

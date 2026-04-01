@@ -15,9 +15,7 @@ import {
 	Calendar,
 } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
-import {
-	isNodeDetailsOpenAtom,
-} from "~/components/graph/common/use-graph-atoms";
+import { isNodeDetailsOpenAtom } from "~/components/graph/common/use-graph-atoms";
 
 export function NotesPanel(props: PropsWithChildren) {
 	const [notes, setNotes] = useState([
@@ -162,11 +160,7 @@ export function NotesPanel(props: PropsWithChildren) {
 														title: e.target.value,
 													};
 													setActiveNote(updatedNote);
-													setNotes(
-														notes.map((n) =>
-															n.id === activeNote.id ? updatedNote : n,
-														),
-													);
+													setNotes(notes.map((n) => (n.id === activeNote.id ? updatedNote : n)));
 												}}
 												className="w-full text-xl font-bold bg-transparent border-none outline-hidden text-gray-900 dark:text-gray-100 placeholder-gray-400"
 												placeholder="Note title..."
@@ -183,11 +177,7 @@ export function NotesPanel(props: PropsWithChildren) {
 														content: e.target.value,
 													};
 													setActiveNote(updatedNote);
-													setNotes(
-														notes.map((n) =>
-															n.id === activeNote.id ? updatedNote : n,
-														),
-													);
+													setNotes(notes.map((n) => (n.id === activeNote.id ? updatedNote : n)));
 												}}
 												placeholder="Start writing your note..."
 												className="w-full h-full resize-none border-none outline-hidden text-base text-gray-700 dark:text-gray-300 bg-transparent placeholder-gray-400 leading-relaxed"

@@ -18,7 +18,11 @@ function SummaryRoute() {
 			title="Summary"
 			description="Tabular views for hotspots, direct import fan-in and fan-out, cluster sizes, and package-level distribution."
 		>
-			{isModvizBundleReady(bundle) ? <SummaryView bundle={bundle} /> : <SetupView bundle={bundle} />}
+			{isModvizBundleReady(bundle) ? (
+				<SummaryView bundle={bundle} />
+			) : (
+				<SetupView bundle={bundle} />
+			)}
 		</ModvizLayout>
 	);
 }

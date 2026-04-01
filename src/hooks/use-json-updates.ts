@@ -1,9 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { startTransition, useEffect, useRef, useState } from "react";
-import {
-	fetchModvizJsonStatus,
-	type ModvizJsonStatus,
-} from "~/utils/modviz-data";
+import { fetchModvizJsonStatus, type ModvizJsonStatus } from "~/utils/modviz-data";
 
 export function useJsonUpdates(intervalMs = 2500) {
 	const router = useRouter();
@@ -39,10 +36,7 @@ export function useJsonUpdates(intervalMs = 2500) {
 					return;
 				}
 
-				if (
-					nextStatus.lastModified > lastModifiedRef.current &&
-					!isRefreshingRef.current
-				) {
+				if (nextStatus.lastModified > lastModifiedRef.current && !isRefreshingRef.current) {
 					lastModifiedRef.current = nextStatus.lastModified;
 					isRefreshingRef.current = true;
 					setIsRefreshing(true);

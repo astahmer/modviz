@@ -46,9 +46,9 @@ test("getExternalPackageName handles relative node_modules paths", () => {
 });
 
 test("getExternalPackageName handles scoped packages", () => {
-	expect(getExternalPackageName(createNode("node_modules/@tanstack/react-router/dist/index.js"))).toBe(
-		"@tanstack/react-router",
-	);
+	expect(
+		getExternalPackageName(createNode("node_modules/@tanstack/react-router/dist/index.js")),
+	).toBe("@tanstack/react-router");
 });
 
 test("getExternalPackageName handles pnpm nested node_modules paths", () => {
@@ -60,16 +60,12 @@ test("getExternalPackageName handles pnpm nested node_modules paths", () => {
 });
 
 test("getExternalPackageName ignores bogus package metadata", () => {
-	expect(
-		getExternalPackageName(
-			createNode("node_modules/lodash/lodash.js", "node_modules"),
-		),
-	).toBe("lodash");
-	expect(
-		getExternalPackageName(
-			createNode("node_modules/lodash/lodash.js", "lodash"),
-		),
-	).toBe("lodash");
+	expect(getExternalPackageName(createNode("node_modules/lodash/lodash.js", "node_modules"))).toBe(
+		"lodash",
+	);
+	expect(getExternalPackageName(createNode("node_modules/lodash/lodash.js", "lodash"))).toBe(
+		"lodash",
+	);
 });
 
 test("buildModvizSummary ranks hotspots by graph-derived transitive reach without llm", () => {
@@ -118,7 +114,9 @@ test("buildModvizSummary ranks hotspots by graph-derived transitive reach withou
 		[root.path, 1],
 		[leaf.path, 0],
 	]);
-	expect(summary.hotspots[0]?.description).toBe("2 transitive imports • 1 direct imports • 0 inbound imports");
+	expect(summary.hotspots[0]?.description).toBe(
+		"2 transitive imports • 1 direct imports • 0 inbound imports",
+	);
 });
 
 test("buildModvizSummary excludes self from transitive reach in cycles", () => {

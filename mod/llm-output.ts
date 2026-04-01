@@ -55,10 +55,7 @@ export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 		)
 		.sort((left, right) => compareHotspots(right, left));
 
-	const externalPackages = buildExternalPackages(
-		externalDependencies,
-		metadata,
-	);
+	const externalPackages = buildExternalPackages(externalDependencies, metadata);
 
 	return {
 		format: "modviz-llm-v1",
@@ -68,14 +65,11 @@ export function buildModvizLlmOutput(output: ModvizOutput): ModvizLlmOutput {
 		},
 		summary: {
 			totalNodes: output.nodes.length,
-			internalNodes: output.nodes.filter((node) => node.type !== "external")
-				.length,
+			internalNodes: output.nodes.filter((node) => node.type !== "external").length,
 			barrelFiles: barrelFiles.length,
 			externalDependencies: externalDependencies.length,
 			externalPackages: externalPackages.length,
-			nodesWithMultipleOrigins: output.nodes.filter(
-				(node) => node.chain.length > 1,
-			).length,
+			nodesWithMultipleOrigins: output.nodes.filter((node) => node.chain.length > 1).length,
 			topHotspots: hotspots.slice(0, 10).map((hotspot) => ({
 				path: hotspot.path,
 				displayPath: hotspot.displayPath,
@@ -118,12 +112,9 @@ export function renderModvizLlmMarkdown(
 			hotspot.type !== "external" &&
 			hotspot.type !== "entry" &&
 			(hotspot.directImporterCount > 1 || hotspot.isBarrelFile) &&
-			(hotspot.reachableNodeModulesCount > 0 ||
-				hotspot.reachableModulesCount >= 25),
+			(hotspot.reachableNodeModulesCount > 0 || hotspot.reachableModulesCount >= 25),
 	);
-	const multiSourcePackages = report.externalPackages.filter(
-		(pkg) => pkg.sourceGroupCount > 1,
-	);
+	const multiSourcePackages = report.externalPackages.filter((pkg) => pkg.sourceGroupCount > 1);
 
 	const lines = [
 		"# modviz LLM report",
@@ -131,12 +122,8 @@ export function renderModvizLlmMarkdown(
 		...(options.focus?.packageName || options.focus?.nodeQuery
 			? [
 					"## Active focus",
-					...(options.focus.packageName
-						? [`- Package query: ${options.focus.packageName}`]
-						: []),
-					...(options.focus.nodeQuery
-						? [`- Node query: ${options.focus.nodeQuery}`]
-						: []),
+					...(options.focus.packageName ? [`- Package query: ${options.focus.packageName}`] : []),
+					...(options.focus.nodeQuery ? [`- Node query: ${options.focus.nodeQuery}`] : []),
 					"",
 				]
 			: []),
@@ -155,21 +142,15 @@ export function renderModvizLlmMarkdown(
 		lines.push("- None");
 	} else {
 		for (const hotspot of auditHotspots.slice(0, 10)) {
-			const kindLabel = hotspot.isBarrelFile
-				? `explicit barrel, ${hotspot.type}`
-				: hotspot.type;
+			const kindLabel = hotspot.isBarrelFile ? `explicit barrel, ${hotspot.type}` : hotspot.type;
 			lines.push(
 				`- ${hotspot.displayPath} (${kindLabel}) reaches ${hotspot.reachableModulesCount} modules, including ${hotspot.reachableNodeModulesCount} node_modules modules; direct importers: ${formatPreviewList(
-					hotspot.directImporters.map((importer) =>
-						formatPathForLlm(importer, report.metadata),
-					),
+					hotspot.directImporters.map((importer) => formatPathForLlm(importer, report.metadata)),
 					5,
 				)}`,
 			);
 			if (hotspot.topExternalPackages.length > 0) {
-				lines.push(
-					`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`,
-				);
+				lines.push(`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`);
 			}
 			if (hotspot.signals.length > 0) {
 				lines.push(`  Signals: ${formatPreviewList(hotspot.signals, 4)}`);
@@ -194,16 +175,12 @@ export function renderModvizLlmMarkdown(
 		for (const hotspot of internalFanoutCulprits.slice(0, 10)) {
 			lines.push(
 				`- ${hotspot.displayPath}${hotspot.isBarrelFile ? " [explicit barrel]" : ""} reaches ${hotspot.reachableModulesCount} modules, including ${hotspot.reachableNodeModulesCount} node_modules modules; direct importers: ${formatPreviewList(
-					hotspot.directImporters.map((importer) =>
-						formatPathForLlm(importer, report.metadata),
-					),
+					hotspot.directImporters.map((importer) => formatPathForLlm(importer, report.metadata)),
 					5,
 				)}`,
 			);
 			if (hotspot.topExternalPackages.length > 0) {
-				lines.push(
-					`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`,
-				);
+				lines.push(`  Pulls in: ${formatPreviewList(hotspot.topExternalPackages, 5)}`);
 			}
 			lines.push(`  Signals: ${formatPreviewList(hotspot.signals, 4)}`);
 		}
@@ -220,15 +197,12 @@ export function renderModvizLlmMarkdown(
 					: `${pkg.sourceCount} source files across ${pkg.sourceGroupCount} source groups`;
 			lines.push(`- ${pkg.packageName} is introduced by ${sourceSummary}`);
 			if (pkg.sourceGroups.length > 0) {
-				lines.push(
-					`  Top source groups: ${formatSourceGroupPreview(pkg.sourceGroups, 6)}`,
-				);
+				lines.push(`  Top source groups: ${formatSourceGroupPreview(pkg.sourceGroups, 6)}`);
 			}
 			if (pkg.barrelSources.length > 0) {
-				const fanoutSources = buildSourceGroups(
-					pkg.barrelSources,
-					report.metadata,
-				).map((sourceGroup) => sourceGroup.label);
+				const fanoutSources = buildSourceGroups(pkg.barrelSources, report.metadata).map(
+					(sourceGroup) => sourceGroup.label,
+				);
 				lines.push(`  Fan-out sources: ${formatPreviewList(fanoutSources, 5)}`);
 			}
 			if (pkg.modulePaths.length > 0) {
@@ -237,11 +211,7 @@ export function renderModvizLlmMarkdown(
 						pkg.modulePaths
 							.slice(0, 3)
 							.map((modulePath) =>
-								formatModulePathWithinPackage(
-									modulePath,
-									pkg.packageName,
-									report.metadata,
-								),
+								formatModulePathWithinPackage(modulePath, pkg.packageName, report.metadata),
 							),
 						3,
 					)}`,
@@ -276,10 +246,7 @@ export function renderModvizLlmMarkdown(
 			...trimTrailingBlankLines(
 				options.focusedDrilldown
 					.split("\n")
-					.filter(
-						(line, index) =>
-							!(index === 0 && line.trim() === "# modviz LLM drilldown"),
-					),
+					.filter((line, index) => !(index === 0 && line.trim() === "# modviz LLM drilldown")),
 			),
 		);
 	}
@@ -287,19 +254,13 @@ export function renderModvizLlmMarkdown(
 	return `${lines.join("\n")}\n`;
 }
 
-export function renderModvizLlmDrilldown(
-	report: ModvizLlmOutput,
-	options: ModvizFocusOptions,
-) {
+export function renderModvizLlmDrilldown(report: ModvizLlmOutput, options: ModvizFocusOptions) {
 	const limit = Math.max(options.limit ?? 20, 1);
 	const lines = ["# modviz LLM drilldown", ""];
 	let renderedSectionCount = 0;
 
 	if (options.packageName) {
-		const packageMatches = findExternalPackageMatches(
-			report.externalPackages,
-			options.packageName,
-		);
+		const packageMatches = findExternalPackageMatches(report.externalPackages, options.packageName);
 
 		if (packageMatches.length === 0) {
 			lines.push(`## Package: ${options.packageName}`, "- No matching package");
@@ -338,11 +299,7 @@ export function renderModvizLlmDrilldown(
 		lines.push("");
 	}
 
-	if (
-		renderedSectionCount === 0 &&
-		!options.packageName &&
-		!options.nodeQuery
-	) {
+	if (renderedSectionCount === 0 && !options.packageName && !options.nodeQuery) {
 		lines.push("- No drilldown query provided", "");
 	}
 
@@ -355,10 +312,9 @@ export function resolveModvizFocus(
 ): ModvizFocusResolution {
 	const includedPaths = new Set<string>();
 	const matchedPackageNames = options.packageName
-		? findExternalPackageMatches(
-				report.externalPackages,
-				options.packageName,
-			).map((pkg) => pkg.packageName)
+		? findExternalPackageMatches(report.externalPackages, options.packageName).map(
+				(pkg) => pkg.packageName,
+			)
 		: [];
 	const matchedNodePaths = options.nodeQuery
 		? findNodeMatches(report, options.nodeQuery).map((node) => node.path)
@@ -396,9 +352,7 @@ export function resolveModvizFocus(
 		}
 
 		const directImporters =
-			node.hotspot?.directImporters ??
-			node.externalDependency?.directImporters ??
-			[];
+			node.hotspot?.directImporters ?? node.externalDependency?.directImporters ?? [];
 		for (const importer of directImporters) {
 			includedPaths.add(importer);
 		}
@@ -454,9 +408,7 @@ function buildHotspot(
 		signals.push("barrel-file");
 	}
 	if (reachableNodeModulesCount > 0) {
-		signals.push(
-			`pulls ${reachableNodeModulesCount} node_modules modules transitively`,
-		);
+		signals.push(`pulls ${reachableNodeModulesCount} node_modules modules transitively`);
 	}
 	if (node.importedBy.length > 1) {
 		signals.push(`shared by ${node.importedBy.length} direct importers`);
@@ -554,9 +506,7 @@ function buildExternalDependencyReport(
 		Array.from(
 			new Set(
 				node.chain
-					.flatMap((chain) =>
-						chain.filter((nodePath) => nodeMap.get(nodePath)?.isBarrelFile),
-					)
+					.flatMap((chain) => chain.filter((nodePath) => nodeMap.get(nodePath)?.isBarrelFile))
 					.filter((nodePath) => nodePath !== node.path)
 					.map((nodePath) => toDisplayPath(nodePath, basePath)),
 			),
@@ -586,10 +536,7 @@ function buildExternalPackages(
 		const current = packageMap.get(packageName);
 
 		if (!current) {
-			const sourceGroups = buildSourceGroups(
-				dependency.directImporters,
-				metadata,
-			);
+			const sourceGroups = buildSourceGroups(dependency.directImporters, metadata);
 			packageMap.set(packageName, {
 				packageName,
 				modulePaths: [dependency.path],
@@ -603,25 +550,13 @@ function buildExternalPackages(
 			continue;
 		}
 
-		current.modulePaths = sortStrings([
-			...current.modulePaths,
-			dependency.path,
-		]);
-		current.sources = sortStrings([
-			...current.sources,
-			...dependency.directImporters,
-		]);
+		current.modulePaths = sortStrings([...current.modulePaths, dependency.path]);
+		current.sources = sortStrings([...current.sources, ...dependency.directImporters]);
 		current.sourceCount = current.sources.length;
 		current.sourceGroups = buildSourceGroups(current.sources, metadata);
 		current.sourceGroupCount = current.sourceGroups.length;
-		current.originChains = dedupeChains([
-			...current.originChains,
-			...dependency.originChains,
-		]);
-		current.barrelSources = sortStrings([
-			...current.barrelSources,
-			...dependency.barrelSources,
-		]);
+		current.originChains = dedupeChains([...current.originChains, ...dependency.originChains]);
+		current.barrelSources = sortStrings([...current.barrelSources, ...dependency.barrelSources]);
 	}
 
 	return Array.from(packageMap.values()).sort((left, right) => {
@@ -632,20 +567,13 @@ function buildExternalPackages(
 	});
 }
 
-function collectReachablePaths(
-	startNode: VizNode,
-	nodeMap: Map<string, VizNode>,
-): Set<string> {
+function collectReachablePaths(startNode: VizNode, nodeMap: Map<string, VizNode>): Set<string> {
 	const reachable = new Set<string>();
 	const stack = [...startNode.importees];
 
 	while (stack.length > 0) {
 		const currentPath = stack.pop();
-		if (
-			!currentPath ||
-			reachable.has(currentPath) ||
-			currentPath === startNode.path
-		) {
+		if (!currentPath || reachable.has(currentPath) || currentPath === startNode.path) {
 			continue;
 		}
 
@@ -668,9 +596,7 @@ function collectReachablePaths(
 
 function normalizeChains(chains: string[][], basePath: string) {
 	return dedupeChains(
-		chains.map((chain) =>
-			chain.map((nodePath) => toDisplayPath(nodePath, basePath)),
-		),
+		chains.map((chain) => chain.map((nodePath) => toDisplayPath(nodePath, basePath))),
 	);
 }
 
@@ -713,9 +639,7 @@ function toDisplayPath(filePath: string, basePath: string) {
 	}
 
 	const relativePath = path.relative(basePath, filePath);
-	return relativePath && !relativePath.startsWith("..")
-		? relativePath
-		: filePath;
+	return relativePath && !relativePath.startsWith("..") ? relativePath : filePath;
 }
 
 function getPackageNameFromNodeModulesPath(filePath: string) {
@@ -765,16 +689,10 @@ function collectExternalPackageNames(nodes: VizNode[]) {
 }
 
 function buildSourceGroups(sources: string[], metadata: VizMetadata) {
-	const groups = new Map<
-		string,
-		LlmExternalPackageReport["sourceGroups"][number]
-	>();
+	const groups = new Map<string, LlmExternalPackageReport["sourceGroups"][number]>();
 
 	for (const source of sortStrings(sources)) {
-		const workspacePackage = getWorkspacePackageForDisplayPath(
-			source,
-			metadata,
-		);
+		const workspacePackage = getWorkspacePackageForDisplayPath(source, metadata);
 		const externalPackage = getPackageNameFromNodeModulesPath(source);
 		const label = workspacePackage?.name ?? externalPackage ?? source;
 		const kind = workspacePackage
@@ -800,17 +718,12 @@ function buildSourceGroups(sources: string[], metadata: VizMetadata) {
 }
 
 function formatChainForLlm(chain: string[], metadata: VizMetadata) {
-	return chain
-		.map((nodePath) => formatPathForLlm(nodePath, metadata))
-		.join(" -> ");
+	return chain.map((nodePath) => formatPathForLlm(nodePath, metadata)).join(" -> ");
 }
 
 function formatPathForLlm(filePath: string, metadata: VizMetadata) {
 	const displayPath = toDisplayPath(filePath, metadata.basePath);
-	const workspacePackage = getWorkspacePackageForDisplayPath(
-		displayPath,
-		metadata,
-	);
+	const workspacePackage = getWorkspacePackageForDisplayPath(displayPath, metadata);
 	if (workspacePackage) {
 		return `${workspacePackage.name} (${displayPath})`;
 	}
@@ -823,10 +736,7 @@ function formatPathForLlm(filePath: string, metadata: VizMetadata) {
 	return displayPath;
 }
 
-function getWorkspacePackageForDisplayPath(
-	displayPath: string,
-	metadata: VizMetadata,
-) {
+function getWorkspacePackageForDisplayPath(displayPath: string, metadata: VizMetadata) {
 	const normalizedDisplayPath = normalizePath(displayPath);
 	const packages = metadata.packages
 		.map((pkg) => ({
@@ -838,9 +748,7 @@ function getWorkspacePackageForDisplayPath(
 				normalizedDisplayPath === pkg.normalizedPath ||
 				normalizedDisplayPath.startsWith(`${pkg.normalizedPath}/`),
 		)
-		.sort(
-			(left, right) => right.normalizedPath.length - left.normalizedPath.length,
-		);
+		.sort((left, right) => right.normalizedPath.length - left.normalizedPath.length);
 
 	return packages[0];
 }
@@ -850,9 +758,7 @@ function normalizePath(filePath: string) {
 }
 
 function sortStrings(values: string[]) {
-	return Array.from(new Set(values)).sort((left, right) =>
-		left.localeCompare(right),
-	);
+	return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 }
 
 function formatPreviewList(values: string[], limit: number) {
@@ -862,9 +768,7 @@ function formatPreviewList(values: string[], limit: number) {
 	}
 
 	const preview = uniqueValues.slice(0, limit).join(", ");
-	return uniqueValues.length > limit
-		? `${preview}, +${uniqueValues.length - limit} more`
-		: preview;
+	return uniqueValues.length > limit ? `${preview}, +${uniqueValues.length - limit} more` : preview;
 }
 
 function formatSourceGroupPreview(
@@ -873,9 +777,7 @@ function formatSourceGroupPreview(
 ) {
 	return formatPreviewList(
 		sourceGroups.map((group) =>
-			group.paths.length > 1
-				? `${group.label} (${group.paths.length} files)`
-				: group.label,
+			group.paths.length > 1 ? `${group.label} (${group.paths.length} files)` : group.label,
 		),
 		limit,
 	);
@@ -893,19 +795,14 @@ function formatModulePathWithinPackage(
 		return displayPath;
 	}
 
-	const packageParts = packageName.startsWith("@")
-		? packageName.split("/")
-		: [packageName];
+	const packageParts = packageName.startsWith("@") ? packageName.split("/") : [packageName];
 	const startIndex = nodeModulesIndex + 1 + packageParts.length;
 	const withinPackage = parts.slice(startIndex).join("/");
 
 	return withinPackage || packageName;
 }
 
-function findExternalPackageMatches(
-	packages: LlmExternalPackageReport[],
-	query: string,
-) {
+function findExternalPackageMatches(packages: LlmExternalPackageReport[], query: string) {
 	const normalizedQuery = normalizeSearchQuery(query);
 	const exactMatches = packages.filter(
 		(pkg) => normalizeSearchQuery(pkg.packageName) === normalizedQuery,
@@ -914,9 +811,7 @@ function findExternalPackageMatches(
 		return exactMatches;
 	}
 
-	return packages.filter((pkg) =>
-		normalizeSearchQuery(pkg.packageName).includes(normalizedQuery),
-	);
+	return packages.filter((pkg) => normalizeSearchQuery(pkg.packageName).includes(normalizedQuery));
 }
 
 function findNodeMatches(report: ModvizLlmOutput, query: string) {
@@ -974,18 +869,14 @@ function findNodeMatches(report: ModvizLlmOutput, query: string) {
 	const normalizedQuery = normalizeSearchQuery(query);
 	const nodes = Array.from(nodesByPath.values());
 	const exactMatches = nodes.filter((node) =>
-		buildNodeSearchTerms(node).some(
-			(term) => normalizeSearchQuery(term) === normalizedQuery,
-		),
+		buildNodeSearchTerms(node).some((term) => normalizeSearchQuery(term) === normalizedQuery),
 	);
 	if (exactMatches.length > 0) {
 		return exactMatches;
 	}
 
 	return nodes.filter((node) =>
-		buildNodeSearchTerms(node).some((term) =>
-			normalizeSearchQuery(term).includes(normalizedQuery),
-		),
+		buildNodeSearchTerms(node).some((term) => normalizeSearchQuery(term).includes(normalizedQuery)),
 	);
 }
 
@@ -1012,9 +903,7 @@ function renderPackageDrilldown(
 	if (pkg.barrelSources.length > 0) {
 		lines.push(
 			`- Fan-out sources: ${formatPreviewList(
-				buildSourceGroups(pkg.barrelSources, metadata).map(
-					(group) => group.label,
-				),
+				buildSourceGroups(pkg.barrelSources, metadata).map((group) => group.label),
 				limit,
 			)}`,
 		);
@@ -1030,9 +919,7 @@ function renderPackageDrilldown(
 	}
 	lines.push("", "### Representative modules");
 	for (const modulePath of pkg.modulePaths.slice(0, limit)) {
-		lines.push(
-			`- ${formatModulePathWithinPackage(modulePath, pkg.packageName, metadata)}`,
-		);
+		lines.push(`- ${formatModulePathWithinPackage(modulePath, pkg.packageName, metadata)}`);
 	}
 	if (pkg.modulePaths.length > limit) {
 		lines.push(`- +${pkg.modulePaths.length - limit} more modules`);
@@ -1062,9 +949,7 @@ function renderNodeDrilldown(
 	if (node.hotspot) {
 		lines.push(`- Type: ${node.hotspot.type}`);
 		lines.push(`- Reachable modules: ${node.hotspot.reachableModulesCount}`);
-		lines.push(
-			`- Reachable node_modules modules: ${node.hotspot.reachableNodeModulesCount}`,
-		);
+		lines.push(`- Reachable node_modules modules: ${node.hotspot.reachableNodeModulesCount}`);
 		lines.push(`- Direct importers: ${node.hotspot.directImporterCount}`);
 		lines.push(`- Direct importees: ${node.hotspot.directImporteeCount}`);
 		if (node.hotspot.topExternalPackages.length > 0) {
@@ -1073,16 +958,12 @@ function renderNodeDrilldown(
 			);
 		}
 		if (node.hotspot.signals.length > 0) {
-			lines.push(
-				`- Signals: ${formatPreviewList(node.hotspot.signals, limit)}`,
-			);
+			lines.push(`- Signals: ${formatPreviewList(node.hotspot.signals, limit)}`);
 		}
 	}
 	if (node.barrel) {
 		lines.push(`- Explicit barrel file: yes`);
-		lines.push(
-			`- node_modules introduced: ${node.barrel.nodeModulesIntroduced.length}`,
-		);
+		lines.push(`- node_modules introduced: ${node.barrel.nodeModulesIntroduced.length}`);
 	}
 	if (node.externalDependency) {
 		lines.push(
@@ -1094,14 +975,9 @@ function renderNodeDrilldown(
 			);
 		}
 	}
-	if (
-		node.hotspot?.directImporters.length ||
-		node.externalDependency?.directImporters.length
-	) {
+	if (node.hotspot?.directImporters.length || node.externalDependency?.directImporters.length) {
 		const importers =
-			node.hotspot?.directImporters ??
-			node.externalDependency?.directImporters ??
-			[];
+			node.hotspot?.directImporters ?? node.externalDependency?.directImporters ?? [];
 		lines.push("", "### Direct importers");
 		for (const importer of importers.slice(0, limit)) {
 			lines.push(`- ${importer}`);
@@ -1112,18 +988,13 @@ function renderNodeDrilldown(
 	}
 	if (node.externalDependency?.introducedThrough.length) {
 		lines.push("", "### Introduced through");
-		for (const source of node.externalDependency.introducedThrough.slice(
-			0,
-			limit,
-		)) {
+		for (const source of node.externalDependency.introducedThrough.slice(0, limit)) {
 			lines.push(
 				`- ${source.path}: ${source.originChains.length} chain${source.originChains.length === 1 ? "" : "s"}`,
 			);
 		}
 		if (node.externalDependency.introducedThrough.length > limit) {
-			lines.push(
-				`- +${node.externalDependency.introducedThrough.length - limit} more introducers`,
-			);
+			lines.push(`- +${node.externalDependency.introducedThrough.length - limit} more introducers`);
 		}
 	}
 	const originChains =
@@ -1171,9 +1042,7 @@ function compareSourceGroups(
 	return left.label.localeCompare(right.label);
 }
 
-function getSourceGroupRank(
-	kind: LlmExternalPackageReport["sourceGroups"][number]["kind"],
-) {
+function getSourceGroupRank(kind: LlmExternalPackageReport["sourceGroups"][number]["kind"]) {
 	switch (kind) {
 		case "workspace-package":
 			return 0;

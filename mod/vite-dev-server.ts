@@ -5,10 +5,7 @@ import { createServer } from "vite";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const root = path.join(__dirname, "..");
 
-export async function startServer(options: {
-	port: number | undefined;
-	outputPath: string;
-}) {
+export async function startServer(options: { port: number | undefined; outputPath: string }) {
 	const server = await createServer({
 		// any valid user config options, plus `mode` and `configFile`
 		// configFile: path.join(root, "./vite.config.ts"),

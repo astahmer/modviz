@@ -65,14 +65,10 @@ const ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY = "modviz.active-snapshot-selection"
 const normalizeActiveSnapshotSelection = (
 	selection?: Partial<ModvizActiveSnapshotSelection> | null,
 ): ModvizActiveSnapshotSelection => {
-	const snapshotId =
-		typeof selection?.snapshotId === "string" ? selection.snapshotId.trim() : "";
-	const graphPath =
-		typeof selection?.graphPath === "string" ? selection.graphPath.trim() : "";
+	const snapshotId = typeof selection?.snapshotId === "string" ? selection.snapshotId.trim() : "";
+	const graphPath = typeof selection?.graphPath === "string" ? selection.graphPath.trim() : "";
 
-	return snapshotId
-		? { snapshotId, graphPath: "" }
-		: { snapshotId: "", graphPath };
+	return snapshotId ? { snapshotId, graphPath: "" } : { snapshotId: "", graphPath };
 };
 
 export const getActiveSnapshotSelection = (): ModvizActiveSnapshotSelection => {
@@ -86,7 +82,9 @@ export const getActiveSnapshotSelection = (): ModvizActiveSnapshotSelection => {
 			return { snapshotId: "", graphPath: "" };
 		}
 
-		return normalizeActiveSnapshotSelection(JSON.parse(raw) as Partial<ModvizActiveSnapshotSelection>);
+		return normalizeActiveSnapshotSelection(
+			JSON.parse(raw) as Partial<ModvizActiveSnapshotSelection>,
+		);
 	} catch {
 		return { snapshotId: "", graphPath: "" };
 	}
@@ -105,10 +103,7 @@ export const setActiveSnapshotSelection = (
 		return;
 	}
 
-	window.localStorage.setItem(
-		ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY,
-		JSON.stringify(normalized),
-	);
+	window.localStorage.setItem(ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY, JSON.stringify(normalized));
 };
 
 const appendActiveSnapshotSelection = (pathname: string) => {
@@ -140,10 +135,7 @@ export const isModvizBundleReady = (
 	summary: ModvizDerivedSummary;
 } => Boolean(bundle.graph && bundle.summary && bundle.setup.status === "ready");
 
-export const isExternalNode = (
-	node: VizNode,
-	workspacePackageNames: Set<string>,
-) => {
+export const isExternalNode = (node: VizNode, workspacePackageNames: Set<string>) => {
 	if (node.path.includes("node_modules")) return true;
 	if (!node.package?.name) return false;
 	return !workspacePackageNames.has(node.package.name);
@@ -180,9 +172,7 @@ export const getExternalPackageName = (node: VizNode) => {
 		return "node_modules";
 	}
 
-	return scopeOrName.startsWith("@") && maybeName
-		? `${scopeOrName}/${maybeName}`
-		: scopeOrName;
+	return scopeOrName.startsWith("@") && maybeName ? `${scopeOrName}/${maybeName}` : scopeOrName;
 };
 
 export const getNodeGroupingLabel = (
@@ -191,9 +181,7 @@ export const getNodeGroupingLabel = (
 	externalGrouping: ExternalGroupingMode,
 ) => {
 	if (getNodeScope(node, workspacePackageNames) === "external") {
-		return externalGrouping === "package"
-			? getExternalPackageName(node)
-			: "node_modules";
+		return externalGrouping === "package" ? getExternalPackageName(node) : "node_modules";
 	}
 
 	return node.cluster ?? node.package?.name ?? "workspace";
@@ -208,9 +196,7 @@ export const filterNodesByScope = (
 		return nodes;
 	}
 
-	return nodes.filter(
-		(node) => getNodeScope(node, workspacePackageNames) === scope,
-	);
+	return nodes.filter((node) => getNodeScope(node, workspacePackageNames) === scope);
 };
 
 const countBy = <T, K extends string>(items: T[], getKey: (item: T) => K | null) => {
@@ -227,9 +213,7 @@ const sortSummaryItems = (items: SummaryListItem[]) =>
 	items
 		.sort((left, right) => {
 			const valueOrder = right.value - left.value;
-			return valueOrder !== 0
-				? valueOrder
-				: left.label.localeCompare(right.label);
+			return valueOrder !== 0 ? valueOrder : left.label.localeCompare(right.label);
 		})
 		.slice(0, 8);
 
@@ -270,18 +254,10 @@ export const buildModvizSummary = (
 	graph: ModvizOutput,
 	llm: ModvizLlmOutput | null,
 ): ModvizDerivedSummary => {
-	const workspacePackageNames = new Set(
-		graph.metadata.packages.map((pkg) => pkg.name),
-	);
-	const externalNodes = graph.nodes.filter((node) =>
-		isExternalNode(node, workspacePackageNames),
-	);
-	const workspaceNodes = graph.nodes.filter(
-		(node) => !isExternalNode(node, workspacePackageNames),
-	);
-	const externalPackageCounts = countBy(externalNodes, (node) =>
-		getExternalPackageName(node),
-	);
+	const workspacePackageNames = new Set(graph.metadata.packages.map((pkg) => pkg.name));
+	const externalNodes = graph.nodes.filter((node) => isExternalNode(node, workspacePackageNames));
+	const workspaceNodes = graph.nodes.filter((node) => !isExternalNode(node, workspacePackageNames));
+	const externalPackageCounts = countBy(externalNodes, (node) => getExternalPackageName(node));
 	const reachableCountByPath = buildReachableCountByPath(graph.nodes);
 	const clusterCounts = countBy(graph.nodes, (node) => {
 		return node.cluster ?? node.package?.name ?? node.type ?? "unclassified";
@@ -358,9 +334,7 @@ export const buildModvizSummary = (
 const readErrorMessage = async (response: Response) => {
 	const contentType = response.headers.get("content-type") ?? "";
 	if (contentType.includes("application/json")) {
-		const body = (await response.json().catch(() => null)) as
-			| { error?: string }
-			| null;
+		const body = (await response.json().catch(() => null)) as { error?: string } | null;
 		if (body?.error) {
 			return body.error;
 		}
@@ -374,14 +348,12 @@ const fetchJson = async <T>(
 	options?: { includeActiveSnapshot?: boolean },
 ): Promise<T> => {
 	const response = await fetch(
-		options?.includeActiveSnapshot === false
-			? pathname
-			: appendActiveSnapshotSelection(pathname),
+		options?.includeActiveSnapshot === false ? pathname : appendActiveSnapshotSelection(pathname),
 		{
-		cache: "no-store",
-		headers: {
-			accept: "application/json",
-		},
+			cache: "no-store",
+			headers: {
+				accept: "application/json",
+			},
 		},
 	);
 
@@ -393,7 +365,9 @@ const fetchJson = async <T>(
 };
 
 export const fetchModvizBundle = () =>
-	fetchJson<ModvizDataBundle>("/api/modviz-bundle");
+	import.meta.env.SSR
+		? import("~/utils/modviz-server").then(({ loadModvizBundle }) => loadModvizBundle())
+		: fetchJson<ModvizDataBundle>("/api/modviz-bundle");
 
 export const fetchSnapshotHistory = () =>
 	fetchJson<ModvizSnapshotHistoryItem[]>("/api/snapshot-history", {
@@ -409,5 +383,4 @@ const rootRouteApi = getRouteApi("__root__");
 
 export const useModvizBundle = () => rootRouteApi.useLoaderData();
 
-export const fetchModvizJsonStatus = () =>
-	fetchJson<ModvizJsonStatus>("/api/json-status");
+export const fetchModvizJsonStatus = () => fetchJson<ModvizJsonStatus>("/api/json-status");

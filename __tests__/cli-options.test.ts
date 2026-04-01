@@ -1,9 +1,5 @@
 import { expect, test } from "vitest";
-import {
-	buildCliSummary,
-	parseCliArgs,
-	validateCliArgs,
-} from "../mod/cli-options.ts";
+import { buildCliSummary, parseCliArgs, validateCliArgs } from "../mod/cli-options.ts";
 import type { ModvizOutput, VizNode } from "../mod/types.ts";
 
 const baseNode = (overrides: Partial<VizNode>): VizNode => ({

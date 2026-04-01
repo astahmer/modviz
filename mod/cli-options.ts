@@ -80,10 +80,7 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 		}
 
 		const equalSignIndex = currentArg.indexOf("=");
-		const optionName =
-			equalSignIndex === -1
-				? currentArg
-				: currentArg.slice(0, equalSignIndex);
+		const optionName = equalSignIndex === -1 ? currentArg : currentArg.slice(0, equalSignIndex);
 
 		if (equalSignIndex !== -1) {
 			values.set(optionName, currentArg.slice(equalSignIndex + 1));
@@ -108,12 +105,9 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 export function parseCliArgs(args: string[]): ParsedCliArgs {
 	const [firstArg, ...restArgs] = args;
 	const command =
-		firstArg === "analyze" || firstArg === "serve" || firstArg === "report"
-			? firstArg
-			: "analyze";
+		firstArg === "analyze" || firstArg === "serve" || firstArg === "report" ? firstArg : "analyze";
 	const commandArgs = command === "analyze" && firstArg !== "analyze" ? args : restArgs;
-	const { flags: parsedFlags, values: parsedValues, positionals } =
-		parseOptionTokens(commandArgs);
+	const { flags: parsedFlags, values: parsedValues, positionals } = parseOptionTokens(commandArgs);
 	const serve = args.includes("--serve");
 	const effectiveServe = command === "serve" || serve;
 	const getOptionValue = (name: string) => parsedValues.get(name);
@@ -175,11 +169,7 @@ export function validateCliArgs(parsedArgs: ParsedCliArgs) {
 		return `Invalid --limit value: ${flags.limit}`;
 	}
 
-	if (
-		flags.moduleLexer &&
-		flags.moduleLexer !== "rs" &&
-		flags.moduleLexer !== "es"
-	) {
+	if (flags.moduleLexer && flags.moduleLexer !== "rs" && flags.moduleLexer !== "es") {
 		return `Invalid --module-lexer value: ${flags.moduleLexer}. Use rs or es.`;
 	}
 
@@ -246,17 +236,13 @@ const getExternalPackageName = (node: VizNode) => {
 		return "node_modules";
 	}
 
-	return scopeOrName.startsWith("@") && maybeName
-		? `${scopeOrName}/${maybeName}`
-		: scopeOrName;
+	return scopeOrName.startsWith("@") && maybeName ? `${scopeOrName}/${maybeName}` : scopeOrName;
 };
 
 export function buildCliSummary(output: ModvizOutput) {
 	const workspaceNodes = output.nodes.filter((node) => node.type !== "external");
 	const externalNodes = output.nodes.filter((node) => node.type === "external");
-	const externalPackages = new Set(
-		externalNodes.map((node) => getExternalPackageName(node)),
-	);
+	const externalPackages = new Set(externalNodes.map((node) => getExternalPackageName(node)));
 
 	return [
 		"",
@@ -270,7 +256,9 @@ export function buildCliSummary(output: ModvizOutput) {
 	].join("\n");
 }
 
-export function buildSnapshotList(history: Array<{ id: string; totalNodes: number; generatedAt: string | null }>) {
+export function buildSnapshotList(
+	history: Array<{ id: string; totalNodes: number; generatedAt: string | null }>,
+) {
 	if (history.length === 0) {
 		return "No named snapshots found.\n";
 	}
