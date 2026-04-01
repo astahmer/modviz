@@ -25,6 +25,7 @@ import {
 	type ExternalGroupingMode,
 	type ModvizScope,
 } from "~/utils/modviz-data";
+import { parseSearchParam } from "~/utils/search-params";
 
 const Sigma = lazy(() =>
 	import("~/components/graph/modviz-sigma").then((module) => ({
@@ -48,51 +49,28 @@ type GraphSearch = {
 	strongGravityMode: boolean;
 };
 
-const parseBooleanSearchValue = (value: unknown, fallback: boolean) => {
-	if (value === undefined || value === null || value === "") {
-		return fallback;
-	}
-
-	if (typeof value === "boolean") {
-		return value;
-	}
-
-	return value === "true";
-};
-
-const parseNumberSearchValue = (value: unknown, fallback: number) => {
-	if (value === undefined || value === null || value === "") {
-		return fallback;
-	}
-
-	const parsed = Number(value);
-	return Number.isFinite(parsed) ? parsed : fallback;
-};
-
 const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
-	// Calculate defaults based on node count from the loader data
-	const defaults = getDefaultGraphLayoutSettings(3961); // This will be updated dynamically in the component
+	const defaults = getDefaultGraphLayoutSettings(3961);
 	return {
-		adjustSizes: parseBooleanSearchValue(search.adjustSizes, defaults.adjustSizes),
-		cluster: typeof search.cluster === "string" ? search.cluster : "",
-		externalGrouping:
-			search.externalGrouping === "combined" ? "combined" : "package",
-		focus: typeof search.focus === "string" ? search.focus : "",
-		gravity: parseNumberSearchValue(search.gravity, defaults.gravity),
-		hideClusterLabels: parseBooleanSearchValue(search.hideClusterLabels, defaults.hideClusterLabels),
-		iterations: Math.round(parseNumberSearchValue(search.iterations, defaults.iterations)),
-		linLogMode: parseBooleanSearchValue(search.linLogMode, defaults.linLogMode),
-		nodeSizeScale: parseNumberSearchValue(search.nodeSizeScale, defaults.nodeSizeScale),
-		outboundAttractionDistribution: parseBooleanSearchValue(
+		adjustSizes: parseSearchParam.boolean(search.adjustSizes, defaults.adjustSizes),
+		cluster: parseSearchParam.string(search.cluster),
+		externalGrouping: "package", // Always default to package grouping for clarity
+		focus: parseSearchParam.string(search.focus),
+		gravity: parseSearchParam.number(search.gravity, defaults.gravity),
+		hideClusterLabels: parseSearchParam.boolean(search.hideClusterLabels, defaults.hideClusterLabels),
+		iterations: Math.round(parseSearchParam.number(search.iterations, defaults.iterations)),
+		linLogMode: parseSearchParam.boolean(search.linLogMode, defaults.linLogMode),
+		nodeSizeScale: parseSearchParam.number(search.nodeSizeScale, defaults.nodeSizeScale),
+		outboundAttractionDistribution: parseSearchParam.boolean(
 			search.outboundAttractionDistribution,
 			defaults.outboundAttractionDistribution,
 		),
-		scalingRatio: parseNumberSearchValue(search.scalingRatio, defaults.scalingRatio),
+		scalingRatio: parseSearchParam.number(search.scalingRatio, defaults.scalingRatio),
 		scope:
 			search.scope === "workspace" || search.scope === "external"
 				? search.scope
 				: "all",
-		strongGravityMode: parseBooleanSearchValue(search.strongGravityMode, defaults.strongGravityMode),
+		strongGravityMode: parseSearchParam.boolean(search.strongGravityMode, defaults.strongGravityMode),
 	};
 };
 

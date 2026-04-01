@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, SquareStack } from "lucide-react";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
+import { formatNumber } from "~/utils/formatting";
 
 type RouteCard = {
 	to: "/graph" | "/explorer" | "/summary" | "/imports" | "/hierarchy";
@@ -52,8 +53,6 @@ const routes: RouteCard[] = [
 		search: undefined,
 	},
 ] as const;
-
-const formatNumber = new Intl.NumberFormat("en-US");
 
 function StatCard(props: { label: string; value: number; detail: string }) {
 	return (

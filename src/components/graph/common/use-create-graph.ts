@@ -64,9 +64,6 @@ export const useCreateGraph = (props: {
 	const edges = useMemo(() => {
 		const ids = new Set<string>();
 		props.nodes.forEach((node) => {
-			// node.importees.forEach((importee) => {
-			// 	ids.add(`${node.path}->${importee}`);
-			// });
 			node.importedBy.forEach((importee) => {
 				ids.add(`${importee}->${node.path}`);
 			});

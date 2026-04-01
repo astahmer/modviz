@@ -2,6 +2,7 @@ import { Code2, List } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { VizImport } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
+import { formatNumber } from "~/utils/formatting";
 
 type ImportBlock = {
 	module: string;
@@ -169,13 +170,22 @@ function formatImportBlocks(matches: VizImport[]) {
 }
 
 function extractNamesFromCode(code: string): string[] {
-	// Extract import names from code like: import { Name1, Name2 } from "module"
-	const match = code.match(/import\s+(?:\{([^}]+)\})?/);
-	if (!match) return [];
-	if (!match[1]) return [];
+	// Extract all import names from code, handling multiple import statements
+	const names: string[] = [];
 
-	return match[1]
-		.split(",")
-		.map((name) => name.trim())
-		.filter(Boolean);
+	// Match all: import { Name1, Name2 } from "module" patterns
+	const importMatches = code.matchAll(/import\s+(?:\{([^}]+)\})?[^;]*;/g);
+
+	for (const match of importMatches) {
+		if (match[1]) {
+			names.push(
+				...match[1]
+					.split(",")
+					.map((name) => name.trim())
+					.filter(Boolean)
+			);
+		}
+	}
+
+	return [...new Set(names)]; // Remove duplicates
 }

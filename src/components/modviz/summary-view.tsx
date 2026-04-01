@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
-
-const formatNumber = new Intl.NumberFormat("en-US");
+import { formatNumber } from "~/utils/formatting";
 
 function MetricCard(props: { label: string; value: number; note: string }) {
 	return (
