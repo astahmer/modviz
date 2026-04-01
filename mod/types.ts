@@ -80,6 +80,7 @@ export interface LlmSummary {
 	nodesWithMultipleOrigins: number;
 	topHotspots: Array<{
 		path: string;
+		displayPath: string;
 		reachableModulesCount: number;
 		reachableNodeModulesCount: number;
 		directImporterCount: number;
@@ -94,6 +95,7 @@ export interface LlmSummary {
 
 export interface LlmHotspot {
 	path: string;
+	displayPath: string;
 	type: string;
 	isBarrelFile: boolean;
 	directImporterCount: number;
@@ -104,11 +106,13 @@ export interface LlmHotspot {
 	reachableInternalModulesCount: number;
 	reachableNodeModulesCount: number;
 	reachableBarrelFilesCount: number;
+	topExternalPackages: string[];
 	signals: string[];
 }
 
 export interface LlmExternalDependencyReport {
 	path: string;
+	displayPath: string;
 	packageName?: string;
 	directImporterCount: number;
 	directImporters: string[];
@@ -122,6 +126,7 @@ export interface LlmExternalDependencyReport {
 
 export interface LlmBarrelFileReport {
 	path: string;
+	displayPath: string;
 	directImporterCount: number;
 	directImporters: string[];
 	originChains: string[][];
@@ -139,11 +144,19 @@ export interface LlmBarrelFileReport {
 	}>;
 }
 
+export interface LlmSourceGroup {
+	kind: "workspace-package" | "file";
+	label: string;
+	paths: string[];
+}
+
 export interface LlmExternalPackageReport {
 	packageName: string;
 	modulePaths: string[];
 	sourceCount: number;
+	sourceGroupCount: number;
 	sources: string[];
 	originChains: string[][];
 	barrelSources: string[];
+	sourceGroups: LlmSourceGroup[];
 }
