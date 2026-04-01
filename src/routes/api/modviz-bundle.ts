@@ -3,9 +3,15 @@ import { createServerFileRoute } from "@tanstack/react-start/server";
 import { loadModvizBundle } from "~/utils/modviz-server";
 
 export const ServerRoute = createServerFileRoute("/api/modviz-bundle").methods({
-	GET: async () => {
+	GET: async ({ request }) => {
 		try {
-			return json(loadModvizBundle());
+			const url = new URL(request.url);
+			return json(
+				loadModvizBundle({
+					graphPath: url.searchParams.get("graphPath"),
+					snapshotId: url.searchParams.get("snapshotId"),
+				}),
+			);
 		} catch (error) {
 			return json(
 				{

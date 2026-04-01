@@ -23,7 +23,6 @@ const defaultGraphSearch = {
 	linLogMode: false,
 	nodeSizeScale: 0,
 	outboundAttractionDistribution: true,
-	preset: "",
 	scalingRatio: 0,
 	scope: "all" as const,
 	strongGravityMode: false,
@@ -68,6 +67,9 @@ export function TraceView(props: {
 					<Button variant="outline" onClick={() => props.onSearchChange({ package: "", node: props.bundle.graph.metadata.entrypoints[0] ?? "" })}>Trace entrypoint</Button>
 					<Button variant="outline" onClick={() => props.onSearchChange({ package: "", node: "", limit: 10 })}>Reset</Button>
 				</div>
+				<p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
+					Import search finds matching import statements. Trace explains why a file or external package is reachable by walking upstream importers back toward workspace roots and entrypoints.
+				</p>
 			</section>
 
 			{report ? (
@@ -89,14 +91,42 @@ export function TraceView(props: {
 							<article key={match.path} className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 								<div className="flex flex-wrap items-start justify-between gap-4">
 									<div>
-										<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{match.path}</h3>
-										<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{match.packageName ? `${match.packageName} • ` : ""}{match.type} • {match.directImporters.length} direct importer(s)</p>
+										<h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{match.label}</h3>
+										<p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{match.packageName ? `${match.packageName} • ` : ""}{match.type} • {match.targetPaths.length} matching file(s) • {match.workspaceOrigins.length} workspace origin(s)</p>
 									</div>
 									<div className="flex flex-wrap gap-2">
-										<Link to="/graph" search={{ ...defaultGraphSearch, focus: match.path, scope: match.path.includes("node_modules") ? "external" : "workspace" }} className="text-sm font-medium text-sky-700 dark:text-sky-300">Open in graph</Link>
-										<Link to="/explorer" search={{ selected: match.path, q: "", scope: match.path.includes("node_modules") ? "external" : "workspace" }} className="text-sm font-medium text-sky-700 dark:text-sky-300">Open in explorer</Link>
+										<Link to="/graph" search={{ ...defaultGraphSearch, focus: match.introducedThrough[0] ?? match.workspaceOrigins[0] ?? match.targetPaths[0] ?? match.path, scope: match.introducedThrough[0] || match.workspaceOrigins[0] ? "workspace" : match.path.includes("node_modules") ? "external" : "workspace" }} className="text-sm font-medium text-sky-700 dark:text-sky-300">Open in graph</Link>
+										<Link to="/explorer" search={{ selected: match.introducedThrough[0] ?? match.workspaceOrigins[0] ?? match.targetPaths[0] ?? match.path, q: "", scope: match.introducedThrough[0] || match.workspaceOrigins[0] ? "workspace" : match.path.includes("node_modules") ? "external" : "workspace" }} className="text-sm font-medium text-sky-700 dark:text-sky-300">Open in explorer</Link>
 									</div>
 								</div>
+								<div className="mt-4 grid gap-3 lg:grid-cols-2">
+									<div className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
+										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Introduced through</p>
+										<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
+											{match.introducedThrough.length > 0 ? match.introducedThrough.slice(0, props.search.limit).map((segment) => (
+												<span key={`${match.path}-introduced-${segment}`} className="rounded-full bg-white px-3 py-1 dark:bg-slate-950/80">{segment}</span>
+											)) : <span className="text-slate-500 dark:text-slate-400">No workspace importer path found.</span>}
+										</div>
+									</div>
+									<div className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
+										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Workspace origins</p>
+										<div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-700 dark:text-slate-200">
+											{match.workspaceOrigins.length > 0 ? match.workspaceOrigins.slice(0, props.search.limit).map((segment) => (
+												<span key={`${match.path}-origin-${segment}`} className="rounded-full bg-white px-3 py-1 dark:bg-slate-950/80">{segment}</span>
+											)) : <span className="text-slate-500 dark:text-slate-400">No upstream workspace root found.</span>}
+										</div>
+									</div>
+								</div>
+								{match.targetPaths.length > 1 ? (
+									<div className="mt-4 rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">
+										<p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Matching files</p>
+										<div className="mt-2 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+											{match.targetPaths.slice(0, props.search.limit).map((targetPath) => (
+												<div key={`${match.path}-target-${targetPath}`} className="font-mono">{targetPath}</div>
+											))}
+										</div>
+									</div>
+								) : null}
 								<div className="mt-4 space-y-3">
 									{match.chains.slice(0, props.search.limit).map((chain, index) => (
 										<div key={`${match.path}-${index}`} className="rounded-2xl bg-slate-50/90 px-4 py-3 dark:bg-slate-900/70">

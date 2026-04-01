@@ -16,6 +16,16 @@ type SnapshotState = {
 
 type SnapshotSlot = "baseline" | "current";
 
+const formatSnapshotOptionLabel = (snapshot: ModvizSnapshotHistoryItem) => {
+	const generatedLabel = snapshot.generatedAt
+		? new Date(snapshot.generatedAt).toLocaleString()
+		: null;
+
+	return generatedLabel
+		? `${snapshot.label || snapshot.id} • ${generatedLabel}`
+		: snapshot.label || snapshot.id;
+};
+
 const isModvizOutput = (value: unknown): value is ModvizOutput => {
 	if (!value || typeof value !== "object") {
 		return false;
@@ -329,7 +339,7 @@ export function CompareView(props: {
 							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("baseline", event.currentTarget.value); }} defaultValue={props.baselineSnapshotId ?? ""}>
 								<option value="">Choose snapshot…</option>
 								{props.history.map((snapshot) => (
-									<option key={snapshot.id} value={snapshot.id}>{snapshot.id}</option>
+									<option key={snapshot.id} value={snapshot.id}>{formatSnapshotOptionLabel(snapshot)}</option>
 								))}
 							</select>
 						</label>
@@ -338,7 +348,7 @@ export function CompareView(props: {
 							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("current", event.currentTarget.value); }} defaultValue="">
 								<option value="">Choose snapshot…</option>
 								{props.history.map((snapshot) => (
-									<option key={snapshot.id} value={snapshot.id}>{snapshot.id}</option>
+									<option key={snapshot.id} value={snapshot.id}>{formatSnapshotOptionLabel(snapshot)}</option>
 								))}
 							</select>
 						</label>

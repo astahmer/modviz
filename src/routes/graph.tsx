@@ -49,7 +49,6 @@ type GraphSearch = {
 	scalingRatio: number;
 	scope: ModvizScope;
 	strongGravityMode: boolean;
-	preset: string;
 };
 
 const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
@@ -69,7 +68,6 @@ const validateGraphSearch = (search: Record<string, unknown>): GraphSearch => {
 			search.outboundAttractionDistribution,
 			defaults.outboundAttractionDistribution,
 		),
-		preset: parseSearchParam.string(search.preset),
 		scalingRatio: parseSearchParam.number(search.scalingRatio, defaults.scalingRatio),
 		scope:
 			search.scope === "workspace" || search.scope === "external"
@@ -181,17 +179,6 @@ function GraphRoute() {
 			}
 		>
 			<div className="flex h-[calc(100vh-14rem)] min-h-[680px] flex-col gap-4">
-				<section className="flex flex-wrap gap-2 rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-					{[
-						{ id: "all-overview", label: "All overview", patch: { preset: "all-overview", scope: "all" as const, cluster: "", externalGrouping: "package" as const } },
-						{ id: "workspace-focus", label: "Workspace only", patch: { preset: "workspace-focus", scope: "workspace" as const, cluster: "", externalGrouping: "package" as const } },
-						{ id: "external-packages", label: "External packages", patch: { preset: "external-packages", scope: "external" as const, cluster: "", externalGrouping: "package" as const } },
-					].map((preset) => (
-						<Button key={preset.id} variant={search.preset === preset.id ? "default" : "outline"} size="sm" onClick={() => updateSearch(preset.patch)}>
-							{preset.label}
-						</Button>
-					))}
-				</section>
 				<section className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 					{([
 						["all", "All nodes"],
@@ -202,7 +189,7 @@ function GraphRoute() {
 							key={value}
 							variant={scope === value ? "default" : "outline"}
 							size="sm"
-							onClick={() => updateSearch({ scope: value, cluster: "", preset: "" })}
+							onClick={() => updateSearch({ scope: value, cluster: "" })}
 						>
 							{label}
 						</Button>
@@ -215,7 +202,6 @@ function GraphRoute() {
 							onChange={(event) =>
 								updateSearch({
 									cluster: "",
-									preset: "",
 									externalGrouping: event.currentTarget
 										.value as ExternalGroupingMode,
 								})

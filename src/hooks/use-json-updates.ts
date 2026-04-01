@@ -8,6 +8,7 @@ import {
 export function useJsonUpdates(intervalMs = 2500) {
 	const router = useRouter();
 	const lastModifiedRef = useRef<number | null>(null);
+	const graphPathRef = useRef<string | null>(null);
 	const isRefreshingRef = useRef(false);
 	const [status, setStatus] = useState<ModvizJsonStatus | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
@@ -23,6 +24,12 @@ export function useJsonUpdates(intervalMs = 2500) {
 				}
 
 				setStatus(nextStatus);
+				if (graphPathRef.current !== nextStatus.graphPath) {
+					graphPathRef.current = nextStatus.graphPath;
+					lastModifiedRef.current = nextStatus.lastModified;
+					return;
+				}
+
 				if (nextStatus.lastModified == null) {
 					return;
 				}

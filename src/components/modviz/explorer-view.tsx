@@ -45,7 +45,6 @@ const defaultGraphSearch = {
 	scalingRatio: 0,
 	scope: "all" as const,
 	strongGravityMode: false,
-	preset: "",
 };
 
 const defaultImportSearch = {

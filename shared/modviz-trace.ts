@@ -5,9 +5,11 @@ export interface ModvizTraceMatch {
 	label: string;
 	packageName: string | null;
 	type: string;
+	targetPaths: string[];
 	directImporters: string[];
-	directImporteeCount: number;
 	chains: string[][];
+	workspaceOrigins: string[];
+	introducedThrough: string[];
 }
 
 export interface ModvizTraceReport {
@@ -19,6 +21,13 @@ export interface ModvizTraceReport {
 }
 
 const normalizeForSearch = (value: string) => value.trim().toLowerCase();
+
+const isExternalPath = (value: string) => value.includes("node_modules");
+
+const uniqueSorted = (values: Iterable<string>) =>
+	Array.from(new Set(values))
+		.filter(Boolean)
+		.sort((left, right) => left.localeCompare(right));
 
 export const getTracePackageName = (node: VizNode) => {
 	if (!node.path.includes("node_modules")) {
@@ -66,14 +75,91 @@ const uniqueChains = (chains: string[][]) => {
 	});
 };
 
-const createTraceMatch = (node: VizNode): ModvizTraceMatch => ({
+const buildUpstreamChains = (
+	graph: ModvizOutput,
+	targetPath: string,
+	maxChains = 40,
+	maxDepth = 28,
+) => {
+	const nodeByPath = new Map(graph.nodes.map((node) => [node.path, node]));
+	const entrypoints = new Set(graph.metadata.entrypoints);
+	const results: string[][] = [];
+	const queue: string[][] = [[targetPath]];
+
+	while (queue.length > 0 && results.length < maxChains) {
+		const reverseChain = queue.shift();
+		if (!reverseChain) {
+			continue;
+		}
+
+		const currentPath = reverseChain[0];
+		const currentNode = nodeByPath.get(currentPath);
+		const importers = uniqueSorted(
+			(currentNode?.importedBy ?? []).filter(
+				(importerPath) => !reverseChain.includes(importerPath) && nodeByPath.has(importerPath),
+			),
+		);
+
+		if (
+			!currentNode ||
+			importers.length === 0 ||
+			entrypoints.has(currentPath) ||
+			reverseChain.length >= maxDepth
+		) {
+			results.push([...reverseChain].reverse());
+			continue;
+		}
+
+		importers
+			.sort((left, right) => {
+				const leftExternal = isExternalPath(left);
+				const rightExternal = isExternalPath(right);
+				if (leftExternal !== rightExternal) {
+					return leftExternal ? 1 : -1;
+				}
+
+				return left.localeCompare(right);
+			})
+			.forEach((importerPath) => {
+				queue.push([importerPath, ...reverseChain]);
+			});
+	}
+
+	return uniqueChains(results);
+};
+
+const getWorkspaceOrigin = (chain: string[]) =>
+	chain.find((segment) => !isExternalPath(segment)) ?? chain[0] ?? null;
+
+const getIntroducedThrough = (chain: string[]) => {
+	for (let index = 0; index < chain.length; index += 1) {
+		if (!isExternalPath(chain[index])) {
+			continue;
+		}
+
+		return chain[index - 1] ?? chain[index] ?? null;
+	}
+
+	return chain.at(-1) ?? null;
+};
+
+const createTraceMatch = (
+	node: VizNode,
+	chains: string[][],
+): ModvizTraceMatch => ({
 	path: node.path,
 	label: node.name,
 	packageName: getTracePackageName(node),
 	type: node.type,
-	directImporters: [...node.importedBy].sort((left, right) => left.localeCompare(right)),
-	directImporteeCount: node.importees.length,
-	chains: uniqueChains(node.chain),
+	targetPaths: [node.path],
+	directImporters: uniqueSorted(node.importedBy),
+	chains,
+	workspaceOrigins: uniqueSorted(
+		chains.map((chain) => getWorkspaceOrigin(chain)).filter(Boolean) as string[],
+	),
+	introducedThrough: uniqueSorted(
+		chains.map((chain) => getIntroducedThrough(chain)).filter(Boolean) as string[],
+	),
 });
 
 export const buildPackageTraceReport = (
@@ -81,13 +167,54 @@ export const buildPackageTraceReport = (
 	packageQuery: string,
 ): ModvizTraceReport => {
 	const normalizedQuery = normalizeForSearch(packageQuery);
-	const matches = graph.nodes
+	const groupedMatches = new Map<string, ModvizTraceMatch>();
+
+	graph.nodes
 		.filter((node) => node.path.includes("node_modules"))
 		.filter((node) => {
 			const packageName = getTracePackageName(node);
 			return packageName ? normalizeForSearch(packageName).includes(normalizedQuery) : false;
 		})
-		.map(createTraceMatch);
+		.forEach((node) => {
+			const packageName = getTracePackageName(node) ?? node.path;
+			const chains = buildUpstreamChains(graph, node.path);
+			const existing = groupedMatches.get(packageName);
+
+			if (!existing) {
+				groupedMatches.set(packageName, {
+					path: packageName,
+					label: packageName,
+					packageName,
+					type: "package",
+					targetPaths: [node.path],
+					directImporters: uniqueSorted(node.importedBy),
+					chains,
+					workspaceOrigins: uniqueSorted(
+						chains.map((chain) => getWorkspaceOrigin(chain)).filter(Boolean) as string[],
+					),
+					introducedThrough: uniqueSorted(
+						chains.map((chain) => getIntroducedThrough(chain)).filter(Boolean) as string[],
+					),
+				});
+				return;
+			}
+
+			existing.targetPaths = uniqueSorted([...existing.targetPaths, node.path]);
+			existing.directImporters = uniqueSorted([...existing.directImporters, ...node.importedBy]);
+			existing.chains = uniqueChains([...existing.chains, ...chains]);
+			existing.workspaceOrigins = uniqueSorted([
+				...existing.workspaceOrigins,
+				...chains.map((chain) => getWorkspaceOrigin(chain)).filter(Boolean) as string[],
+			]);
+			existing.introducedThrough = uniqueSorted([
+				...existing.introducedThrough,
+				...chains.map((chain) => getIntroducedThrough(chain)).filter(Boolean) as string[],
+			]);
+		});
+
+	const matches = Array.from(groupedMatches.values()).sort((left, right) =>
+		left.label.localeCompare(right.label),
+	);
 
 	return {
 		kind: "package",
@@ -111,7 +238,7 @@ export const buildNodeTraceReport = (
 				.filter(Boolean)
 				.some((value) => normalizeForSearch(String(value)).includes(normalizedQuery));
 		})
-		.map(createTraceMatch);
+		.map((node) => createTraceMatch(node, buildUpstreamChains(graph, node.path)));
 
 	return {
 		kind: "node",
@@ -142,8 +269,10 @@ export const renderTraceReport = (
 		if (match.packageName) {
 			lines.push(`  Package: ${match.packageName}`);
 		}
+		lines.push(`  Matching files: ${match.targetPaths.length}`);
+		lines.push(`  Workspace origins: ${match.workspaceOrigins.join(", ") || "none"}`);
+		lines.push(`  Introduced through: ${match.introducedThrough.join(", ") || "none"}`);
 		lines.push(`  Direct importers: ${match.directImporters.join(", ") || "none"}`);
-		lines.push(`  Direct importees: ${match.directImporteeCount}`);
 		for (const chain of match.chains.slice(0, limit)) {
 			lines.push(`  Chain: ${chain.join(" -> ")}`);
 		}

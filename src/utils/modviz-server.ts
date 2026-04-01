@@ -11,6 +11,11 @@ import {
 const resolveGraphPath = () =>
 	path.resolve(process.env.MODVIZ_PATH ?? path.join(process.cwd(), "modviz.json"));
 
+type ModvizBundleSelection = {
+	snapshotId?: string | null;
+	graphPath?: string | null;
+};
+
 const resolveLlmPath = (graphPath: string) => {
 	if (graphPath.endsWith(".llm.json")) {
 		return graphPath;
@@ -86,10 +91,51 @@ const resolveProjectTitle = (graph: ModvizOutput) => {
 	}
 };
 
-export const loadModvizBundle = (): ModvizDataBundle => {
-	const graphPath = resolveGraphPath();
-	const llmPath = resolveLlmPath(graphPath);
+const resolveSelectedGraphPath = (
+	history: ReturnType<typeof listSnapshotHistory>,
+	selection?: ModvizBundleSelection,
+) => {
+	if (selection?.snapshotId?.trim()) {
+		const snapshot = history.find((item) => item.id === selection.snapshotId?.trim());
+		if (!snapshot) {
+			throw new Error(`Named snapshot \"${selection.snapshotId}\" was not found.`);
+		}
+
+		return snapshot.graphPath;
+	}
+
+	if (selection?.graphPath?.trim()) {
+		return path.resolve(selection.graphPath.trim());
+	}
+
+	return resolveGraphPath();
+};
+
+export const loadModvizBundle = (selection?: ModvizBundleSelection): ModvizDataBundle => {
 	const history = listSnapshotHistory();
+	let graphPath: string;
+
+	try {
+		graphPath = resolveSelectedGraphPath(history, selection);
+	} catch (error) {
+		return {
+			graph: null,
+			llm: null,
+			projectTitle: null,
+			summary: null,
+			history,
+			setup: {
+				status: "missing",
+				graphPath: selection?.graphPath?.trim() ?? resolveGraphPath(),
+				message:
+					error instanceof Error
+						? error.message
+						: "The selected snapshot could not be resolved.",
+			},
+		};
+	}
+
+	const llmPath = resolveLlmPath(graphPath);
 
 	if (!fs.existsSync(graphPath)) {
 		return {
@@ -144,8 +190,16 @@ export const loadModvizBundle = (): ModvizDataBundle => {
 
 export { resolveProjectTitle };
 
-export const getModvizJsonStatus = (): ModvizJsonStatus => {
-	const graphPath = resolveGraphPath();
+export const getModvizJsonStatus = (selection?: ModvizBundleSelection): ModvizJsonStatus => {
+	const history = listSnapshotHistory();
+	let graphPath: string;
+
+	try {
+		graphPath = resolveSelectedGraphPath(history, selection);
+	} catch {
+		graphPath = selection?.graphPath?.trim() ?? resolveGraphPath();
+	}
+
 	const llmPath = resolveLlmPath(graphPath);
 	const exists = fs.existsSync(graphPath);
 

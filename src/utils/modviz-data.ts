@@ -55,6 +55,84 @@ export type ModvizJsonStatus = {
 	llmPath: string;
 };
 
+export type ModvizActiveSnapshotSelection = {
+	snapshotId: string;
+	graphPath: string;
+};
+
+const ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY = "modviz.active-snapshot-selection";
+
+const normalizeActiveSnapshotSelection = (
+	selection?: Partial<ModvizActiveSnapshotSelection> | null,
+): ModvizActiveSnapshotSelection => {
+	const snapshotId =
+		typeof selection?.snapshotId === "string" ? selection.snapshotId.trim() : "";
+	const graphPath =
+		typeof selection?.graphPath === "string" ? selection.graphPath.trim() : "";
+
+	return snapshotId
+		? { snapshotId, graphPath: "" }
+		: { snapshotId: "", graphPath };
+};
+
+export const getActiveSnapshotSelection = (): ModvizActiveSnapshotSelection => {
+	if (typeof window === "undefined") {
+		return { snapshotId: "", graphPath: "" };
+	}
+
+	try {
+		const raw = window.localStorage.getItem(ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY);
+		if (!raw) {
+			return { snapshotId: "", graphPath: "" };
+		}
+
+		return normalizeActiveSnapshotSelection(JSON.parse(raw) as Partial<ModvizActiveSnapshotSelection>);
+	} catch {
+		return { snapshotId: "", graphPath: "" };
+	}
+};
+
+export const setActiveSnapshotSelection = (
+	selection?: Partial<ModvizActiveSnapshotSelection> | null,
+) => {
+	if (typeof window === "undefined") {
+		return;
+	}
+
+	const normalized = normalizeActiveSnapshotSelection(selection);
+	if (!normalized.snapshotId && !normalized.graphPath) {
+		window.localStorage.removeItem(ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY);
+		return;
+	}
+
+	window.localStorage.setItem(
+		ACTIVE_SNAPSHOT_SELECTION_STORAGE_KEY,
+		JSON.stringify(normalized),
+	);
+};
+
+const appendActiveSnapshotSelection = (pathname: string) => {
+	if (typeof window === "undefined") {
+		return pathname;
+	}
+
+	const selection = getActiveSnapshotSelection();
+	if (!selection.snapshotId && !selection.graphPath) {
+		return pathname;
+	}
+
+	const url = new URL(pathname, window.location.origin);
+	if (selection.snapshotId) {
+		url.searchParams.set("snapshotId", selection.snapshotId);
+		url.searchParams.delete("graphPath");
+	} else if (selection.graphPath) {
+		url.searchParams.set("graphPath", selection.graphPath);
+		url.searchParams.delete("snapshotId");
+	}
+
+	return `${url.pathname}${url.search}`;
+};
+
 export const isModvizBundleReady = (
 	bundle: ModvizDataBundle,
 ): bundle is ModvizDataBundle & {
@@ -291,13 +369,21 @@ const readErrorMessage = async (response: Response) => {
 	return (await response.text().catch(() => "")) || response.statusText;
 };
 
-const fetchJson = async <T>(pathname: string): Promise<T> => {
-	const response = await fetch(pathname, {
+const fetchJson = async <T>(
+	pathname: string,
+	options?: { includeActiveSnapshot?: boolean },
+): Promise<T> => {
+	const response = await fetch(
+		options?.includeActiveSnapshot === false
+			? pathname
+			: appendActiveSnapshotSelection(pathname),
+		{
 		cache: "no-store",
 		headers: {
 			accept: "application/json",
 		},
-	});
+		},
+	);
 
 	if (!response.ok) {
 		throw new Error(await readErrorMessage(response));
@@ -310,10 +396,14 @@ export const fetchModvizBundle = () =>
 	fetchJson<ModvizDataBundle>("/api/modviz-bundle");
 
 export const fetchSnapshotHistory = () =>
-	fetchJson<ModvizSnapshotHistoryItem[]>("/api/snapshot-history");
+	fetchJson<ModvizSnapshotHistoryItem[]>("/api/snapshot-history", {
+		includeActiveSnapshot: false,
+	});
 
 export const fetchSnapshotGraph = (snapshotId: string) =>
-	fetchJson<ModvizOutput>(`/api/snapshot-history/${encodeURIComponent(snapshotId)}`);
+	fetchJson<ModvizOutput>(`/api/snapshot-history/${encodeURIComponent(snapshotId)}`, {
+		includeActiveSnapshot: false,
+	});
 
 const rootRouteApi = getRouteApi("__root__");
 
