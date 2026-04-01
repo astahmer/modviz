@@ -20,6 +20,8 @@ import type {
 	EdgeType,
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
+import { Button } from "~/components/ui/button";
+import { LoadingState } from "~/components/ui/loading-state";
 import {
 	focusedNodeIdAtom,
 	highlightedNodeIdAtom,
@@ -36,12 +38,16 @@ export const ModvizSigma = (props: {
 	layoutSettings: GraphLayoutSettings;
 	packages: ModvizOutput["metadata"]["packages"];
 	nodes: ModvizOutput["nodes"];
+	isBusy?: boolean;
+	cancelNonce?: number;
+	onCancelUpdate?: () => void;
+	onBusyChange?: (isBusy: boolean) => void;
 }) => {
 	const [sigma, setSigma] = useState<Sigma<NodeType, EdgeType> | null>(null);
 	return (
 		<SigmaContainer
 			ref={setSigma}
-			className="h-full w-full"
+			className="relative h-full w-full"
 			settings={{ allowInvalidContainer: true }}
 		>
 			<SigmaGraph
@@ -50,7 +56,25 @@ export const ModvizSigma = (props: {
 				layoutSettings={props.layoutSettings}
 				packages={props.packages}
 				nodes={props.nodes}
+				cancelNonce={props.cancelNonce}
+				onBusyChange={props.onBusyChange}
 			/>
+			{props.isBusy ? (
+				<div className="absolute inset-0 z-20 flex items-center justify-center bg-white/72 backdrop-blur-[1.5px] dark:bg-slate-950/72">
+					<div className="pointer-events-auto flex min-w-[18rem] flex-col items-center gap-4 rounded-3xl border border-slate-200/80 bg-white/90 px-6 py-5 shadow-[0_18px_48px_-32px_rgba(15,23,42,0.65)] dark:border-slate-800 dark:bg-slate-950/90">
+						<LoadingState
+							label="Updating graph…"
+							description="Rebuilding the dependency map and running the layout in the background."
+							className="min-h-0"
+						/>
+						{props.onCancelUpdate ? (
+							<Button variant="outline" size="sm" onClick={props.onCancelUpdate}>
+								Cancel update
+							</Button>
+						) : null}
+					</div>
+				</div>
+			) : null}
 			{sigma && (
 				<WithGraph
 					hideClusterLabels={props.layoutSettings.hideClusterLabels}
@@ -230,6 +254,7 @@ const MoveToHighlightedNode = () => {
 interface Cluster {
 	name: string;
 	inferredName?: string;
+	isExternal?: boolean;
 	path: string;
 	x?: number;
 	y?: number;
@@ -255,11 +280,13 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 				if (cluster) {
 					cluster.nodes.push(nodeId);
 					cluster.positions.push({ x: attrs.x, y: attrs.y });
+					cluster.isExternal = cluster.isExternal || attrs.modType === "external";
 					return;
 				}
 
 				map.set(attrs.cluster, {
 					name: attrs.cluster,
+					isExternal: attrs.modType === "external",
 					path: attrs.clusterPath ?? "",
 					nodes: [nodeId],
 					positions: [{ x: attrs.x, y: attrs.y }],
@@ -268,11 +295,13 @@ const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {
 			});
 
 			map.forEach((cluster) => {
-				const pathsLabel = inferPathsLabel(
-					cluster.nodes.map((path) => path.replace(cluster.path, "")),
-				);
-				if (pathsLabel) {
-					cluster.inferredName = pathsLabel;
+				if (!cluster.isExternal) {
+					const pathsLabel = inferPathsLabel(
+						cluster.nodes.map((path) => path.replace(cluster.path, "")),
+					);
+					if (pathsLabel) {
+						cluster.inferredName = pathsLabel;
+					}
 				}
 
 				// calculate the cluster's nodes barycenter to use this as cluster label position

@@ -1,6 +1,7 @@
 import { FloatingPanel } from "@ark-ui/react/floating-panel";
 import { Portal } from "@ark-ui/react/portal";
 import { RotateCcw, Settings2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -68,16 +69,45 @@ export function GraphSettingsPanel(props: {
 	settings: GraphLayoutSettings;
 	onOpenChange: (open: boolean) => void;
 	onSettingsChange: (settings: GraphLayoutSettings) => void;
-	onReset: () => void;
+	onReset: () => GraphLayoutSettings;
 }) {
+	const [draftSettings, setDraftSettings] = useState(props.settings);
+
+	useEffect(() => {
+		if (!props.open) {
+			setDraftSettings(props.settings);
+			return;
+		}
+
+		setDraftSettings(props.settings);
+	}, [props.open, props.settings]);
+
+	const hasChanges = useMemo(
+		() => JSON.stringify(draftSettings) !== JSON.stringify(props.settings),
+		[draftSettings, props.settings],
+	);
+
 	const updateSetting = <K extends keyof GraphLayoutSettings>(
 		key: K,
 		value: GraphLayoutSettings[K],
 	) => {
-		props.onSettingsChange({
-			...props.settings,
+		setDraftSettings({
+			...draftSettings,
 			[key]: value,
 		});
+	};
+
+	const applyChanges = () => {
+		if (!hasChanges) {
+			return;
+		}
+
+		props.onSettingsChange(draftSettings);
+	};
+
+	const resetSettings = () => {
+		const nextSettings = props.onReset();
+		setDraftSettings(nextSettings);
 	};
 
 	if (!props.open) return null;
@@ -109,9 +139,12 @@ export function GraphSettingsPanel(props: {
 									</div>
 								</div>
 								<div className="flex items-center gap-2">
-									<Button variant="outline" size="sm" onClick={props.onReset}>
+									<Button variant="outline" size="sm" onClick={resetSettings}>
 										<RotateCcw className="size-4" />
 										Reset
+									</Button>
+									<Button size="sm" onClick={applyChanges} disabled={!hasChanges}>
+										Apply
 									</Button>
 									<Button
 										variant="ghost"
@@ -125,16 +158,16 @@ export function GraphSettingsPanel(props: {
 						</FloatingPanel.DragTrigger>
 						<FloatingPanel.Body className="flex-1 overflow-y-auto px-4 py-4">
 							<div className="space-y-5">
-								<NumberField label="Iterations" value={props.settings.iterations} min={10} max={500} step={10} onChange={(value) => updateSetting("iterations", Math.max(10, value || 10))} help="Higher values let ForceAtlas2 settle longer before the graph renders." />
-								<NumberField label="Gravity" value={props.settings.gravity} min={0} max={1500} step={1} onChange={(value) => updateSetting("gravity", Math.max(0, value || 0))} help="Pulls nodes back toward the center. Lower gravity spreads clusters out more." />
-								<NumberField label="Scaling ratio" value={props.settings.scalingRatio} min={1} max={500} step={1} onChange={(value) => updateSetting("scalingRatio", Math.max(1, value || 1))} help="Primary spacing control. Higher values increase separation between nodes and clusters." />
-								<NumberField label="Node size scale" value={props.settings.nodeSizeScale} min={0.5} max={4} step={0.1} onChange={(value) => updateSetting("nodeSizeScale", Math.max(0.5, Number(value.toFixed(1)) || 1))} help="Amplifies the node size derived from inbound edge count." />
+								<NumberField label="Iterations" value={draftSettings.iterations} min={10} max={500} step={10} onChange={(value) => updateSetting("iterations", Math.max(10, value || 10))} help="Higher values let ForceAtlas2 settle longer before the graph renders." />
+								<NumberField label="Gravity" value={draftSettings.gravity} min={0} max={1500} step={1} onChange={(value) => updateSetting("gravity", Math.max(0, value || 0))} help="Pulls nodes back toward the center. Lower gravity spreads clusters out more." />
+								<NumberField label="Scaling ratio" value={draftSettings.scalingRatio} min={1} max={500} step={1} onChange={(value) => updateSetting("scalingRatio", Math.max(1, value || 1))} help="Primary spacing control. Higher values increase separation between nodes and clusters." />
+								<NumberField label="Node size scale" value={draftSettings.nodeSizeScale} min={0.5} max={4} step={0.1} onChange={(value) => updateSetting("nodeSizeScale", Math.max(0.5, Number(value.toFixed(1)) || 1))} help="Amplifies the node size derived from inbound edge count." />
 								<div className="grid gap-3">
-									<ToggleField label="Strong gravity mode" checked={props.settings.strongGravityMode} onChange={(checked) => updateSetting("strongGravityMode", checked)} help="Keeps distant nodes from drifting too far out of frame." />
-									<ToggleField label="LinLog mode" checked={props.settings.linLogMode} onChange={(checked) => updateSetting("linLogMode", checked)} help="Often improves community separation in clustered graphs." />
-									<ToggleField label="Adjust sizes" checked={props.settings.adjustSizes} onChange={(checked) => updateSetting("adjustSizes", checked)} help="Uses node size during layout to reduce collisions." />
-									<ToggleField label="Outbound attraction distribution" checked={props.settings.outboundAttractionDistribution} onChange={(checked) => updateSetting("outboundAttractionDistribution", checked)} help="Balances attraction when hubs create too much pull." />
-									<ToggleField label="Hide cluster labels" checked={props.settings.hideClusterLabels} onChange={(checked) => updateSetting("hideClusterLabels", checked)} help="Useful when labels cover dense areas during exploration." />
+									<ToggleField label="Strong gravity mode" checked={draftSettings.strongGravityMode} onChange={(checked) => updateSetting("strongGravityMode", checked)} help="Keeps distant nodes from drifting too far out of frame." />
+									<ToggleField label="LinLog mode" checked={draftSettings.linLogMode} onChange={(checked) => updateSetting("linLogMode", checked)} help="Often improves community separation in clustered graphs." />
+									<ToggleField label="Adjust sizes" checked={draftSettings.adjustSizes} onChange={(checked) => updateSetting("adjustSizes", checked)} help="Uses node size during layout to reduce collisions." />
+									<ToggleField label="Outbound attraction distribution" checked={draftSettings.outboundAttractionDistribution} onChange={(checked) => updateSetting("outboundAttractionDistribution", checked)} help="Balances attraction when hubs create too much pull." />
+									<ToggleField label="Hide cluster labels" checked={draftSettings.hideClusterLabels} onChange={(checked) => updateSetting("hideClusterLabels", checked)} help="Useful when labels cover dense areas during exploration." />
 								</div>
 							</div>
 						</FloatingPanel.Body>
