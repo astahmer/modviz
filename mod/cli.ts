@@ -1,6 +1,12 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
+import {
+	buildCliHelpText,
+	buildCliSummary,
+	parseCliArgs,
+	validateCliArgs,
+} from "./cli-options.ts";
 import { generateAiAnalysis } from "./llm-analysis.ts";
 import {
 	buildModvizLlmOutput,
@@ -14,102 +20,35 @@ import {
 	createModuleGraph,
 	type Module,
 	type Plugin,
-} from "/Users/astahmer/dev/open-source/module-graph/index.js";
-import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
-import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
-import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
-import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
+} from "@astahmer/module-graph";
+import type { ModuleGraph } from "@astahmer/module-graph/ModuleGraph.js";
+import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
+import { exports } from "@astahmer/module-graph/plugins/exports.js";
+import { imports } from "@astahmer/module-graph/plugins/imports.js";
 import {
 	unusedExports,
 	type Export,
 	type Import,
-} from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
+} from "@astahmer/module-graph/plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
 
 const args = process.argv.slice(2);
-const entryFile = args.find((arg) => !arg.startsWith("--"));
-const flags = {
-	port: args.find((arg) => arg.startsWith("--port="))?.split("=")[1],
-	ui: args.includes("--ui"),
-	llmAnalyze: args.includes("--llm-analyze"),
-	llmBaseUrl: args.find((arg) => arg.startsWith("--llm-base-url="))?.split("=")[1],
-	llmModel: args.find((arg) => arg.startsWith("--llm-model="))?.split("=")[1],
-	outputFile:
-		args.find((arg) => arg.startsWith("--output-file="))?.split("=")[1] ??
-		"./modviz.json",
-	nodeModules: args.includes("--node-modules"),
-	ignoreDynamic: args.includes("--ignore-dynamic"),
-	serve: args.includes("--serve"),
-	help: args.includes("--help") || args.includes("-h"),
-	llm: args.includes("--llm"),
-	packageQuery: args
-		.find(
-			(arg) => arg.startsWith("--package="),
-		)
-		?.split("=")[1],
-	nodeQuery: args
-		.find((arg) => arg.startsWith("--node="))
-		?.split("=")[1],
-	limit: Number.parseInt(
-		args
-			.find(
-				(arg) => arg.startsWith("--limit="),
-			)
-			?.split("=")[1] ?? "20",
-		10,
-	),
-	moduleLexer: args
-		.find((arg) => arg.startsWith("--module-lexer="))
-		?.split("=")[1],
-};
+const { entryFile, flags, serveDataFile } = parseCliArgs(args);
+const validationError = validateCliArgs({ entryFile, flags, serveDataFile });
+
+if (validationError) {
+	console.error(`Error: ${validationError}`);
+	process.exit(1);
+}
 
 if (flags.help || (!entryFile && !flags.serve)) {
-	console.log(`
-modviz - Module dependency graph visualizer and import analysis CLI
-
-Usage:
-	modviz <entryFile>                              Generate graph JSON for the UI
-	modviz <entryFile> --ui                         Generate graph JSON and launch the web UI
-	modviz <entryFile> --llm                        Generate UI JSON plus LLM-focused JSON and Markdown reports
-	modviz <entryFile> --llm-analyze                Generate LLM companion files plus an AI-written engineering summary
-	modviz <entryFile> --package=zod                Focus outputs on one external package and print a drilldown
-	modviz <entryFile> --node=src/foo.ts            Focus outputs on one node and print a drilldown
-	modviz --serve [dataFile]                       Launch the web UI with existing graph data
-	modviz <entryFile> --ui --port=4000             Use a custom port
-
-Options:
-	--output-file=<file>   Base JSON output path for the UI graph (default: ./modviz.json)
-	--port=<port>          Port for the web server (default: 3000)
-	--ui                   Launch the browser UI after generating the graph
-	--serve                Launch the UI server using an existing graph JSON file
-	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
-	--llm-analyze          Use the Vercel AI SDK to turn the structured LLM report into <output>.llm.ai.md
-	--llm-model=<model>    Override the OpenAI-compatible model used by --llm-analyze
-	--llm-base-url=<url>   Override the OpenAI-compatible base URL used by --llm-analyze
-	--package=<name>       Focus outputs and drilldowns on one external package
-	--node=<path>          Focus outputs and drilldowns on one node path or display path
-	--limit=<n>            Limit printed list output in focused drilldowns (default: 20)
-	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
-	--ignore-dynamic       Ignore dynamic imports
-	--module-lexer=<mode>  Choose import parser: rs or es (default: rs)
-	--help, -h             Show this help message
-
-Examples:
-  modviz src/index.ts
-	modviz src/index.ts --ui --port=4000
-	modviz src/index.ts --llm --node-modules
-	MODVIZ_LLM_API_KEY=... modviz src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
-	modviz src/index.ts --node-modules --package=googleapis
-	modviz src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
-  modviz --serve ./modviz.json
-	`);
+	console.log(buildCliHelpText());
 	process.exit(0);
 }
 
 // If serving existing data
 if (flags.serve) {
-	const dataFile = args.find((arg) => !arg.startsWith("--") && arg !== "serve");
-	await launchWebUI(flags.port, dataFile);
+	await launchWebUI(flags.port, serveDataFile);
 	process.exit(0);
 }
 
@@ -223,6 +162,10 @@ writeFileSync(flags.outputFile, JSON.stringify(outputGraphData, null, 2));
 console.log(
 	`💾 Graph data saved to: ${flags.outputFile} (${outputGraphData.nodes.length} nodes out of ${outputGraphData.imports.length} imports)`,
 );
+
+if (flags.summary) {
+	console.log(buildCliSummary(outputGraphData));
+}
 
 if (focusResolution && shouldResolveFocus) {
 	if (

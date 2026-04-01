@@ -15,8 +15,8 @@ importers:
         specifier: ^5.25.0
         version: 5.25.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       '@astahmer/module-graph':
-        specifier: ^0.13.0
-        version: 0.13.0(rollup@4.50.1)(tslib@2.8.1)(typescript@5.9.2)
+        specifier: 0.14.1
+        version: 0.14.1(rollup@4.50.1)(tslib@2.8.1)(typescript@5.9.2)
       '@chenglou/pretext':
         specifier: ^0.0.3
         version: 0.0.3
@@ -277,8 +277,8 @@ packages:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
-  '@astahmer/module-graph@0.13.0':
-    resolution: {integrity: sha512-t1MgYTgHt0NxsYBylitl+rIvF1jOUV580p9VRxeSFtwlHuOjePig3JDGKvKZzpgeaR5SRT3vQQj8fh+rf+ho6A==}
+  '@astahmer/module-graph@0.14.1':
+    resolution: {integrity: sha512-QUKfD/vckMKdZEClAsTJyjOlkGEvWmomlVdlbAPkWJwjBgTlLAVBYc7Ew+ndXpnCQv6NTAxjws3U8dK/YEBMLQ==}
     hasBin: true
 
   '@babel/code-frame@7.26.2':
@@ -5522,11 +5522,12 @@ snapshots:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
 
-  '@astahmer/module-graph@0.13.0(rollup@4.50.1)(tslib@2.8.1)(typescript@5.9.2)':
+  '@astahmer/module-graph@0.14.1(rollup@4.50.1)(tslib@2.8.1)(typescript@5.9.2)':
     dependencies:
       '@rollup/plugin-typescript': 11.1.6(rollup@4.50.1)(tslib@2.8.1)(typescript@5.9.2)
       '@thepassle/module-utils': 0.2.4
       commander: 12.1.0
+      es-module-lexer: 1.7.0
       oxc-resolver: 1.12.0
       picomatch: 4.0.3
       rs-module-lexer: 2.5.1

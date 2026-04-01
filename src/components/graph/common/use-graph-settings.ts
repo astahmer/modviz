@@ -18,60 +18,35 @@ import {
 	hoveredClusterNameAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
-export const useGraphSettings = (props: { entryNode?: string }) => {
+export const useGraphSettings = () => {
 	const sigma = useSigma<NodeType, EdgeType>();
 	const setSettings = useSetSettings<NodeType, EdgeType>();
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
 	const hoveredClusterName = useAtom(hoveredClusterNameAtom);
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-	const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
 	const { gotoNode } = useCamera();
 
-	// registerEvents
 	useEffect(() => {
 		registerEvents({
 			enterNode: (event) => setHoveredNodeId(event.node),
 			leaveNode: () => setHoveredNodeId(null),
-			downNode: (event) => {
-				// setDraggedNodeId(event.node);
-			},
 			clickNode: (event) => {
 				gotoNode(event.node);
 				focusedNodeIdAtom.set((prev) =>
 					prev === event.node ? null : event.node,
 				);
 			},
-			// clickStage: () => setSelectedNodeId(null),
 			downStage: () => {
 				highlightedNodeIdAtom.set(null);
-			},
-			mousemovebody: (e) => {
-				if (!draggedNodeId) return;
-
-				const pos = sigma.viewportToGraph(e);
-				sigma.getGraph().setNodeAttribute(draggedNodeId, "x", pos.x);
-				sigma.getGraph().setNodeAttribute(draggedNodeId, "y", pos.y);
-
-				// Prevent sigma to move camera:
-				e.preventSigmaDefault();
-				e.original.preventDefault();
-				e.original.stopPropagation();
-			},
-			mouseup: () => {
-				if (draggedNodeId) {
-					setDraggedNodeId(null);
-					sigma.getGraph().removeNodeAttribute(draggedNodeId, "highlighted");
-				}
 			},
 			mousedown: () => {
 				if (!sigma.getCustomBBox()) sigma.setCustomBBox(sigma.getBBox());
 			},
 		});
-	}, [registerEvents, draggedNodeId, sigma, focusedNodeIdAtom]);
+	}, [gotoNode, registerEvents, sigma]);
 
-	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
 			autoCenter: true,
@@ -149,5 +124,5 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 				return updated;
 			},
 		});
-	}, [setSettings, hoveredClusterName, hoveredNodeId, sigma, props.entryNode]);
+	}, [hoveredClusterName, hoveredNodeId, setSettings, sigma]);
 };

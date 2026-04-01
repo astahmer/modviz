@@ -1,10 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Copy, Play, LoaderCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { useModvizBundle } from "~/utils/modviz-data";
+
+type CommandBuilderState = {
+	outputFile: string;
+	enableLlm: boolean;
+	enableAiAnalysis: boolean;
+	ignoreDynamic: boolean;
+	llmModel: string;
+	nodeModules: boolean;
+	packageQuery: string;
+	nodeQuery: string;
+};
+
+const defaultCommandBuilderState: CommandBuilderState = {
+	outputFile: "modviz.json",
+	enableLlm: false,
+	enableAiAnalysis: false,
+	ignoreDynamic: false,
+	llmModel: "gpt-4.1-mini",
+	nodeModules: false,
+	packageQuery: "",
+	nodeQuery: "",
+};
 
 export const Route = createFileRoute("/configure")({
 	ssr: false,
@@ -13,60 +35,61 @@ export const Route = createFileRoute("/configure")({
 
 function ConfigureRoute() {
 	const bundle = useModvizBundle();
-	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-	const [isRunning, setIsRunning] = useState(false);
+	const [config, setConfig] = useState(defaultCommandBuilderState);
+	const [didCopy, setDidCopy] = useState(false);
 
-	// Form state for command builder
-	const [outputFile, setOutputFile] = useState("modviz.json");
-	const [enableLlm, setEnableLlm] = useState(false);
-	const [enableAiAnalysis, setEnableAiAnalysis] = useState(false);
-	const [ignoreDynamic, setIgnoreDynamic] = useState(false);
-	const [llmModel, setLlmModel] = useState("gpt-4.1-mini");
-	const [nodeModules, setNodeModules] = useState(false);
-	const [packageQuery, setPackageQuery] = useState("");
-	const [nodeQuery, setNodeQuery] = useState("");
+	const updateConfig = <K extends keyof CommandBuilderState>(
+		key: K,
+		value: CommandBuilderState[K],
+	) => {
+		setConfig((current) => ({ ...current, [key]: value }));
+	};
 
 	const buildCommand = () => {
 		const basePath = bundle.graph.metadata.entrypoints[0] || "./src/index.ts";
 		let cmd = `pnpm exec modviz ${basePath}`;
 
-		if (outputFile && outputFile !== "modviz.json") {
-			cmd += ` --output-file=${outputFile}`;
+		if (config.outputFile && config.outputFile !== defaultCommandBuilderState.outputFile) {
+			cmd += ` --output-file=${config.outputFile}`;
 		}
-		if (enableLlm) cmd += ` --llm`;
-		if (enableAiAnalysis) cmd += ` --llm-analyze`;
-		if (enableAiAnalysis && llmModel.trim()) {
-			cmd += ` --llm-model=${llmModel.trim()}`;
+		if (config.enableLlm) cmd += " --llm";
+		if (config.enableAiAnalysis) cmd += " --llm-analyze";
+		if (config.enableAiAnalysis && config.llmModel.trim()) {
+			cmd += ` --llm-model=${config.llmModel.trim()}`;
 		}
-		if (ignoreDynamic) cmd += ` --ignore-dynamic`;
-		if (nodeModules) cmd += ` --node-modules`;
-		if (packageQuery) cmd += ` --package=${packageQuery}`;
-		if (nodeQuery) cmd += ` --node=${nodeQuery}`;
+		if (config.ignoreDynamic) cmd += " --ignore-dynamic";
+		if (config.nodeModules) cmd += " --node-modules";
+		if (config.packageQuery) cmd += ` --package=${config.packageQuery}`;
+		if (config.nodeQuery) cmd += ` --node=${config.nodeQuery}`;
 
 		return cmd;
 	};
 
-	const copyToClipboard = (text: string, index: number) => {
-		navigator.clipboard.writeText(text);
-		setCopiedIndex(index);
-		setTimeout(() => setCopiedIndex(null), 2000);
+	const copyToClipboard = async (text: string) => {
+		await navigator.clipboard.writeText(text);
+		setDidCopy(true);
+		window.setTimeout(() => setDidCopy(false), 2000);
 	};
 
-	const runCommand = async () => {
-		const cmd = buildCommand();
-		setIsRunning(true);
-		try {
-			await navigator.clipboard.writeText(cmd);
-			setCopiedIndex(0);
-			setTimeout(() => setCopiedIndex(null), 2000);
-		} catch (error) {
-			console.error("Failed to copy command:", error);
-		} finally {
-			setIsRunning(false);
-		}
-	};
-
-	const cmd = buildCommand();
+	const cmd = useMemo(() => buildCommand(), [bundle.graph.metadata.entrypoints, config]);
+	const toggleFields = [
+		{
+			key: "enableLlm" as const,
+			label: "Enable LLM analysis (--llm)",
+		},
+		{
+			key: "enableAiAnalysis" as const,
+			label: "Generate AI summary (--llm-analyze)",
+		},
+		{
+			key: "ignoreDynamic" as const,
+			label: "Ignore dynamic imports (--ignore-dynamic)",
+		},
+		{
+			key: "nodeModules" as const,
+			label: "Include node_modules (--node-modules)",
+		},
+	] as const;
 
 	return (
 		<ModvizLayout projectTitle={bundle.projectTitle}>
@@ -92,72 +115,39 @@ function ConfigureRoute() {
 								Output File
 							</label>
 							<Input
-								value={outputFile}
-								onChange={(e) => setOutputFile(e.target.value)}
+								value={config.outputFile}
+								onChange={(e) => updateConfig("outputFile", e.target.value)}
 								placeholder="modviz.json"
 								className="mt-1"
 							/>
 						</div>
 
-						{/* Flags as checkboxes */}
 						<div className="space-y-2">
-							<label className="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={enableLlm}
-									onChange={(e) => setEnableLlm(e.target.checked)}
-									className="rounded"
-								/>
-								<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-									Enable LLM analysis (--llm)
-								</span>
-							</label>
-							<label className="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={enableAiAnalysis}
-									onChange={(e) => setEnableAiAnalysis(e.target.checked)}
-									className="rounded"
-								/>
-								<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-									Generate AI summary (--llm-analyze)
-								</span>
-							</label>
-							<label className="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={ignoreDynamic}
-									onChange={(e) => setIgnoreDynamic(e.target.checked)}
-									className="rounded"
-								/>
-								<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-									Ignore dynamic imports (--ignore-dynamic)
-								</span>
-							</label>
-							<label className="flex items-center gap-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={nodeModules}
-									onChange={(e) => setNodeModules(e.target.checked)}
-									className="rounded"
-								/>
-								<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-									Include node_modules (--node-modules)
-								</span>
-							</label>
+							{toggleFields.map((field) => (
+								<label key={field.key} className="flex cursor-pointer items-center gap-2">
+									<input
+										type="checkbox"
+										checked={config[field.key]}
+										onChange={(e) => updateConfig(field.key, e.target.checked)}
+										className="rounded"
+									/>
+									<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+										{field.label}
+									</span>
+								</label>
+							))}
 						</div>
 
-						{/* Query fields */}
 						<div>
 							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
 								AI model (optional)
 							</label>
 							<Input
-								value={llmModel}
-								onChange={(e) => setLlmModel(e.target.value)}
+								value={config.llmModel}
+								onChange={(e) => updateConfig("llmModel", e.target.value)}
 								placeholder="gpt-4.1-mini"
 								className="mt-1 text-xs"
-								disabled={!enableAiAnalysis}
+								disabled={!config.enableAiAnalysis}
 							/>
 						</div>
 
@@ -166,8 +156,8 @@ function ConfigureRoute() {
 								Filter package (optional)
 							</label>
 							<Input
-								value={packageQuery}
-								onChange={(e) => setPackageQuery(e.target.value)}
+								value={config.packageQuery}
+								onChange={(e) => updateConfig("packageQuery", e.target.value)}
 								placeholder="e.g., @namespace/package"
 								className="mt-1 text-xs"
 							/>
@@ -178,14 +168,13 @@ function ConfigureRoute() {
 								Filter node (optional)
 							</label>
 							<Input
-								value={nodeQuery}
-								onChange={(e) => setNodeQuery(e.target.value)}
+								value={config.nodeQuery}
+								onChange={(e) => updateConfig("nodeQuery", e.target.value)}
 								placeholder="e.g., src/utils"
 								className="mt-1 text-xs"
 							/>
 						</div>
 
-						{/* Command display & actions */}
 						<div className="pt-2 border-t border-slate-200 dark:border-slate-800">
 							<p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
 								Run this command in your terminal:
@@ -196,27 +185,19 @@ function ConfigureRoute() {
 								</code>
 								<Button
 									size="sm"
-									variant="outline"
-									onClick={() => copyToClipboard(cmd, 0)}
-									disabled={isRunning}
-									className="shrink-0"
+									onClick={() => void copyToClipboard(cmd)}
+									className="shrink-0 gap-1.5"
 									title="Copy command"
 								>
-									{copiedIndex === 0 ? "✓" : <Copy className="size-3.5" />}
-								</Button>
-								<Button
-									size="sm"
-									onClick={runCommand}
-									disabled={isRunning}
-									className="shrink-0 gap-1.5 bg-sky-600 hover:bg-sky-700"
-									title="Copy command to clipboard"
-								>
-									{isRunning ? (
-										<LoaderCircle className="size-3.5 animate-spin" />
+									{didCopy ? (
+										<>
+											<Check className="size-3.5" />
+											Copied
+										</>
 									) : (
 										<>
-											<Play className="size-3.5" />
-											Run
+											<Copy className="size-3.5" />
+											Copy command
 										</>
 									)}
 								</Button>

@@ -70,7 +70,7 @@ export const SigmaGraph = (props: {
 	const hasLoadedGraphRef = useRef(false);
 	const animationFrameRef = useRef<number | null>(null);
 	const activeRunIdRef = useRef(0);
-	useGraphSettings(props);
+	useGraphSettings();
 
 	const applyNoverlapSpacing = (runId: number) => {
 		if (activeRunIdRef.current !== runId) {

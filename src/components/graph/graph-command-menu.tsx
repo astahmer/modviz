@@ -23,11 +23,80 @@ import {
 import type { ModvizOutput, VizNode } from "../../../mod/types";
 import { getExternalPackageName } from "~/utils/modviz-data";
 
-export function GraphCommandMenuDialog(props: {
+type GraphCommandMenuProps = {
 	nodes: ModvizOutput["nodes"];
 	onHighlight: (value: string | undefined) => void;
 	onSelect: (value: string | undefined) => void;
-}) {
+};
+
+const getActiveCommandItemValue = () => {
+	const item = document.querySelector(
+		'[cmdk-item][data-selected="true"]',
+	) as HTMLElement | undefined;
+	return item?.dataset.value;
+};
+
+const handleArrowKeyHighlight = (
+	onHighlight: (value: string | undefined) => void,
+) => {
+	return (event: React.KeyboardEvent<HTMLInputElement>) => {
+		if (!event.key.startsWith("Arrow")) {
+			return;
+		}
+
+		onHighlight(getActiveCommandItemValue());
+	};
+};
+
+function NodeCommandList(props: GraphCommandMenuProps & { onClose?: () => void }) {
+	const nodesByClusterMap = useNodesByClusterMap(props.nodes);
+
+	return (
+		<Command loop>
+			<CommandInput
+				placeholder="Type a command or search..."
+				onKeyDown={handleArrowKeyHighlight(props.onHighlight)}
+			/>
+			<CommandList>
+				<CommandEmpty>No results found.</CommandEmpty>
+				{Array.from(nodesByClusterMap.entries()).map(([cluster, nodeList]) => (
+					<CommandGroup key={cluster} heading={cluster}>
+						{nodeList.map((node) => (
+							<CommandItem
+								key={node.path}
+								value={node.path}
+								keywords={[
+									node.name,
+									node.package?.name,
+									node.cluster,
+									node.path,
+									...node.path.split("/"),
+								].filter(Boolean) as string[]}
+								onMouseEnter={() => {
+									props.onHighlight(node.path);
+								}}
+								onSelect={(value) => {
+									props.onSelect(value);
+									props.onClose?.();
+								}}
+							>
+								<div className="flex min-w-0 flex-col">
+									<span className="truncate">{node.name}</span>
+									<span className="truncate text-xs text-slate-500">
+										{node.path}
+									</span>
+								</div>
+							</CommandItem>
+						))}
+						<CommandSeparator />
+					</CommandGroup>
+				))}
+			</CommandList>
+		</Command>
+	);
+}
+
+export function GraphCommandMenuDialog(props: GraphCommandMenuProps) {
 	const [open, setOpen] = useState(false);
 
 	useEffect(() => {
@@ -41,77 +110,16 @@ export function GraphCommandMenuDialog(props: {
 		return () => document.removeEventListener("keydown", down);
 	}, []);
 
-	const nodesByClusterMap = useNodesByClusterMap(props.nodes);
-
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<Command loop>
-				<CommandInput
-					placeholder="Type a command or search..."
-					onKeyDown={(e) => {
-						if (!e.key.startsWith("Arrow")) return;
-						// item that is currently on focused (selected) either by mouse hover or keyboard navigation
-						const item = document.querySelector(
-							'[cmdk-item][data-selected="true"]',
-						) as HTMLElement | undefined;
-						if (!item) return;
-
-						props.onHighlight(item?.dataset.value);
-						// this will dispatch an event that the cmdk library will listen to (then onSelect) will be executed
-						// const event = new Event('cmdk-item-select');
-						// item.dispatchEvent(event);
-					}}
-				/>
-				<CommandList>
-					<CommandEmpty>No results found.</CommandEmpty>
-					{Array.from(nodesByClusterMap.entries()).map(
-						([cluster, nodeList]) => (
-							<CommandGroup key={cluster} heading={cluster}>
-								{nodeList.map((node) => (
-									<CommandItem
-										key={node.path}
-										value={node.path}
-										keywords={[
-											node.name,
-											node.package?.name,
-											node.cluster,
-											node.path,
-											...node.path.split("/"),
-										].filter(Boolean) as string[]}
-										onMouseEnter={() => {
-											props.onHighlight(node.path);
-										}}
-										onSelect={(value) => {
-											props.onSelect(value);
-											setOpen(false);
-										}}
-									>
-										<div className="flex min-w-0 flex-col">
-											<span className="truncate">{node.name}</span>
-											<span className="truncate text-xs text-slate-500">
-												{node.path}
-											</span>
-										</div>
-									</CommandItem>
-								))}
-								<CommandSeparator />
-							</CommandGroup>
-						),
-					)}
-				</CommandList>
-			</Command>
+			<NodeCommandList {...props} onClose={() => setOpen(false)} />
 		</CommandDialog>
 	);
 }
 
-export function GraphCommandMenu(props: {
-	nodes: ModvizOutput["nodes"];
-	onHighlight: (value: string | undefined) => void;
-	onSelect: (value: string | undefined) => void;
-}) {
+export function GraphCommandMenu(props: GraphCommandMenuProps) {
 	const [open, setOpen] = useState(false);
 
-	const nodesByClusterMap = useNodesByClusterMap(props.nodes);
 	const focusedValue = useAtom(focusedNodeIdAtom);
 	const focusedNode = props.nodes.find((node) => node.path === focusedValue);
 
@@ -129,61 +137,7 @@ export function GraphCommandMenu(props: {
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-full p-0">
-				<Command loop>
-					<CommandInput
-						placeholder="Type a command or search..."
-						onKeyDown={(e) => {
-							if (!e.key.startsWith("Arrow")) return;
-							// item that is currently on focused (selected) either by mouse hover or keyboard navigation
-							const item = document.querySelector(
-								'[cmdk-item][data-selected="true"]',
-							) as HTMLElement | undefined;
-							if (!item) return;
-
-							props.onHighlight(item?.dataset.value);
-							// this will dispatch an event that the cmdk library will listen to (then onSelect) will be executed
-							// const event = new Event('cmdk-item-select');
-							// item.dispatchEvent(event);
-						}}
-					/>
-					<CommandList>
-						<CommandEmpty>No results found.</CommandEmpty>
-						{Array.from(nodesByClusterMap.entries()).map(
-							([cluster, nodeList]) => (
-								<CommandGroup key={cluster} heading={cluster}>
-									{nodeList.map((node) => (
-										<CommandItem
-											key={node.path}
-											value={node.path}
-											keywords={[
-												node.name,
-												node.package?.name,
-												node.cluster,
-												node.path,
-												...node.path.split("/"),
-											].filter(Boolean) as string[]}
-											onMouseEnter={() => {
-												props.onHighlight(node.path);
-											}}
-											onSelect={(currentValue) => {
-												props.onSelect(currentValue);
-												setOpen(false);
-											}}
-										>
-											<div className="flex min-w-0 flex-col">
-												<span className="truncate">{node.name}</span>
-												<span className="truncate text-xs text-slate-500">
-													{node.path}
-												</span>
-											</div>
-										</CommandItem>
-									))}
-									<CommandSeparator />
-								</CommandGroup>
-							),
-						)}
-					</CommandList>
-				</Command>
+				<NodeCommandList {...props} onClose={() => setOpen(false)} />
 			</PopoverContent>
 		</Popover>
 	);
