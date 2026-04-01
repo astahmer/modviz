@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { colors } from "~/components/graph/common/colors";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
 import { Button } from "~/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { fetchModvizBundle, getWorkspacePackageNames } from "~/utils/modviz-data";
 import {
 	buildTreemapModel,
@@ -100,6 +101,7 @@ function TreemapRoute() {
 			layoutTreemap(visibleNodes, 0, 0, 1000, 600).map((rect, index) => ({
 				...rect,
 				legendIndex: index + 1,
+				hasInlineLabel: rect.width > 110 && rect.height > 72,
 			})),
 		[visibleNodes],
 	);
@@ -250,7 +252,39 @@ function TreemapRoute() {
 											</text>
 										</g>
 									)}
-									{rect.width > 110 && rect.height > 72 && (
+									{!rect.hasInlineLabel && (
+										<foreignObject
+											x={rect.x + 2}
+											y={rect.y + 2}
+											width={Math.max(0, rect.width - 4)}
+											height={Math.max(0, rect.height - 4)}
+										>
+											<div className="flex h-full w-full items-stretch justify-stretch">
+												<Tooltip lazyMount openDelay={70} closeDelay={0}>
+													<TooltipTrigger>
+														<div
+															className="h-full w-full cursor-pointer"
+															onClick={() => handleRectClick(rect.node)}
+															onMouseEnter={() => setHoveredNodeId(rect.node.id)}
+															onMouseLeave={() =>
+																setHoveredNodeId((current) =>
+																	current === rect.node.id ? null : current,
+																)
+															}
+														/>
+													</TooltipTrigger>
+													<TooltipContent sideOffset={8} className="max-w-80">
+														<div className="space-y-1">
+															<p className="font-semibold">#{rect.legendIndex} {getNodeTitle(rect.node)}</p>
+															<p className="text-xs opacity-80">{getNodeSubtitle(rect.node)}</p>
+															<p className="text-xs opacity-80">{getRectCaption(rect.node)}</p>
+														</div>
+													</TooltipContent>
+												</Tooltip>
+											</div>
+										</foreignObject>
+									)}
+									{rect.hasInlineLabel && (
 										<foreignObject
 											x={rect.x + 14}
 											y={rect.y + 36}
