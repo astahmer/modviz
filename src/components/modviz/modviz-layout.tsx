@@ -24,7 +24,6 @@ const navigationItems = [
 	{ to: "/explorer", label: "Explorer", icon: FolderTree },
 	{ to: "/hierarchy", label: "Hierarchy", icon: SquareStack },
 	{ to: "/treemap", label: "Treemap", icon: Trello },
-	{ to: "/configure", label: "Configure", icon: Settings },
 ] as const;
 
 export function ModvizLayout(props: PropsWithChildren<{
@@ -45,12 +44,9 @@ export function ModvizLayout(props: PropsWithChildren<{
 				<header className="rounded-[28px] border border-white/60 bg-white/80 p-5 shadow-[0_20px_80px_-45px_rgba(15,23,42,0.65)] backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
 					<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 						<div className="space-y-2">
-							<p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">
-								modviz workspace
-							</p>
 							<div>
 								<h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-									{props.title}
+									Modviz - {"Project Title"}
 								</h1>
 								<p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
 									{props.description}
@@ -58,6 +54,17 @@ export function ModvizLayout(props: PropsWithChildren<{
 							</div>
 						</div>
 						{props.actions ? <div className="shrink-0">{props.actions}</div> : null}
+						<Link
+									to="/configure"
+									className="absolute right-4 top-5 inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-slate-50/90 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-sky-500/70 dark:hover:text-sky-200"
+									activeProps={{
+										className:
+											"inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium whitespace-nowrap text-sky-700 shadow-sm dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200",
+									}}
+								>
+									<Settings className="size-4" />
+									<span>Configure</span>
+								</Link>
 					</div>
 					<nav className="mt-5 flex flex-wrap gap-2">
 						{navigationItems.map((item) => {
@@ -67,11 +74,11 @@ export function ModvizLayout(props: PropsWithChildren<{
 									key={item.to}
 									to={item.to}
 									className={cn(
-										"inline-flex items-center gap-2 rounded-full border border-slate-200/70 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-500/70 dark:hover:text-sky-200",
+										"inline-flex items-center gap-2 rounded-full border border-slate-200/70 px-4 py-2 text-sm font-medium whitespace-nowrap text-slate-600 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-500/70 dark:hover:text-sky-200",
 									)}
 									activeProps={{
 										className:
-											"inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500 text-white shadow-sm dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950",
+											"inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500 text-white shadow-sm whitespace-nowrap dark:border-sky-400 dark:bg-sky-500 dark:text-slate-950",
 									}}
 								>
 									<Icon className="size-4" />
@@ -79,8 +86,8 @@ export function ModvizLayout(props: PropsWithChildren<{
 								</Link>
 							);
 						})}
-					</nav>
-					<div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+						</nav>
+					<div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
 						<div
 							className={cn(
 								"inline-flex items-center gap-2 rounded-full border px-3 py-1 font-medium",
