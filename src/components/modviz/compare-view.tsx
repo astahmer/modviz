@@ -430,12 +430,6 @@ export function CompareView(props: {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex justify-end">
-				<Button variant="outline" size="sm" onClick={() => void refreshHistory()} disabled={historyLoading}>
-					<RotateCcw className="size-4" />
-					{historyLoading ? "Refreshing history..." : "Refresh history"}
-				</Button>
-			</div>
 			<section className="grid gap-4 xl:grid-cols-2">
 				<SnapshotCard
 					description="Load the older or baseline snapshot you want to compare against."
@@ -578,8 +572,14 @@ export function CompareView(props: {
 					</section>
 				</>
 			) : (
-				<section className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 p-8 text-sm leading-6 text-slate-500 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-400">
-					Load a baseline snapshot to compare it with the currently served graph or another uploaded JSON file.
+				<section className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 p-6 text-sm leading-6 text-slate-500 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-400">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<p>Load a baseline snapshot to compare it with the currently served graph or another uploaded JSON file.</p>
+						<Button variant="outline" size="sm" onClick={() => void refreshHistory()} disabled={historyLoading}>
+							<RotateCcw className="size-4" />
+							{historyLoading ? "Refreshing history..." : "Refresh history"}
+						</Button>
+					</div>
 				</section>
 			)}
 		</div>

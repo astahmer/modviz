@@ -68,6 +68,9 @@ export function TraceView(props: {
 		props.onSearchChange(next);
 	};
 
+	const getInputValue = (target: EventTarget | null) =>
+		target instanceof HTMLInputElement ? target.value : "";
+
 	const report = useMemo(() => {
 		if (deferredSearch.package.trim()) {
 			return buildPackageTraceReport(props.bundle.graph, deferredSearch.package, {
@@ -99,15 +102,15 @@ export function TraceView(props: {
 				<div className="grid gap-4 lg:grid-cols-3">
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">External package</label>
-						<Input placeholder="zod, react, lodash-es" value={draftSearch.package} onChange={(event) => setDraftSearch((previous) => ({ ...previous, package: event.currentTarget.value, node: "" }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch({ ...draftSearch, package: event.currentTarget.value, node: "" }); }} />
+						<Input placeholder="zod, react, lodash-es" value={draftSearch.package} onChange={(event) => { const value = getInputValue(event.target); setDraftSearch((previous) => ({ ...previous, package: value, node: "" })); }} onKeyDown={(event) => { if (event.key === "Enter") { const value = getInputValue(event.target); applySearch({ ...draftSearch, package: value, node: "" }); } }} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Node path or name</label>
-						<Input placeholder="src/routes/index.ts" value={draftSearch.node} onChange={(event) => setDraftSearch((previous) => ({ ...previous, node: event.currentTarget.value, package: "" }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch({ ...draftSearch, node: event.currentTarget.value, package: "" }); }} />
+						<Input placeholder="src/routes/index.ts" value={draftSearch.node} onChange={(event) => { const value = getInputValue(event.target); setDraftSearch((previous) => ({ ...previous, node: value, package: "" })); }} onKeyDown={(event) => { if (event.key === "Enter") { const value = getInputValue(event.target); applySearch({ ...draftSearch, node: value, package: "" }); } }} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Chain limit</label>
-						<Input type="number" min="1" max="200" value={String(draftSearch.limit)} onChange={(event) => setDraftSearch((previous) => ({ ...previous, limit: Math.max(1, Number(event.currentTarget.value) || TRACE_RESULT_LIMIT_DEFAULT) }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch(draftSearch); }} />
+						<Input type="number" min="1" max="200" value={String(draftSearch.limit)} onChange={(event) => { const value = getInputValue(event.target); setDraftSearch((previous) => ({ ...previous, limit: Math.max(1, Number(value) || TRACE_RESULT_LIMIT_DEFAULT) })); }} onKeyDown={(event) => { if (event.key === "Enter") applySearch(draftSearch); }} />
 					</div>
 				</div>
 				<div className="mt-4 flex flex-wrap gap-2">

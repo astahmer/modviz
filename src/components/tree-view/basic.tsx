@@ -25,7 +25,10 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import {
+	currentNodeIdAtom,
+	isNodeDetailsOpenAtom,
+} from "~/components/graph/common/use-graph-atoms";
 import { Flamegraph } from "~/components/graph/flamegraph";
 
 const TreeNodeName = (props: {
@@ -105,7 +108,8 @@ const TreeNodeName = (props: {
 					size="icon"
 					onClickCapture={(e) => {
 						e.stopPropagation();
-						focusedNodeIdAtom.set(node.id);
+						currentNodeIdAtom.set(node.id);
+						isNodeDetailsOpenAtom.set(true);
 					}}
 				>
 					<LuArrowRight className="text-slate-400" />

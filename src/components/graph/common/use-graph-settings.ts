@@ -5,7 +5,7 @@ import {
 	useSigma,
 } from "@react-sigma/core";
 import { useAtom } from "@xstate/store/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import { colors } from "~/components/graph/common/colors";
 import type {
@@ -13,11 +13,10 @@ import type {
 	NodeType,
 } from "~/components/graph/common/use-create-graph";
 import {
-	focusedNodeIdAtom,
+	currentNodeIdAtom,
 	highlightedNodeIdAtom,
 	hoveredClusterNameAtom,
 	selectedNodeIdsAtom,
-	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
 export const useGraphSettings = () => {
@@ -26,8 +25,26 @@ export const useGraphSettings = () => {
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
 	const hoveredClusterName = useAtom(hoveredClusterNameAtom);
 	const selectedNodeIds = useAtom(selectedNodeIdsAtom);
-	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
- 	const selectedNodeSet = new Set(selectedNodeIds);
+	const selectedNodeSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+	const selectedVisibleNodeSet = useMemo(() => {
+		if (selectedNodeSet.size === 0) {
+			return new Set<string>();
+		}
+
+		const graph = sigma.getGraph();
+		const visible = new Set<string>(selectedNodeIds);
+		for (const selectedNodeId of selectedNodeIds) {
+			if (!graph.hasNode(selectedNodeId)) {
+				continue;
+			}
+
+			for (const neighborId of graph.neighbors(selectedNodeId)) {
+				visible.add(neighborId);
+			}
+		}
+
+		return visible;
+	}, [selectedNodeIds, selectedNodeSet.size, sigma]);
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -39,17 +56,12 @@ export const useGraphSettings = () => {
 			leaveNode: () => setHoveredNodeId(null),
 			clickNode: (event) => {
 				gotoNode(event.node);
-				if (selectionModeEnabled) {
-					focusedNodeIdAtom.set(null);
-					selectedNodeIdsAtom.set((previous) =>
-						previous.includes(event.node)
-							? previous.filter((nodeId) => nodeId !== event.node)
-							: [...previous, event.node],
-					);
-					return;
-				}
-				focusedNodeIdAtom.set((prev) =>
-					prev === event.node ? null : event.node,
+				currentNodeIdAtom.set(event.node);
+				highlightedNodeIdAtom.set(event.node);
+				selectedNodeIdsAtom.set((previous) =>
+					previous.includes(event.node)
+						? previous.filter((nodeId) => nodeId !== event.node)
+						: [...previous, event.node],
 				);
 			},
 			downStage: () => {
@@ -66,7 +78,11 @@ export const useGraphSettings = () => {
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			renderLabels: Boolean(hoveredNodeId || hoveredClusterName),
+			renderLabels: Boolean(
+				hoveredNodeId ||
+					hoveredClusterName ||
+					selectedNodeSet.size > 0,
+			),
 			// hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
 			// This function tells sigma to grow sizes linearly with the zoom, instead
@@ -78,11 +94,14 @@ export const useGraphSettings = () => {
 					highlighted: node.highlighted || false,
 				};
 
-				if (selectionModeEnabled && selectedNodeSet.size > 0) {
+				if (selectedNodeSet.size > 0) {
 					if (selectedNodeSet.has(nodeId)) {
 						updated.label = node.label;
 						updated.highlighted = true;
 						updated.size = node.size + clamp(2, 8, node.size * 0.15);
+					} else if (selectedVisibleNodeSet.has(nodeId)) {
+						updated.label = node.label;
+						updated.highlighted = true;
 					} else {
 						updated.color = colors.default;
 						updated.label = "";
@@ -127,9 +146,9 @@ export const useGraphSettings = () => {
 				const graph = sigma.getGraph();
 				const updated: EdgeType = { ...edge, hidden: true };
 
-				if (selectionModeEnabled && selectedNodeSet.size > 0) {
+				if (selectedNodeSet.size > 0) {
 					const [source, target] = graph.extremities(edgeId);
-					if (selectedNodeSet.has(source) && selectedNodeSet.has(target)) {
+					if (selectedNodeSet.has(source) || selectedNodeSet.has(target)) {
 						updated.hidden = false;
 						updated.color = graph.getNodeAttribute(source, "color");
 					}
@@ -162,5 +181,12 @@ export const useGraphSettings = () => {
 				return updated;
 			},
 		});
-	}, [hoveredClusterName, hoveredNodeId, selectedNodeIds, selectionModeEnabled, setSettings, sigma]);
+	}, [
+		hoveredClusterName,
+		hoveredNodeId,
+		selectedNodeSet,
+		selectedVisibleNodeSet,
+		setSettings,
+		sigma,
+	]);
 };

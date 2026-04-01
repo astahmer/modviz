@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
 import {
-	focusedNodeIdAtom,
-	isFocusedModalOpenedAtom,
+	isNodeDetailsOpenAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
 export function NotesPanel(props: PropsWithChildren) {
@@ -61,7 +60,7 @@ export function NotesPanel(props: PropsWithChildren) {
 		setActiveNote(newNote);
 	};
 
-	const isOpened = useAtom(isFocusedModalOpenedAtom);
+	const isOpened = useAtom(isNodeDetailsOpenAtom);
 
 	return (
 		<FloatingPanel.Root
@@ -105,8 +104,7 @@ export function NotesPanel(props: PropsWithChildren) {
 									<FloatingPanel.CloseTrigger
 										className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
 										onClick={() => {
-											// isFocusedModalOpenedAtom.set(false)
-											focusedNodeIdAtom.set(null);
+											isNodeDetailsOpenAtom.set(false);
 										}}
 									>
 										<X className="w-3 h-3" />

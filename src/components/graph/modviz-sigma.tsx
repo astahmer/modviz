@@ -24,11 +24,11 @@ import type {
 import { Button } from "~/components/ui/button";
 import { LoadingState } from "~/components/ui/loading-state";
 import {
-	focusedNodeIdAtom,
+	currentNodeIdAtom,
 	highlightedNodeIdAtom,
 	hoveredClusterNameAtom,
+	isNodeDetailsOpenAtom,
 	selectedNodeIdsAtom,
-	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { GraphCommandMenuDialog } from "~/components/graph/graph-command-menu";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
@@ -111,7 +111,6 @@ const WithGraph = (props: {
 				.map((node) => node.path),
 		[props.nodes],
 	);
-	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
 	useClusterLabelLayer(sigma, clusterMap, props.hideClusterLabels);
 
 	const graph = sigma.getGraph();
@@ -213,27 +212,15 @@ const WithGraph = (props: {
 					highlightedNodeIdAtom.set(null);
 
 					if (!value) {
-						if (selectionModeEnabled) {
-							selectedNodeIdsAtom.set([]);
-						}
-						return focusedNodeIdAtom.set(null);
+						return currentNodeIdAtom.set(null);
 					}
 
 					const node = props.nodes.find((node) => node.path === value);
 					if (!node) return;
-					if (selectionModeEnabled) {
-						focusedNodeIdAtom.set(null);
-						selectedNodeIdsAtom.set((previous) =>
-							previous.includes(value)
-								? previous.filter((nodeId) => nodeId !== value)
-								: [...previous, value],
-						);
-						return;
-					}
-					if (focusedNodeIdAtom.get() === value)
-						return focusedNodeIdAtom.set(null);
-
-					focusedNodeIdAtom.set(value);
+					currentNodeIdAtom.set(value);
+					selectedNodeIdsAtom.set((previous) =>
+						previous.includes(value) ? previous : [...previous, value],
+					);
 				}}
 			/>
 

@@ -4,7 +4,7 @@ import { useAtom } from "@xstate/store/react";
 import { Command } from "cmdk";
 import { ChevronsUpDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { focusedNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
+import { currentNodeIdAtom } from "~/components/graph/common/use-graph-atoms";
 import { Button } from "~/components/ui/button";
 import {
 	CommandDialog,
@@ -120,8 +120,8 @@ export function GraphCommandMenuDialog(props: GraphCommandMenuProps) {
 export function GraphCommandMenu(props: GraphCommandMenuProps) {
 	const [open, setOpen] = useState(false);
 
-	const focusedValue = useAtom(focusedNodeIdAtom);
-	const focusedNode = props.nodes.find((node) => node.path === focusedValue);
+	const currentNodeId = useAtom(currentNodeIdAtom);
+	const currentNode = props.nodes.find((node) => node.path === currentNodeId);
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -132,7 +132,7 @@ export function GraphCommandMenu(props: GraphCommandMenuProps) {
 					aria-expanded={open}
 					className="w-full justify-between max-w-[400px]"
 				>
-					{focusedNode?.name ?? "Find a node..."}
+					{currentNode?.name ?? "Find or change current node..."}
 					<ChevronsUpDown className="opacity-50" />
 				</Button>
 			</PopoverTrigger>

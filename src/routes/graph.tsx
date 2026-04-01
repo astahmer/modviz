@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { ChevronRight, RotateCcw, Settings2 } from "lucide-react";
+import { Eye, RotateCcw, Settings2 } from "lucide-react";
 import { z } from "zod";
 import { GraphCommandMenu } from "~/components/graph/graph-command-menu";
 import {
@@ -9,11 +9,10 @@ import {
 	type GraphLayoutSettings,
 } from "~/components/graph/common/graph-layout-settings";
 import {
-	focusedNodeIdAtom,
+	currentNodeIdAtom,
 	highlightedNodeIdAtom,
-	isFocusedModalOpenedAtom,
+	isNodeDetailsOpenAtom,
 	selectedNodeIdsAtom,
-	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { GraphSettingsPanel } from "~/components/graph/graph-settings-panel";
 import { ModvizLayout } from "~/components/modviz/modviz-layout";
@@ -91,9 +90,8 @@ function GraphRoute() {
 	const navigate = Route.useNavigate();
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [refreshNonce, setRefreshNonce] = useState(0);
-	const focusedValue = useAtom(focusedNodeIdAtom);
-	const isFocusedModalOpened = useAtom(isFocusedModalOpenedAtom);
-	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
+	const currentNodeId = useAtom(currentNodeIdAtom);
+	const isNodeDetailsOpen = useAtom(isNodeDetailsOpenAtom);
 	const selectedNodeIds = useAtom(selectedNodeIdsAtom);
 
 	if (!isModvizBundleReady(bundle)) {
@@ -168,7 +166,10 @@ function GraphRoute() {
 		}
 
 		highlightedNodeIdAtom.set(search.focus);
-		focusedNodeIdAtom.set(search.focus);
+		currentNodeIdAtom.set(search.focus);
+		selectedNodeIdsAtom.set((previous) =>
+			previous.includes(search.focus) ? previous : [...previous, search.focus],
+		);
 	}, [search.focus]);
 
 	return (
@@ -226,46 +227,30 @@ function GraphRoute() {
 							}}
 							onSelect={(value) => {
 								highlightedNodeIdAtom.set(null);
-									if (!value) return focusedNodeIdAtom.set(null);
-									if (selectionModeEnabled) {
-										selectedNodeIdsAtom.set((previous) =>
-											previous.includes(value)
-												? previous.filter((nodeId) => nodeId !== value)
-												: [...previous, value],
-										);
-										return;
-									}
+								if (!value) return currentNodeIdAtom.set(null);
 								updateSearch({ focus: value });
-								focusedNodeIdAtom.set(
-									focusedNodeIdAtom.get() === value ? null : value,
+								currentNodeIdAtom.set(value);
+								selectedNodeIdsAtom.set((previous) =>
+									previous.includes(value) ? previous : [...previous, value],
 								);
 							}}
 						/>
 					</div>
 					<Button
-						variant={selectionModeEnabled ? "default" : "outline"}
-						onClick={() => {
-							const nextSelectionMode = !selectionModeEnabled;
-							selectionModeEnabledAtom.set(nextSelectionMode);
-							if (nextSelectionMode) {
-								focusedNodeIdAtom.set(null);
-							}
-							if (selectionModeEnabled) {
-								selectedNodeIdsAtom.set([]);
-							}
-						}}
+						variant="outline"
+						onClick={() => isNodeDetailsOpenAtom.set(true)}
+						disabled={!currentNodeId}
 					>
-						Selection mode
+						<Eye className="size-4" />
+						{isNodeDetailsOpen ? "Details open" : "Open details"}
 					</Button>
-					{selectionModeEnabled ? (
-						<Button
-							variant="outline"
-							onClick={() => selectedNodeIdsAtom.set([])}
-							disabled={selectedNodeIds.length === 0}
-						>
-							Clear selection ({selectedNodeIds.length})
-						</Button>
-					) : null}
+					<Button
+						variant="outline"
+						onClick={() => selectedNodeIdsAtom.set([])}
+						disabled={selectedNodeIds.length === 0}
+					>
+						Clear selection ({selectedNodeIds.length})
+					</Button>
 					<Button
 						variant="outline"
 						onClick={() => setRefreshNonce((value) => value + 1)}
@@ -273,18 +258,21 @@ function GraphRoute() {
 						<RotateCcw className="size-4" />
 						Refresh canvas
 					</Button>
-					{focusedValue ? (
+					{currentNodeId ? (
 						<Button
 							variant="outline"
-							onClick={() => focusedNodeIdAtom.set(null)}
+							onClick={() => {
+								currentNodeIdAtom.set(null);
+								isNodeDetailsOpenAtom.set(false);
+							}}
 						>
-							<ChevronRight className="size-4" />
-							{isFocusedModalOpened ? "Close details" : "Clear selection"}
+							Clear current node
 						</Button>
 					) : null}
 					<div className="text-sm text-slate-500 dark:text-slate-400">
 						{filteredNodes.length} nodes, {bundle.graph.metadata.packages.length} workspace packages
-						{selectionModeEnabled && selectedNodeIds.length > 0 ? ` • ${selectedNodeIds.length} selected` : ""}
+						{selectedNodeIds.length > 0 ? ` • ${selectedNodeIds.length} selected` : ""}
+						{currentNodeId ? ` • current ${currentNodeId.split("/").at(-1)}` : ""}
 						{search.cluster ? ` • filtered to ${search.cluster}` : ""}
 					</div>
 				</section>

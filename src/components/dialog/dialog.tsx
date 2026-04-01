@@ -8,9 +8,8 @@ import { useAtom } from "@xstate/store/react";
 import { useMemo, useState } from "react";
 import { LuMaximize, LuMinimize } from "react-icons/lu";
 import {
-	focusedNodeIdAtom,
-	isFocusedModalOpenedAtom,
-	selectionModeEnabledAtom,
+	currentNodeIdAtom,
+	isNodeDetailsOpenAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { Flamegraph } from "~/components/graph/flamegraph";
 import { TreeViewBasic } from "~/components/tree-view/basic";
@@ -34,20 +33,18 @@ import type { ModvizOutput, VizNode } from "../../../mod/types";
 import { getExternalPackageName } from "~/utils/modviz-data";
 
 export function NodeDetailsModal(props: { output: ModvizOutput }) {
-	const isOpened = useAtom(isFocusedModalOpenedAtom);
-	const focusedNodeId = useAtom(focusedNodeIdAtom);
-	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
+	const isOpened = useAtom(isNodeDetailsOpenAtom);
+	const currentNodeId = useAtom(currentNodeIdAtom);
 
-	const node =
-		isOpened && !selectionModeEnabled
-			? props.output.nodes.find((node) => node.path === focusedNodeId)
-			: null;
+	const node = currentNodeId
+		? props.output.nodes.find((candidate) => candidate.path === currentNodeId)
+		: null;
 
 	return (
 		<Dialog.Root
-			open={isOpened}
+			open={Boolean(isOpened && node)}
 			onOpenChange={(details) => {
-				if (!details.open) focusedNodeIdAtom.set(null);
+				if (!details.open) isNodeDetailsOpenAtom.set(false);
 			}}
 			lazyMount
 		>
@@ -187,7 +184,7 @@ const NodeDetailsModalContent = (props: {
 				<Link
 					to="/trace"
 					search={getNodeTraceSearch(props.node)}
-					onClick={() => focusedNodeIdAtom.set(null)}
+					onClick={() => isNodeDetailsOpenAtom.set(false)}
 					className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-500/60 dark:hover:bg-sky-500/10 dark:hover:text-sky-200"
 				>
 					Trace this node →
