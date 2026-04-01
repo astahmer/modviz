@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, Sparkles, SquareStack } from "lucide-react";
+import { ArrowRight, BarChart3, FolderTree, GitBranchPlus, Network, SquareStack } from "lucide-react";
 import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 
 type RouteCard = {
@@ -15,9 +15,9 @@ const routes: RouteCard[] = [
 		to: "/graph",
 		title: "Bubble graph",
 		description:
-			"Open the force-directed view only when you need it, with tunable layout controls and broader node search.",
+			"Open the force-directed view with external packages broken down by name instead of grouped together.",
 		icon: Network,
-		search: undefined,
+		search: { externalGrouping: "package" as const },
 	},
 	{
 		to: "/explorer",
@@ -127,40 +127,7 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 
 	return (
 		<div className="space-y-6">
-			<section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
-				<div className="rounded-[28px] border border-slate-200/70 bg-slate-950 p-6 text-slate-100 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.8)]">
-					<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
-						<Sparkles className="size-3.5" />
-						Session overview
-					</div>
-					<h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight">
-						Start with structure, then open the heavy views only when the question needs them.
-					</h2>
-					<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-						The dataset contains {formatNumber.format(summary.overview.totalNodes)} modules across {formatNumber.format(summary.overview.workspacePackages)} workspace packages and {formatNumber.format(summary.overview.externalPackages)} external packages.
-					</p>
-				</div>
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-					<StatCard
-						label="Entrypoints"
-						value={summary.overview.entrypoints}
-						detail={graph.metadata.entrypoints.slice(0, 2).join(" • ") || "No entrypoint metadata"}
-					/>
-					<StatCard
-						label="Workspace Nodes"
-						value={summary.overview.workspaceNodes}
-						detail={`${formatNumber.format(summary.overview.externalNodes)} external nodes are available for search and graph views.`}
-					/>
-				</div>
-			</section>
-
-			<section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-				<StatCard label="Total nodes" value={summary.overview.totalNodes} detail="Whole analyzed graph, including node_modules when present." />
-				<StatCard label="External packages" value={summary.overview.externalPackages} detail="Distinct third-party packages detected in the loaded graph." />
-				<StatCard label="Barrel files" value={summary.overview.barrelFiles} detail="Files marked as re-export hubs by the analyzer." />
-				<StatCard label="LLM report" value={summary.hasLlm ? 1 : 0} detail={summary.hasLlm ? "Companion summary available for hotspot rankings." : "Only graph data is loaded; rankings use direct edge counts."} />
-			</section>
-
+			{/* Quick access navigation - primary focus */}
 			<section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
 				{[...presetRoutes, ...routes].map((route) => {
 					const Icon = route.icon;
@@ -169,18 +136,18 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 							key={`${route.to}-${route.title}`}
 							to={route.to}
 							search={route.search}
-							className="group rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-[0_24px_70px_-34px_rgba(14,165,233,0.45)] dark:border-slate-800 dark:bg-slate-950/70"
+							className="group rounded-[16px] border border-slate-200/70 bg-white/90 p-4 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] transition hover:border-sky-300 hover:shadow-[0_24px_70px_-34px_rgba(14,165,233,0.45)] dark:border-slate-800 dark:bg-slate-950/70"
 						>
-							<div className="flex items-start justify-between gap-4">
-								<div className="rounded-2xl bg-sky-100 p-3 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-									<Icon className="size-5" />
+							<div className="flex items-start justify-between gap-3">
+								<div className="rounded-lg bg-sky-100 p-2 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+									<Icon className="size-4" />
 								</div>
-								<ArrowRight className="size-4 text-slate-400 transition group-hover:text-sky-600 dark:group-hover:text-sky-300" />
+								<ArrowRight className="size-3.5 text-slate-400 transition group-hover:text-sky-600 dark:group-hover:text-sky-300" />
 							</div>
-							<h3 className="mt-5 text-lg font-semibold text-slate-900 dark:text-slate-100">
+							<h3 className="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
 								{route.title}
 							</h3>
-							<p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+							<p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
 								{route.description}
 							</p>
 						</Link>
@@ -188,6 +155,15 @@ export function DashboardView(props: { bundle: ModvizDataBundle }) {
 				})}
 			</section>
 
+			{/* Key metrics - compact view */}
+			<section className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+				<StatCard label="Total nodes" value={summary.overview.totalNodes} detail={`${formatNumber.format(summary.overview.workspaceNodes)} workspace, ${formatNumber.format(summary.overview.externalNodes)} external`} />
+				<StatCard label="Workspace packages" value={summary.overview.workspacePackages} detail={`+${formatNumber.format(summary.overview.externalPackages)} external packages`} />
+				<StatCard label="Barrel files" value={summary.overview.barrelFiles} detail="Re-export hubs in the analyzer." />
+				<StatCard label="Entrypoints" value={summary.overview.entrypoints} detail={graph.metadata.entrypoints.slice(0, 2).join(" • ") || "No metadata"} />
+			</section>
+
+			{/* Data-driven rankings - actionable insights */}
 			<section className="grid gap-4 xl:grid-cols-3">
 				<RankingList title="Hotspots" description={summary.hasLlm ? "Reachable-module hotspots from the companion report." : "Fallback ranking based on direct outgoing imports."} items={summary.hotspots.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />
 				<RankingList title="Most imported by" description="Files or modules with the most inbound edges." items={summary.topImportedBy.slice(0, 6)} getLink={(item) => ({ to: "/explorer", search: { selected: item.path, scope: item.path.includes("node_modules") ? "external" : "workspace" } })} />

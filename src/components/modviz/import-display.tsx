@@ -69,10 +69,19 @@ export function ImportDisplay(props: ImportDisplayProps) {
 			)}
 
 			{viewMode === "code" ? (
-				<div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-					<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
-						<code>{blocks[0]?.code}</code>
-					</pre>
+				<div className="space-y-3">
+					{blocks.map((block, idx) => (
+						<div key={idx} className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+							{blocks.length > 1 && (
+								<p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+									{block.module}
+								</p>
+							)}
+							<pre className="overflow-x-auto text-sm leading-6 text-slate-800 dark:text-slate-100">
+								<code>{block.code}</code>
+							</pre>
+						</div>
+					))}
 				</div>
 			) : (
 				<div className="overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-slate-800">

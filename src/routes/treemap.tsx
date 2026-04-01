@@ -118,7 +118,7 @@ function TreemapRoute() {
 						{rectangles.map((rect) => (
 							<g
 								key={rect.path}
-								onClick={() => setSelectedPath(rect.path)}
+								onClick={() => setSelectedPath(rect.path === "root" ? null : rect.path)}
 								className="cursor-pointer transition-opacity hover:opacity-80"
 							>
 								<rect
