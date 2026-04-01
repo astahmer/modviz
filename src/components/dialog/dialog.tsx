@@ -3,6 +3,7 @@
 import { Dialog } from "@ark-ui/react/dialog";
 import { Portal } from "@ark-ui/react/portal";
 import { Tabs } from "@ark-ui/react/tabs";
+import { Link } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
 import { useMemo, useState } from "react";
 import { LuMaximize, LuMinimize } from "react-icons/lu";
@@ -29,6 +30,7 @@ import {
 	createListCollection,
 } from "~/components/ui/select";
 import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { getExternalPackageName } from "~/utils/modviz-data";
 
 export function NodeDetailsModal(props: { output: ModvizOutput }) {
 	const isOpened = useAtom(isFocusedModalOpenedAtom);
@@ -169,16 +171,35 @@ const NodeDetailsModalContent = (props: {
 				</Tabs.Root>
 			</div>
 
-			<div className="flex flex-col items-end text-xs p-2 border-t border-gray-200 dark:border-gray-700">
-				<div className="flex gap-3">
-					Current node: <span>{props.node.path}</span>
+			<div className="flex items-center justify-between text-xs p-2 border-t border-gray-200 dark:border-gray-700">
+				<div className="flex flex-col gap-1">
+					<div className="flex gap-3">
+						Current node: <span>{props.node.path}</span>
+					</div>
+					<div className="flex gap-3">
+						Entrypoint: <span>{props.entryNodeId}</span>
+					</div>
 				</div>
-				<div className="flex gap-3">
-					Entrypoint: <span>{props.entryNodeId}</span>
-				</div>
+				<Link
+					to="/trace"
+					search={getNodeTraceSearch(props.node)}
+					onClick={() => focusedNodeIdAtom.set(null)}
+					className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-500/60 dark:hover:bg-sky-500/10 dark:hover:text-sky-200"
+				>
+					Trace this node →
+				</Link>
 			</div>
 		</Dialog.Content>
 	);
+};
+
+const getNodeTraceSearch = (node: VizNode) => {
+	if (node.path.includes("node_modules")) {
+		const packageName = getExternalPackageName(node);
+		return { package: packageName ?? node.path, node: "", limit: 25 };
+	}
+
+	return { node: node.path, package: "", limit: 25 };
 };
 
 const TransitiveImportsTab = (props: {

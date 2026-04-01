@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, FileUp, RotateCcw } from "lucide-react";
+import { ArrowLeftRight, FileUp, History, RotateCcw } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import type { ModvizOutput, ModvizSnapshotHistoryItem } from "../../../mod/types";
 import { Button } from "~/components/ui/button";
+import {
+	CommandDialog,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "~/components/ui/command";
 import {
 	Tooltip,
 	TooltipArrow,
@@ -21,16 +30,6 @@ type SnapshotState = {
 };
 
 type SnapshotSlot = "baseline" | "current";
-
-const formatSnapshotOptionLabel = (snapshot: ModvizSnapshotHistoryItem) => {
-	const generatedLabel = snapshot.generatedAt
-		? new Date(snapshot.generatedAt).toLocaleString()
-		: null;
-
-	return generatedLabel
-		? `${snapshot.label || snapshot.id} • ${generatedLabel}`
-		: snapshot.label || snapshot.id;
-};
 
 const isModvizOutput = (value: unknown): value is ModvizOutput => {
 	if (!value || typeof value !== "object") {
@@ -63,10 +62,62 @@ const parseSnapshotFile = async (file: File) => {
 	} satisfies SnapshotState;
 };
 
+function SnapshotHistoryCombobox(props: {
+	history: ModvizSnapshotHistoryItem[];
+	onSelect: (id: string) => void;
+}) {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<>
+			<Button
+				variant="outline"
+				className="mt-3 w-full justify-between"
+				onClick={() => setOpen(true)}
+			>
+				<span className="flex items-center gap-2">
+					<History className="size-4" />
+					Pick from snapshot history
+				</span>
+				<ChevronsUpDown className="size-4 opacity-50" />
+			</Button>
+			<CommandDialog open={open} onOpenChange={setOpen}>
+				<CommandInput placeholder="Search snapshots…" />
+				<CommandList>
+					<CommandEmpty>No snapshots found.</CommandEmpty>
+					<CommandGroup heading="Saved snapshots">
+						{props.history.map((snapshot) => (
+							<CommandItem
+								key={snapshot.id}
+								value={snapshot.id + " " + (snapshot.label ?? "")}
+								onSelect={() => {
+									props.onSelect(snapshot.id);
+									setOpen(false);
+								}}
+							>
+								<div className="flex min-w-0 flex-col">
+									<span className="truncate font-medium">{snapshot.label || snapshot.id}</span>
+									{snapshot.generatedAt ? (
+										<span className="truncate text-xs text-slate-500">
+											{new Date(snapshot.generatedAt).toLocaleString()}
+										</span>
+									) : null}
+								</div>
+							</CommandItem>
+						))}
+					</CommandGroup>
+				</CommandList>
+			</CommandDialog>
+		</>
+	);
+}
+
 function SnapshotCard(props: {
 	description: string;
+	history?: ModvizSnapshotHistoryItem[];
 	label: string;
 	onFileChange: (file: File) => void;
+	onHistorySelect?: (id: string) => void;
 	secondaryAction?: React.ReactNode;
 	snapshot: SnapshotState | null;
 	title: string;
@@ -103,6 +154,9 @@ function SnapshotCard(props: {
 					}}
 				/>
 			</label>
+			{props.history && props.history.length > 0 && props.onHistorySelect ? (
+				<SnapshotHistoryCombobox history={props.history} onSelect={props.onHistorySelect} />
+			) : null}
 			{props.snapshot ? (
 				<div className="mt-4 grid gap-3 sm:grid-cols-3">
 					<MetricCard label="Nodes" value={props.snapshot.graph.nodes.length} />
@@ -354,42 +408,22 @@ export function CompareView(props: {
 
 	return (
 		<div className="space-y-6">
-			{props.history.length > 0 ? (
-				<section className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
-					<div className="grid gap-4 lg:grid-cols-2">
-						<label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-							<span>Load baseline from history</span>
-							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("baseline", event.currentTarget.value); }} defaultValue={props.baselineSnapshotId ?? ""}>
-								<option value="">Choose snapshot…</option>
-								{props.history.map((snapshot) => (
-									<option key={snapshot.id} value={snapshot.id}>{formatSnapshotOptionLabel(snapshot)}</option>
-								))}
-							</select>
-						</label>
-						<label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-							<span>Load current from history</span>
-							<select className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none" onChange={(event) => { if (event.currentTarget.value) void loadHistorySnapshot("current", event.currentTarget.value); }} defaultValue="">
-								<option value="">Choose snapshot…</option>
-								{props.history.map((snapshot) => (
-									<option key={snapshot.id} value={snapshot.id}>{formatSnapshotOptionLabel(snapshot)}</option>
-								))}
-							</select>
-						</label>
-					</div>
-				</section>
-			) : null}
 			<section className="grid gap-4 xl:grid-cols-2">
 				<SnapshotCard
 					description="Load the older or baseline snapshot you want to compare against."
+					history={props.history}
 					label="No baseline snapshot loaded yet"
 					onFileChange={(file) => void loadFileInto("baseline", file)}
+					onHistorySelect={(id) => void loadHistorySnapshot("baseline", id)}
 					snapshot={baseline}
 					title="Baseline"
 				/>
 				<SnapshotCard
 					description="By default this uses the graph currently served by the modviz UI, but you can replace it with another JSON file."
+					history={props.history}
 					label={current?.label ?? "No current snapshot loaded yet"}
 					onFileChange={(file) => void loadFileInto("current", file)}
+					onHistorySelect={(id) => void loadHistorySnapshot("current", id)}
 					secondaryAction={
 						<div className="flex gap-2">
 							<Button
