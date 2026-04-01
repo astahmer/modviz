@@ -245,7 +245,11 @@ function GraphRoute() {
 					<Button
 						variant={selectionModeEnabled ? "default" : "outline"}
 						onClick={() => {
-							selectionModeEnabledAtom.set(!selectionModeEnabled);
+							const nextSelectionMode = !selectionModeEnabled;
+							selectionModeEnabledAtom.set(nextSelectionMode);
+							if (nextSelectionMode) {
+								focusedNodeIdAtom.set(null);
+							}
 							if (selectionModeEnabled) {
 								selectedNodeIdsAtom.set([]);
 							}

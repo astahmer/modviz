@@ -57,11 +57,18 @@ export async function startProductionServer(options: {
 		);
 	}
 
+	const historyDir = path.join(
+		path.dirname(path.resolve(options.outputPath)),
+		".modviz",
+		"history",
+	);
+
 	const child = spawn(process.execPath, [serverEntry], {
 		cwd: packagedRuntimeRoot,
 		env: {
 			...process.env,
 			MODVIZ_PATH: options.outputPath,
+			MODVIZ_HISTORY_DIR: process.env.MODVIZ_HISTORY_DIR ?? historyDir,
 			PORT: String(options.port),
 		},
 		stdio: "inherit",

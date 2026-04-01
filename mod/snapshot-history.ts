@@ -10,7 +10,10 @@ const SNAPSHOT_NAME_SANITIZER = /[^a-z0-9-_]+/gi;
 
 export const resolveSnapshotHistoryDir = () =>
 	path.resolve(
-		process.env.MODVIZ_HISTORY_DIR ?? path.join(process.cwd(), ".modviz", "history"),
+		process.env.MODVIZ_HISTORY_DIR ??
+			(process.env.MODVIZ_PATH
+				? path.join(path.dirname(path.resolve(process.env.MODVIZ_PATH)), ".modviz", "history")
+				: path.join(process.cwd(), ".modviz", "history")),
 	);
 
 const toSnapshotId = (snapshotName: string, generatedAt?: string) => {

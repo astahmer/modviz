@@ -40,6 +40,7 @@ export const useGraphSettings = () => {
 			clickNode: (event) => {
 				gotoNode(event.node);
 				if (selectionModeEnabled) {
+					focusedNodeIdAtom.set(null);
 					selectedNodeIdsAtom.set((previous) =>
 						previous.includes(event.node)
 							? previous.filter((nodeId) => nodeId !== event.node)

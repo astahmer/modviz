@@ -22,7 +22,7 @@ import {
 	type ChangedNodeSummary,
 } from "~/utils/modviz-compare";
 import { formatNumber } from "~/utils/formatting";
-import { fetchSnapshotGraph } from "~/utils/modviz-data";
+import { fetchSnapshotGraph, fetchSnapshotHistory } from "~/utils/modviz-data";
 
 type SnapshotState = {
 	graph: ModvizOutput;
@@ -343,6 +343,8 @@ export function CompareView(props: {
 	currentGraph: ModvizOutput | null;
 	history: ModvizSnapshotHistoryItem[];
 }) {
+	const [history, setHistory] = useState(props.history);
+	const [historyLoading, setHistoryLoading] = useState(false);
 	const currentServerSnapshot = useMemo(
 		() =>
 			props.currentGraph
@@ -356,6 +358,26 @@ export function CompareView(props: {
 	const [baseline, setBaseline] = useState<SnapshotState | null>(null);
 	const [current, setCurrent] = useState<SnapshotState | null>(currentServerSnapshot);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+	useEffect(() => {
+		setHistory(props.history);
+	}, [props.history]);
+
+	const refreshHistory = async () => {
+		try {
+			setHistoryLoading(true);
+			setErrorMessage(null);
+			setHistory(await fetchSnapshotHistory());
+		} catch (error) {
+			setErrorMessage(
+				error instanceof Error
+					? error.message
+					: "Failed to refresh snapshot history.",
+			);
+		} finally {
+			setHistoryLoading(false);
+		}
+	};
 
 	const comparison = useMemo(() => {
 		if (!baseline || !current) {
@@ -408,10 +430,16 @@ export function CompareView(props: {
 
 	return (
 		<div className="space-y-6">
+			<div className="flex justify-end">
+				<Button variant="outline" size="sm" onClick={() => void refreshHistory()} disabled={historyLoading}>
+					<RotateCcw className="size-4" />
+					{historyLoading ? "Refreshing history..." : "Refresh history"}
+				</Button>
+			</div>
 			<section className="grid gap-4 xl:grid-cols-2">
 				<SnapshotCard
 					description="Load the older or baseline snapshot you want to compare against."
-					history={props.history}
+					history={history}
 					label="No baseline snapshot loaded yet"
 					onFileChange={(file) => void loadFileInto("baseline", file)}
 					onHistorySelect={(id) => void loadHistorySnapshot("baseline", id)}
@@ -420,7 +448,7 @@ export function CompareView(props: {
 				/>
 				<SnapshotCard
 					description="By default this uses the graph currently served by the modviz UI, but you can replace it with another JSON file."
-					history={props.history}
+					history={history}
 					label={current?.label ?? "No current snapshot loaded yet"}
 					onFileChange={(file) => void loadFileInto("current", file)}
 					onHistorySelect={(id) => void loadHistorySnapshot("current", id)}

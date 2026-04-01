@@ -13,6 +13,7 @@ type TraceSearch = {
 };
 
 const TRACE_RESULT_LIMIT_DEFAULT = 25;
+const TRACE_RENDERED_MATCHES_LIMIT = 30;
 
 const explorerSearchForPath = (path: string) => ({
 	q: "",
@@ -54,31 +55,43 @@ export function TraceView(props: {
 	onSearchChange: (patch: Partial<TraceSearch>) => void;
 }) {
 	const [draftSearch, setDraftSearch] = useState(props.search);
-	const deferredSearch = useDeferredValue(draftSearch);
+	const [appliedSearch, setAppliedSearch] = useState(props.search);
+	const deferredSearch = useDeferredValue(appliedSearch);
 
 	useEffect(() => {
 		setDraftSearch(props.search);
+		setAppliedSearch(props.search);
 	}, [props.search]);
 
-	useEffect(() => {
-		const timeoutId = window.setTimeout(() => {
-			props.onSearchChange(draftSearch);
-		}, 180);
-
-		return () => window.clearTimeout(timeoutId);
-	}, [draftSearch, props.onSearchChange]);
+	const applySearch = (next: TraceSearch) => {
+		setAppliedSearch(next);
+		props.onSearchChange(next);
+	};
 
 	const report = useMemo(() => {
 		if (deferredSearch.package.trim()) {
-			return buildPackageTraceReport(props.bundle.graph, deferredSearch.package);
+			return buildPackageTraceReport(props.bundle.graph, deferredSearch.package, {
+				maxChainsPerTarget: 14,
+				maxDepth: 22,
+				maxNodesPerPackage: 80,
+			});
 		}
 
 		if (deferredSearch.node.trim()) {
-			return buildNodeTraceReport(props.bundle.graph, deferredSearch.node);
+			return buildNodeTraceReport(props.bundle.graph, deferredSearch.node, {
+				maxChainsPerTarget: 14,
+				maxDepth: 22,
+				maxNodeMatches: 160,
+			});
 		}
 
 		return null;
 	}, [deferredSearch.node, deferredSearch.package, props.bundle.graph]);
+
+	const visibleMatches = useMemo(
+		() => report?.matches.slice(0, TRACE_RENDERED_MATCHES_LIMIT) ?? [],
+		[report],
+	);
 
 	return (
 		<div className="space-y-6">
@@ -86,21 +99,22 @@ export function TraceView(props: {
 				<div className="grid gap-4 lg:grid-cols-3">
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">External package</label>
-						<Input placeholder="zod, react, lodash-es" value={draftSearch.package} onChange={(event) => setDraftSearch((previous) => ({ ...previous, package: event.currentTarget.value, node: "" }))} />
+						<Input placeholder="zod, react, lodash-es" value={draftSearch.package} onChange={(event) => setDraftSearch((previous) => ({ ...previous, package: event.currentTarget.value, node: "" }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch({ ...draftSearch, package: event.currentTarget.value, node: "" }); }} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Node path or name</label>
-						<Input placeholder="src/routes/index.ts" value={draftSearch.node} onChange={(event) => setDraftSearch((previous) => ({ ...previous, node: event.currentTarget.value, package: "" }))} />
+						<Input placeholder="src/routes/index.ts" value={draftSearch.node} onChange={(event) => setDraftSearch((previous) => ({ ...previous, node: event.currentTarget.value, package: "" }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch({ ...draftSearch, node: event.currentTarget.value, package: "" }); }} />
 					</div>
 					<div className="space-y-2">
 						<label className="text-sm font-medium text-slate-700 dark:text-slate-200">Chain limit</label>
-						<Input type="number" min="1" max="200" value={String(draftSearch.limit)} onChange={(event) => setDraftSearch((previous) => ({ ...previous, limit: Math.max(1, Number(event.currentTarget.value) || TRACE_RESULT_LIMIT_DEFAULT) }))} />
+						<Input type="number" min="1" max="200" value={String(draftSearch.limit)} onChange={(event) => setDraftSearch((previous) => ({ ...previous, limit: Math.max(1, Number(event.currentTarget.value) || TRACE_RESULT_LIMIT_DEFAULT) }))} onKeyDown={(event) => { if (event.key === "Enter") applySearch(draftSearch); }} />
 					</div>
 				</div>
 				<div className="mt-4 flex flex-wrap gap-2">
-					<Button variant="outline" onClick={() => setDraftSearch({ package: "react", node: "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace React</Button>
-					<Button variant="outline" onClick={() => setDraftSearch({ package: "", node: props.bundle.graph.metadata.entrypoints[0] ?? "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace entrypoint</Button>
-					<Button variant="outline" onClick={() => setDraftSearch({ package: "", node: "", limit: TRACE_RESULT_LIMIT_DEFAULT })}>Reset</Button>
+					<Button variant="outline" onClick={() => applySearch({ package: "react", node: "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace React</Button>
+					<Button variant="outline" onClick={() => applySearch({ package: "", node: props.bundle.graph.metadata.entrypoints[0] ?? "", limit: draftSearch.limit || TRACE_RESULT_LIMIT_DEFAULT })}>Trace entrypoint</Button>
+					<Button variant="outline" onClick={() => { const reset = { package: "", node: "", limit: TRACE_RESULT_LIMIT_DEFAULT }; setDraftSearch(reset); applySearch(reset); }}>Reset</Button>
+					<Button onClick={() => applySearch(draftSearch)}>Apply</Button>
 				</div>
 				<p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">
 					Import search finds matching import statements. Trace explains why a file or external package is reachable by walking upstream importers back toward workspace roots and entrypoints.
@@ -122,7 +136,13 @@ export function TraceView(props: {
 					{report.matches.length === 0 ? (
 						<div className="rounded-[24px] border border-slate-200/70 bg-white/90 p-8 text-sm text-slate-500 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">No matching origin traces were found.</div>
 					) : (
-						report.matches.map((match) => (
+						<>
+							{report.matches.length > TRACE_RENDERED_MATCHES_LIMIT ? (
+								<div className="rounded-[20px] border border-amber-200/60 bg-amber-50/80 px-4 py-3 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+									Rendering the first {TRACE_RENDERED_MATCHES_LIMIT} matches out of {report.matches.length}. Refine the query to narrow results.
+								</div>
+							) : null}
+							{visibleMatches.map((match) => (
 							<article key={match.path} className="rounded-[24px] border border-slate-200/70 bg-white/90 p-5 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-950/70">
 								<div className="flex flex-wrap items-start justify-between gap-4">
 									<div>
@@ -178,7 +198,8 @@ export function TraceView(props: {
 									))}
 								</div>
 							</article>
-						))
+							))}
+						</>
 					)}
 				</section>
 			) : (

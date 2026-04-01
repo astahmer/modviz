@@ -10,6 +10,7 @@ import { LuMaximize, LuMinimize } from "react-icons/lu";
 import {
 	focusedNodeIdAtom,
 	isFocusedModalOpenedAtom,
+	selectionModeEnabledAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { Flamegraph } from "~/components/graph/flamegraph";
 import { TreeViewBasic } from "~/components/tree-view/basic";
@@ -35,9 +36,12 @@ import { getExternalPackageName } from "~/utils/modviz-data";
 export function NodeDetailsModal(props: { output: ModvizOutput }) {
 	const isOpened = useAtom(isFocusedModalOpenedAtom);
 	const focusedNodeId = useAtom(focusedNodeIdAtom);
+	const selectionModeEnabled = useAtom(selectionModeEnabledAtom);
 
 	const node =
-		isOpened && props.output.nodes.find((node) => node.path === focusedNodeId);
+		isOpened && !selectionModeEnabled
+			? props.output.nodes.find((node) => node.path === focusedNodeId)
+			: null;
 
 	return (
 		<Dialog.Root

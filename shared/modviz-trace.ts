@@ -20,6 +20,13 @@ export interface ModvizTraceReport {
 	totalChains: number;
 }
 
+export interface ModvizTraceBuildOptions {
+	maxChainsPerTarget?: number;
+	maxDepth?: number;
+	maxNodeMatches?: number;
+	maxNodesPerPackage?: number;
+}
+
 const chainCache = new WeakMap<ModvizOutput, Map<string, string[][]>>();
 const packageReportCache = new WeakMap<ModvizOutput, Map<string, ModvizTraceReport>>();
 const nodeReportCache = new WeakMap<ModvizOutput, Map<string, ModvizTraceReport>>();
@@ -95,9 +102,11 @@ const buildUpstreamChains = (
 	const entrypoints = new Set(graph.metadata.entrypoints);
 	const results: string[][] = [];
 	const queue: string[][] = [[targetPath]];
+	let queueIndex = 0;
 
-	while (queue.length > 0 && results.length < maxChains) {
-		const reverseChain = queue.shift();
+	while (queueIndex < queue.length && results.length < maxChains) {
+		const reverseChain = queue[queueIndex];
+		queueIndex += 1;
 		if (!reverseChain) {
 			continue;
 		}
@@ -182,14 +191,23 @@ const createTraceMatch = (
 export const buildPackageTraceReport = (
 	graph: ModvizOutput,
 	packageQuery: string,
+	options: ModvizTraceBuildOptions = {},
 ): ModvizTraceReport => {
+	const {
+		maxChainsPerTarget = 40,
+		maxDepth = 28,
+		maxNodesPerPackage = Number.POSITIVE_INFINITY,
+	} = options;
+	const cacheSuffix = `::${maxChainsPerTarget}::${maxDepth}::${maxNodesPerPackage}`;
 	const normalizedQuery = normalizeForSearch(packageQuery);
+	const cacheKey = `${normalizedQuery}${cacheSuffix}`;
 	const cachedReports = packageReportCache.get(graph);
-	if (cachedReports?.has(normalizedQuery)) {
-		return cachedReports.get(normalizedQuery)!;
+	if (cachedReports?.has(cacheKey)) {
+		return cachedReports.get(cacheKey)!;
 	}
 
 	const groupedMatches = new Map<string, ModvizTraceMatch>();
+	const tracedNodeCountByPackage = new Map<string, number>();
 
 	graph.nodes
 		.filter((node) => node.path.includes("node_modules"))
@@ -199,7 +217,14 @@ export const buildPackageTraceReport = (
 		})
 		.forEach((node) => {
 			const packageName = getTracePackageName(node) ?? node.path;
-			const chains = buildUpstreamChains(graph, node.path);
+			const tracedCount = tracedNodeCountByPackage.get(packageName) ?? 0;
+			const canTraceNode = tracedCount < maxNodesPerPackage;
+			const chains = canTraceNode
+				? buildUpstreamChains(graph, node.path, maxChainsPerTarget, maxDepth)
+				: [];
+			if (canTraceNode) {
+				tracedNodeCountByPackage.set(packageName, tracedCount + 1);
+			}
 			const existing = groupedMatches.get(packageName);
 
 			if (!existing) {
@@ -249,7 +274,7 @@ export const buildPackageTraceReport = (
 	};
 
 	const nextCache = cachedReports ?? new Map<string, ModvizTraceReport>();
-	nextCache.set(normalizedQuery, report);
+	nextCache.set(cacheKey, report);
 	if (!cachedReports) {
 		packageReportCache.set(graph, nextCache);
 	}
@@ -260,11 +285,19 @@ export const buildPackageTraceReport = (
 export const buildNodeTraceReport = (
 	graph: ModvizOutput,
 	nodeQuery: string,
+	options: ModvizTraceBuildOptions = {},
 ): ModvizTraceReport => {
+	const {
+		maxChainsPerTarget = 40,
+		maxDepth = 28,
+		maxNodeMatches = Number.POSITIVE_INFINITY,
+	} = options;
+	const cacheSuffix = `::${maxChainsPerTarget}::${maxDepth}::${maxNodeMatches}`;
 	const normalizedQuery = normalizeForSearch(nodeQuery);
+	const cacheKey = `${normalizedQuery}${cacheSuffix}`;
 	const cachedReports = nodeReportCache.get(graph);
-	if (cachedReports?.has(normalizedQuery)) {
-		return cachedReports.get(normalizedQuery)!;
+	if (cachedReports?.has(cacheKey)) {
+		return cachedReports.get(cacheKey)!;
 	}
 
 	const matches = graph.nodes
@@ -273,7 +306,13 @@ export const buildNodeTraceReport = (
 				.filter(Boolean)
 				.some((value) => normalizeForSearch(String(value)).includes(normalizedQuery));
 		})
-		.map((node) => createTraceMatch(node, buildUpstreamChains(graph, node.path)));
+		.slice(0, maxNodeMatches)
+		.map((node) =>
+			createTraceMatch(
+				node,
+				buildUpstreamChains(graph, node.path, maxChainsPerTarget, maxDepth),
+			),
+		);
 
 	const report: ModvizTraceReport = {
 		kind: "node",
@@ -284,7 +323,7 @@ export const buildNodeTraceReport = (
 	};
 
 	const nextCache = cachedReports ?? new Map<string, ModvizTraceReport>();
-	nextCache.set(normalizedQuery, report);
+	nextCache.set(cacheKey, report);
 	if (!cachedReports) {
 		nodeReportCache.set(graph, nextCache);
 	}
