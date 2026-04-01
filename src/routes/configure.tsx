@@ -20,20 +20,25 @@ function ConfigureRoute() {
 	// Form state for command builder
 	const [outputFile, setOutputFile] = useState("modviz.json");
 	const [enableLlm, setEnableLlm] = useState(false);
+	const [enableAiAnalysis, setEnableAiAnalysis] = useState(false);
 	const [ignoreDynamic, setIgnoreDynamic] = useState(false);
+	const [llmModel, setLlmModel] = useState("gpt-4.1-mini");
 	const [nodeModules, setNodeModules] = useState(false);
 	const [packageQuery, setPackageQuery] = useState("");
 	const [nodeQuery, setNodeQuery] = useState("");
 
 	const buildCommand = () => {
-		const envVarName = import.meta.env.modvizPath ? "MODVIZ_PATH" : "modviz-path";
-		const basePath = import.meta.env.modvizPath || "./path/to/project";
+		const basePath = bundle.graph.metadata.entrypoints[0] || "./src/index.ts";
 		let cmd = `pnpm exec modviz ${basePath}`;
 
 		if (outputFile && outputFile !== "modviz.json") {
 			cmd += ` --output-file=${outputFile}`;
 		}
 		if (enableLlm) cmd += ` --llm`;
+		if (enableAiAnalysis) cmd += ` --llm-analyze`;
+		if (enableAiAnalysis && llmModel.trim()) {
+			cmd += ` --llm-model=${llmModel.trim()}`;
+		}
 		if (ignoreDynamic) cmd += ` --ignore-dynamic`;
 		if (nodeModules) cmd += ` --node-modules`;
 		if (packageQuery) cmd += ` --package=${packageQuery}`;
@@ -111,6 +116,17 @@ function ConfigureRoute() {
 							<label className="flex items-center gap-2 cursor-pointer">
 								<input
 									type="checkbox"
+									checked={enableAiAnalysis}
+									onChange={(e) => setEnableAiAnalysis(e.target.checked)}
+									className="rounded"
+								/>
+								<span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+									Generate AI summary (--llm-analyze)
+								</span>
+							</label>
+							<label className="flex items-center gap-2 cursor-pointer">
+								<input
+									type="checkbox"
 									checked={ignoreDynamic}
 									onChange={(e) => setIgnoreDynamic(e.target.checked)}
 									className="rounded"
@@ -133,6 +149,19 @@ function ConfigureRoute() {
 						</div>
 
 						{/* Query fields */}
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								AI model (optional)
+							</label>
+							<Input
+								value={llmModel}
+								onChange={(e) => setLlmModel(e.target.value)}
+								placeholder="gpt-4.1-mini"
+								className="mt-1 text-xs"
+								disabled={!enableAiAnalysis}
+							/>
+						</div>
+
 						<div>
 							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
 								Filter package (optional)

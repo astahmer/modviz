@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import { createServerFn } from "@tanstack/react-start";
 import type { ModvizLlmOutput, ModvizOutput, VizNode } from "../../mod/types";
 
 export type ModvizScope = "all" | "workspace" | "external";
@@ -36,15 +34,13 @@ export type ModvizDataBundle = {
 	summary: ModvizDerivedSummary;
 };
 
-const getLlmOutputPath = async (graphPath: string) => {
-	if (graphPath.endsWith(".llm.json")) return graphPath;
-	const path = await import("node:path")
-	const parsed = path.parse(graphPath);
-	return path.join(parsed.dir, `${parsed.name}.llm.json`);
+export type ModvizJsonStatus = {
+	exists: boolean;
+	graphPath: string;
+	hasLlm: boolean;
+	lastModified: number | null;
+	llmPath: string;
 };
-
-const readJsonFile = <T>(filePath: string): T =>
-	JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
 
 export const isExternalNode = (
 	node: VizNode,
@@ -220,17 +216,37 @@ export const buildModvizSummary = (
 	};
 };
 
-export const fetchModvizBundle = createServerFn().handler(async () => {
-	const graphPath = import.meta.env.modvizPath;
-	const graph = readJsonFile<ModvizOutput>(graphPath);
-	const llmPath = await getLlmOutputPath(graphPath);
-	const llm = fs.existsSync(llmPath)
-		? readJsonFile<ModvizLlmOutput>(llmPath)
-		: null;
+const readErrorMessage = async (response: Response) => {
+	const contentType = response.headers.get("content-type") ?? "";
+	if (contentType.includes("application/json")) {
+		const body = (await response.json().catch(() => null)) as
+			| { error?: string }
+			| null;
+		if (body?.error) {
+			return body.error;
+		}
+	}
 
-	return {
-		graph,
-		llm,
-		summary: buildModvizSummary(graph, llm),
-	} satisfies ModvizDataBundle;
-});
+	return (await response.text().catch(() => "")) || response.statusText;
+};
+
+const fetchJson = async <T>(pathname: string): Promise<T> => {
+	const response = await fetch(pathname, {
+		cache: "no-store",
+		headers: {
+			accept: "application/json",
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(await readErrorMessage(response));
+	}
+
+	return (await response.json()) as T;
+};
+
+export const fetchModvizBundle = () =>
+	fetchJson<ModvizDataBundle>("/api/modviz-bundle");
+
+export const fetchModvizJsonStatus = () =>
+	fetchJson<ModvizJsonStatus>("/api/json-status");

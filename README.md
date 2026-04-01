@@ -6,6 +6,7 @@ An interactive CLI and web UI for visualizing module dependency graphs and spott
 
 - **Interactive Graph Visualization**: Force-directed, hierarchical, and circular layouts
 - **Smart Filtering**: Search by filename, filter by node type, or limit by import depth
+- **Snapshot Comparison**: Compare two graph JSON snapshots to see added or removed modules, edges, and packages
 - **File Import/Export**: Load existing graph data or export filtered views
 - **Node Inspection**: Detailed view of imports, exports, and unused exports
 - **TypeScript Support**: Fully supports TypeScript projects with proper resolution
@@ -23,6 +24,9 @@ pnpm add -D modviz
 ```bash
 pnpm run cli -- src/index.ts --ui
 ```
+
+This builds the production UI and launches the built Node server instead of the Vite development server.
+The UI also polls the graph JSON file timestamp and refreshes automatically when the snapshot changes on disk.
 
 ### Generate graph data only (no UI)
 ```bash
@@ -42,6 +46,11 @@ pnpm run cli -- src/index.ts --ui --port=4000
 ### Generate LLM-oriented reports for barrel and import analysis
 ```bash
 pnpm run cli -- src/index.ts --llm --node-modules
+```
+
+### Generate an AI-written engineering summary from the structured LLM report
+```bash
+MODVIZ_LLM_API_KEY=... pnpm run cli -- src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
 ```
 
 ### Focus outputs on one package or node when the summary is not enough
@@ -74,6 +83,11 @@ pnpm run cli -- src/index.ts --node-modules --node=src/adapter-rest/register-app
 - **Zoom/Pan**: Navigate large graphs
 - **Export**: Save filtered graph data as JSON
 
+### Snapshot Comparison
+- **Baseline vs current**: Upload a previous graph snapshot and compare it to the currently served graph
+- **Delta tables**: Review added or removed modules, direct edges, and package presence
+- **Node-level changes**: See which files changed the most by inbound, outbound, and import-statement counts
+
 ## 🔧 Configuration
 
 The tool automatically detects TypeScript projects and applies appropriate plugins:
@@ -90,6 +104,10 @@ When you add `--llm`, modviz also writes:
 
 - `modviz.llm.json`: structured analysis of hotspots, barrel files, external dependencies, and origin chains
 - `modviz.llm.md`: compact Markdown summary intended to be pasted into an LLM or shared in code review
+
+When you add `--llm-analyze`, modviz also writes:
+
+- `modviz.llm.ai.md`: an AI-generated engineering summary using the Vercel AI SDK with an OpenAI-compatible API key
 
 The `modviz.llm.json` file is designed to answer questions such as:
 
@@ -139,6 +157,9 @@ The generated `modviz.json` contains:
 - `--serve`: launch the UI from an existing JSON graph file
 - `--output-file=<file>`: choose the base output filename
 - `--llm`: also emit LLM-oriented JSON and Markdown companion reports
+- `--llm-analyze`: also generate an AI-written Markdown summary from the structured LLM report
+- `--llm-model=<model>`: choose the OpenAI-compatible model for `--llm-analyze`
+- `--llm-base-url=<url>`: choose the OpenAI-compatible base URL for `--llm-analyze`
 - `--package=<name>`: focus the outputs on one external package and print a drilldown
 - `--node=<path>`: focus the outputs on one node path or display path and print a drilldown
 - `--limit=<n>`: limit list output in drilldowns
@@ -154,3 +175,4 @@ The generated `modviz.json` contains:
 - **Architecture Analysis**: Visualize your project's dependency structure
 - **Bundle Analysis**: See which external dependencies are actually used
 - **Documentation**: Generate visual documentation of your codebase structure
+- **Change Review**: Compare snapshots before and after a refactor to confirm which dependency edges moved

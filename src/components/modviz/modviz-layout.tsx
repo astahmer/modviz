@@ -1,11 +1,24 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Boxes, FolderTree, GitBranchPlus, Network, Settings, SquareStack, Trello } from "lucide-react";
+import {
+	ArrowLeftRight,
+	BarChart3,
+	Boxes,
+	FolderTree,
+	GitBranchPlus,
+	Network,
+	RefreshCw,
+	Settings,
+	SquareStack,
+	Trello,
+} from "lucide-react";
 import type { PropsWithChildren, ReactNode } from "react";
+import { useJsonUpdates } from "~/hooks/use-json-updates";
 import { cn } from "~/lib/utils";
 
 const navigationItems = [
 	{ to: "/", label: "Overview", icon: Boxes },
 	{ to: "/graph", label: "Bubble graph", icon: Network },
+	{ to: "/compare", label: "Compare", icon: ArrowLeftRight },
 	{ to: "/summary", label: "Summary", icon: BarChart3 },
 	{ to: "/imports", label: "Import search", icon: GitBranchPlus },
 	{ to: "/explorer", label: "Explorer", icon: FolderTree },
@@ -19,6 +32,13 @@ export function ModvizLayout(props: PropsWithChildren<{
 	description?: string;
 	actions?: ReactNode;
 }>) {
+	const { isRefreshing, status } = useJsonUpdates();
+	const graphFileName = status?.graphPath.split(/[\\/]/).at(-1) ?? "modviz.json";
+	const liveSyncLabel = isRefreshing ? "Refreshing graph data" : "Live JSON sync";
+	const liveSyncTone = isRefreshing
+		? "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200"
+		: "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200";
+
 	return (
 		<div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.12),_transparent_22%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.96))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.16),_transparent_20%),linear-gradient(180deg,_rgba(2,6,23,0.98),_rgba(15,23,42,0.98))]">
 			<div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8">
@@ -60,6 +80,21 @@ export function ModvizLayout(props: PropsWithChildren<{
 							);
 						})}
 					</nav>
+					<div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+						<div
+							className={cn(
+								"inline-flex items-center gap-2 rounded-full border px-3 py-1 font-medium",
+								liveSyncTone,
+							)}
+						>
+							<RefreshCw className={cn("size-3.5", isRefreshing ? "animate-spin" : "")} />
+							<span>{liveSyncLabel}</span>
+						</div>
+						<span>
+							Watching {graphFileName}
+							{status?.hasLlm ? " with LLM companion data." : "."}
+						</span>
+					</div>
 				</header>
 				<main className="min-h-0 flex-1 py-6">{props.children}</main>
 			</div>

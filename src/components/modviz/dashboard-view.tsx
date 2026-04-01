@@ -4,7 +4,13 @@ import type { ModvizDataBundle, SummaryListItem } from "~/utils/modviz-data";
 import { formatNumber } from "~/utils/formatting";
 
 type RouteCard = {
-	to: "/graph" | "/explorer" | "/summary" | "/imports" | "/hierarchy";
+	to:
+		| "/graph"
+		| "/explorer"
+		| "/summary"
+		| "/imports"
+		| "/hierarchy"
+		| "/compare";
 	title: string;
 	description: string;
 	icon: typeof Network;
@@ -41,6 +47,14 @@ const routes: RouteCard[] = [
 		title: "Import search",
 		description:
 			"Search for imports by module or symbol and narrow results to specific monorepo packages, folders, or files.",
+		icon: GitBranchPlus,
+		search: undefined,
+	},
+	{
+		to: "/compare",
+		title: "Snapshot compare",
+		description:
+			"Load a baseline graph JSON beside the currently served snapshot and inspect node, edge, and package deltas.",
 		icon: GitBranchPlus,
 		search: undefined,
 	},

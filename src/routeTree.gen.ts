@@ -18,7 +18,10 @@ import { Route as HierarchyRouteImport } from './routes/hierarchy'
 import { Route as GraphRouteImport } from './routes/graph'
 import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as ConfigureRouteImport } from './routes/configure'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as IndexRouteImport } from './routes/index'
+import { ServerRoute as ApiModvizBundleServerRouteImport } from './routes/api/modviz-bundle'
+import { ServerRoute as ApiJsonStatusServerRouteImport } from './routes/api/json-status'
 import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
 
 const rootServerRouteImport = createServerRootRoute()
@@ -58,10 +61,25 @@ const ConfigureRoute = ConfigureRouteImport.update({
   path: '/configure',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModvizBundleServerRoute = ApiModvizBundleServerRouteImport.update({
+  id: '/api/modviz-bundle',
+  path: '/api/modviz-bundle',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
+const ApiJsonStatusServerRoute = ApiJsonStatusServerRouteImport.update({
+  id: '/api/json-status',
+  path: '/api/json-status',
+  getParentRoute: () => rootServerRouteImport,
 } as any)
 const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
   id: '/api/users/$userId',
@@ -71,6 +89,7 @@ const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
@@ -81,6 +100,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
@@ -92,6 +112,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/configure': typeof ConfigureRoute
   '/explorer': typeof ExplorerRoute
   '/graph': typeof GraphRoute
@@ -104,6 +125,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/compare'
     | '/configure'
     | '/explorer'
     | '/graph'
@@ -114,6 +136,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/compare'
     | '/configure'
     | '/explorer'
     | '/graph'
@@ -124,6 +147,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/compare'
     | '/configure'
     | '/explorer'
     | '/graph'
@@ -135,6 +159,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompareRoute: typeof CompareRoute
   ConfigureRoute: typeof ConfigureRoute
   ExplorerRoute: typeof ExplorerRoute
   GraphRoute: typeof GraphRoute
@@ -144,24 +169,36 @@ export interface RootRouteChildren {
   TreemapRoute: typeof TreemapRoute
 }
 export interface FileServerRoutesByFullPath {
+  '/api/json-status': typeof ApiJsonStatusServerRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRoutesByTo {
+  '/api/json-status': typeof ApiJsonStatusServerRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
+  '/api/json-status': typeof ApiJsonStatusServerRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleServerRoute
   '/api/users/$userId': typeof ApiUsersUserIdServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/api/users/$userId'
+  fullPaths: '/api/json-status' | '/api/modviz-bundle' | '/api/users/$userId'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/api/users/$userId'
-  id: '__root__' | '/api/users/$userId'
+  to: '/api/json-status' | '/api/modviz-bundle' | '/api/users/$userId'
+  id:
+    | '__root__'
+    | '/api/json-status'
+    | '/api/modviz-bundle'
+    | '/api/users/$userId'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
+  ApiJsonStatusServerRoute: typeof ApiJsonStatusServerRoute
+  ApiModvizBundleServerRoute: typeof ApiModvizBundleServerRoute
   ApiUsersUserIdServerRoute: typeof ApiUsersUserIdServerRoute
 }
 
@@ -216,6 +253,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfigureRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -227,6 +271,20 @@ declare module '@tanstack/react-router' {
 }
 declare module '@tanstack/react-start/server' {
   interface ServerFileRoutesByPath {
+    '/api/modviz-bundle': {
+      id: '/api/modviz-bundle'
+      path: '/api/modviz-bundle'
+      fullPath: '/api/modviz-bundle'
+      preLoaderRoute: typeof ApiModvizBundleServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
+    '/api/json-status': {
+      id: '/api/json-status'
+      path: '/api/json-status'
+      fullPath: '/api/json-status'
+      preLoaderRoute: typeof ApiJsonStatusServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/api/users/$userId': {
       id: '/api/users/$userId'
       path: '/api/users/$userId'
@@ -239,6 +297,7 @@ declare module '@tanstack/react-start/server' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompareRoute: CompareRoute,
   ConfigureRoute: ConfigureRoute,
   ExplorerRoute: ExplorerRoute,
   GraphRoute: GraphRoute,
@@ -251,6 +310,8 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 const rootServerRouteChildren: RootServerRouteChildren = {
+  ApiJsonStatusServerRoute: ApiJsonStatusServerRoute,
+  ApiModvizBundleServerRoute: ApiModvizBundleServerRoute,
   ApiUsersUserIdServerRoute: ApiUsersUserIdServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport

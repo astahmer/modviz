@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { ModvizOutput, VizExport, VizImport, VizNode } from "./types.ts";
+import { generateAiAnalysis } from "./llm-analysis.ts";
 import {
 	buildModvizLlmOutput,
 	inferLlmOutputPaths,
@@ -8,6 +9,7 @@ import {
 	renderModvizLlmDrilldown,
 	renderModvizLlmMarkdown,
 } from "./llm-output.ts";
+import { startProductionServer } from "./production-server.ts";
 import {
 	createModuleGraph,
 	type Module,
@@ -29,6 +31,9 @@ const entryFile = args.find((arg) => !arg.startsWith("--"));
 const flags = {
 	port: args.find((arg) => arg.startsWith("--port="))?.split("=")[1],
 	ui: args.includes("--ui"),
+	llmAnalyze: args.includes("--llm-analyze"),
+	llmBaseUrl: args.find((arg) => arg.startsWith("--llm-base-url="))?.split("=")[1],
+	llmModel: args.find((arg) => arg.startsWith("--llm-model="))?.split("=")[1],
 	outputFile:
 		args.find((arg) => arg.startsWith("--output-file="))?.split("=")[1] ??
 		"./modviz.json",
@@ -66,6 +71,7 @@ Usage:
 	modviz <entryFile>                              Generate graph JSON for the UI
 	modviz <entryFile> --ui                         Generate graph JSON and launch the web UI
 	modviz <entryFile> --llm                        Generate UI JSON plus LLM-focused JSON and Markdown reports
+	modviz <entryFile> --llm-analyze                Generate LLM companion files plus an AI-written engineering summary
 	modviz <entryFile> --package=zod                Focus outputs on one external package and print a drilldown
 	modviz <entryFile> --node=src/foo.ts            Focus outputs on one node and print a drilldown
 	modviz --serve [dataFile]                       Launch the web UI with existing graph data
@@ -77,6 +83,9 @@ Options:
 	--ui                   Launch the browser UI after generating the graph
 	--serve                Launch the UI server using an existing graph JSON file
 	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
+	--llm-analyze          Use the Vercel AI SDK to turn the structured LLM report into <output>.llm.ai.md
+	--llm-model=<model>    Override the OpenAI-compatible model used by --llm-analyze
+	--llm-base-url=<url>   Override the OpenAI-compatible base URL used by --llm-analyze
 	--package=<name>       Focus outputs and drilldowns on one external package
 	--node=<path>          Focus outputs and drilldowns on one node path or display path
 	--limit=<n>            Limit printed list output in focused drilldowns (default: 20)
@@ -89,6 +98,7 @@ Examples:
   modviz src/index.ts
 	modviz src/index.ts --ui --port=4000
 	modviz src/index.ts --llm --node-modules
+	MODVIZ_LLM_API_KEY=... modviz src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
 	modviz src/index.ts --node-modules --package=googleapis
 	modviz src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
   modviz --serve ./modviz.json
@@ -153,35 +163,34 @@ const clusterizePlugin: Plugin = {
 	},
 };
 
-const moduleGraph = await createModuleGraph(entryFileForGraph, {
-	basePath,
-	// TODO configurable flag to allow this
-	exclude: flags.nodeModules
-		? undefined
-		: [(importee) => importee.includes("node_modules")],
-	ignoreDynamicImport: flags.ignoreDynamic,
-	moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
-	plugins: [
-		imports,
-		exports,
-		unusedExports,
-		barrelFile({
-			amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
-		}),
-		replaceImportTypeToImportPlugin,
-		clusterizePlugin,
-	],
-});
+const moduleGraph = await withProgress("Analyzing dependency graph", () =>
+	createModuleGraph(entryFileForGraph, {
+		basePath,
+		// TODO configurable flag to allow this
+		exclude: flags.nodeModules
+			? undefined
+			: [(importee) => importee.includes("node_modules")],
+		ignoreDynamicImport: flags.ignoreDynamic,
+		moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
+		plugins: [
+			imports,
+			exports,
+			unusedExports,
+			barrelFile({
+				amountOfExportsToConsiderModuleAsBarrel: 3, // TODO configurable
+			}),
+			replaceImportTypeToImportPlugin,
+			clusterizePlugin,
+		],
+	}),
+);
 
 const packages = workspaceList.map((workspace) => ({
 	name: workspace.name,
 	path: normalizeRelativePath(workspace.relativePath),
 }));
-const webGraphData = processModuleGraphForWeb(
-	moduleGraph,
-	entryFileForGraph,
-	packages,
-	basePath,
+const webGraphData = await withProgress("Preparing graph payload", () =>
+	processModuleGraphForWeb(moduleGraph, entryFileForGraph, packages, basePath),
 );
 
 const focusOptions = {
@@ -192,8 +201,13 @@ const focusOptions = {
 const shouldResolveFocus = Boolean(
 	focusOptions.packageName || focusOptions.nodeQuery,
 );
+const shouldBuildLlmReport =
+	flags.llm ||
+	flags.llmAnalyze ||
+	Boolean(flags.packageQuery) ||
+	Boolean(flags.nodeQuery);
 const fullLlmOutput =
-	shouldResolveFocus || flags.llm
+	shouldResolveFocus || shouldBuildLlmReport
 		? buildModvizLlmOutput(webGraphData)
 		: undefined;
 const focusResolution =
@@ -224,12 +238,10 @@ if (focusResolution && shouldResolveFocus) {
 		);
 	}
 }
-
-const shouldBuildLlmReport =
-	flags.llm || Boolean(flags.packageQuery) || Boolean(flags.nodeQuery);
-
 if (shouldBuildLlmReport) {
-	const llmOutput = buildModvizLlmOutput(outputGraphData);
+	const llmOutput = await withProgress("Building LLM companion report", () =>
+		buildModvizLlmOutput(outputGraphData),
+	);
 	const focusedDrilldown =
 		flags.packageQuery || flags.nodeQuery
 			? renderModvizLlmDrilldown(llmOutput, {
@@ -238,23 +250,34 @@ if (shouldBuildLlmReport) {
 					limit: Number.isFinite(flags.limit) ? flags.limit : 20,
 				})
 			: undefined;
+	const llmOutputPaths = inferLlmOutputPaths(flags.outputFile);
+	const commandHints = buildLlmCommandHints(entryFileAbsolute, flags);
+	const llmMarkdown = renderModvizLlmMarkdown(llmOutput, {
+		focus: shouldResolveFocus ? focusOptions : undefined,
+		commandHints,
+		focusedDrilldown,
+	});
 
-	if (flags.llm) {
-		const llmOutputPaths = inferLlmOutputPaths(flags.outputFile);
-		const commandHints = buildLlmCommandHints(entryFileAbsolute, flags);
-
+	if (flags.llm || flags.llmAnalyze) {
 		writeFileSync(llmOutputPaths.json, JSON.stringify(llmOutput, null, 2));
-		writeFileSync(
-			llmOutputPaths.markdown,
-			renderModvizLlmMarkdown(llmOutput, {
-				focus: shouldResolveFocus ? focusOptions : undefined,
-				commandHints,
-				focusedDrilldown,
-			}),
-		);
+		writeFileSync(llmOutputPaths.markdown, llmMarkdown);
 
 		console.log(
 			`🧠 LLM reports saved to: ${llmOutputPaths.json} and ${llmOutputPaths.markdown}`,
+		);
+	}
+
+	if (flags.llmAnalyze) {
+		const analysis = await withProgress("Generating AI analysis", () =>
+			generateAiAnalysis({
+				baseUrl: flags.llmBaseUrl,
+				markdown: llmMarkdown,
+				model: flags.llmModel,
+				outputFile: flags.outputFile,
+			}),
+		);
+		console.log(
+			`🤖 AI analysis saved to: ${analysis.analysisPath} (model: ${analysis.modelName})`,
 		);
 	}
 
@@ -265,6 +288,55 @@ if (shouldBuildLlmReport) {
 
 if (flags.ui) {
 	await launchWebUI(flags.port, flags.outputFile);
+}
+
+function formatDuration(milliseconds: number) {
+	if (milliseconds < 1000) {
+		return `${milliseconds}ms`;
+	}
+
+	return `${(milliseconds / 1000).toFixed(1)}s`;
+}
+
+async function withProgress<T>(label: string, work: () => Promise<T> | T) {
+	const start = Date.now();
+	const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+	let frameIndex = 0;
+	let interval: NodeJS.Timeout | undefined;
+
+	if (process.stdout.isTTY) {
+		process.stdout.write(`⏳ ${label}\n`);
+		interval = setInterval(() => {
+			const frame = frames[frameIndex % frames.length];
+			frameIndex += 1;
+			process.stdout.write(
+				`\r${frame} ${label} (${formatDuration(Date.now() - start)})`,
+			);
+		}, 80);
+	} else {
+		console.log(`⏳ ${label}`);
+	}
+
+	try {
+		const result = await work();
+		if (interval) {
+			clearInterval(interval);
+			process.stdout.write(`\r✅ ${label} (${formatDuration(Date.now() - start)})\n`);
+		} else {
+			console.log(`✅ ${label} (${formatDuration(Date.now() - start)})`);
+		}
+		return result;
+	} catch (error) {
+		if (interval) {
+			clearInterval(interval);
+			process.stdout.write(`\r❌ ${label} failed after ${formatDuration(Date.now() - start)}\n`);
+		} else {
+			console.error(
+				`❌ ${label} failed after ${formatDuration(Date.now() - start)}`,
+			);
+		}
+		throw error;
+	}
 }
 
 function processModuleGraphForWeb(
@@ -339,11 +411,12 @@ function getNodeType(
 }
 
 async function launchWebUI(port: string | undefined, dataFile?: string) {
-	console.log(`🚀 Launching web UI...`);
-	const { startServer } = await import("./vite-dev-server.ts");
-	await startServer({
-		port: port ? Number.parseInt(port) : undefined,
+	const resolvedPort = port ? Number.parseInt(port, 10) : 3000;
+	console.log(`🚀 Launching production web UI on port ${resolvedPort}...`);
+	await startProductionServer({
+		open: true,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),
+		port: resolvedPort,
 	});
 }
 
@@ -525,6 +598,7 @@ function buildLlmCommandHints(
 		nodeModules: boolean;
 		ignoreDynamic: boolean;
 		llm: boolean;
+		llmAnalyze: boolean;
 		moduleLexer?: string;
 		outputFile: string;
 	},
@@ -535,7 +609,7 @@ function buildLlmCommandHints(
 		entryFileAbsolute,
 		flags.nodeModules ? "--node-modules" : undefined,
 		flags.ignoreDynamic ? "--ignore-dynamic" : undefined,
-		flags.llm ? "--llm" : undefined,
+		flags.llm || flags.llmAnalyze ? "--llm" : undefined,
 		flags.outputFile !== "./modviz.json"
 			? `--output-file=${flags.outputFile}`
 			: undefined,
