@@ -72,6 +72,7 @@ export const useGraphSettings = () => {
 			labelRenderedSizeThreshold: 8,
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
+				const isHoveredNode = nodeId === hoveredNodeId;
 				const updated = {
 					...node,
 					highlighted: node.highlighted || false,
@@ -87,8 +88,14 @@ export const useGraphSettings = () => {
 						updated.highlighted = true;
 					} else {
 						updated.color = colors.default;
-						updated.label = "";
-						updated.highlighted = false;
+						updated.label = isHoveredNode ? node.label : "";
+						updated.highlighted = isHoveredNode;
+					}
+
+					if (isHoveredNode) {
+						updated.label = node.label;
+						updated.highlighted = true;
+						updated.size = node.size + clamp(4, 10, node.size * 0.25);
 					}
 
 					return updated;
