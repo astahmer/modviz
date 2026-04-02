@@ -26,3 +26,8 @@ export async function startServer(options: { port: number | undefined; outputPat
 	server.printUrls();
 	// server.bindCLIShortcuts({ print: true });
 }
+
+startServer({
+	port: 3628,
+	outputPath: path.resolve(process.env.MODVIZ_PATH ?? path.join(process.cwd(), "modviz.json")),
+});
