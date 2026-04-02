@@ -47,6 +47,7 @@
     "@tanstack/react-router": "^1.168.10",
     "@tanstack/react-router-devtools": "^1.166.11",
     "@tanstack/react-start": "^1.167.16",
+    "@tanstack/react-virtual": "^3.13.23",
     "@xstate/store": "^3.17.1",
     "ai": "^6.0.142",
     "class-variance-authority": "^0.7.1",
