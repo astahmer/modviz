@@ -22,7 +22,6 @@ import {
 	renderModvizLlmDrilldown,
 	renderModvizLlmMarkdown,
 } from "./llm-output.ts";
-import { startProductionServer } from "./production-server.ts";
 import {
 	buildNodeTraceReport,
 	buildPackageTraceReport,
@@ -383,6 +382,7 @@ function getNodeType(filePath: string, module: VizModule, entryPoint: string): s
 async function launchWebUI(port: string | undefined, dataFile?: string, open = true) {
 	const resolvedPort = port ? Number.parseInt(port, 10) : 3000;
 	console.log(`🚀 Launching production web UI on port ${resolvedPort}...`);
+	const { startProductionServer } = await import("./production-server.ts");
 	await startProductionServer({
 		open,
 		outputPath: path.resolve(dataFile ?? flags.outputFile),

@@ -130,7 +130,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 		entryFile: effectiveServe || command === "report" ? undefined : positionals[0],
 		serveDataFile: effectiveServe ? positionals[0] : undefined,
 		flags: {
-			port: getOptionValue("--port"),
+			port: getOptionValue("--port") ?? "3628",
 			open: !hasFlag("--no-open"),
 			ui: hasFlag("--ui"),
 			barrelThreshold: Number.parseInt(getOptionValue("--barrel-threshold") ?? "3", 10),
