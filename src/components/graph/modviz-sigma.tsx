@@ -217,24 +217,8 @@ const WithGraph = (props: {
 			</ControlsContainer>
 
 			<NodeDetailsModal output={props.output} />
-			<MoveToHighlightedNode />
 		</>
 	);
-};
-
-const MoveToHighlightedNode = () => {
-	const { gotoNode } = useCamera();
-	const highlightedNodeId = useAtom(highlightedNodeIdAtom);
-
-	/**
-	 * When the selected item changes, highlighted the node and center the camera on it.
-	 */
-	useEffect(() => {
-		if (!highlightedNodeId) return;
-		gotoNode(highlightedNodeId);
-	}, [highlightedNodeId, gotoNode]);
-
-	return null;
 };
 
 interface Cluster {

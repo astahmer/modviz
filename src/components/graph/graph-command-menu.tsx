@@ -42,6 +42,7 @@ const handleArrowKeyHighlight = (onHighlight: (value: string | undefined) => voi
 	};
 };
 
+// TODO virtualize list
 function NodeCommandList(props: GraphCommandMenuProps & { onClose?: () => void }) {
 	const nodesByClusterMap = useNodesByClusterMap(props.nodes);
 
@@ -103,6 +104,8 @@ export function GraphCommandMenuDialog(props: GraphCommandMenuProps) {
 		document.addEventListener("keydown", down);
 		return () => document.removeEventListener("keydown", down);
 	}, []);
+
+	if (!open) return null;
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>

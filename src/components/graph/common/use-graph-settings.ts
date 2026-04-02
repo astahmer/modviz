@@ -47,7 +47,11 @@ export const useGraphSettings = () => {
 			clickNode: (event) => {
 				currentNodeIdAtom.set(event.node);
 				highlightedNodeIdAtom.set(null);
-				selectedNodeIdsAtom.set([event.node]);
+				selectedNodeIdsAtom.set((previous) =>
+					previous.includes(event.node)
+						? previous.filter((nodeId) => nodeId !== event.node)
+						: [...previous, event.node],
+				);
 			},
 			downStage: () => {
 				highlightedNodeIdAtom.set(null);
@@ -64,10 +68,8 @@ export const useGraphSettings = () => {
 			autoRescale: true,
 			zoomDuration: 150,
 			renderLabels: Boolean(hoveredNodeId || hoveredClusterName || selectedNodeSet.size > 0),
-			// hideLabelsOnMove: true,
+			hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
-			// This function tells sigma to grow sizes linearly with the zoom, instead
-			// of relatively to the zoom ratio's square root:
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
 				const updated = {

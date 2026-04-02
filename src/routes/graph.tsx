@@ -252,7 +252,7 @@ function GraphRoute() {
 					</Button>
 					<Button
 						variant="outline"
-						onClick={() => selectedNodeIdsAtom.set([])}
+						onClick={() => setFocusedNode(null)}
 						disabled={selectedNodeIds.length === 0}
 					>
 						Clear selection ({selectedNodeIds.length})
