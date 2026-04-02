@@ -164,7 +164,7 @@ function GraphRoute() {
 	const setFocusedNode = (nodePath: string | null) => {
 		highlightedNodeIdAtom.set(nodePath);
 		currentNodeIdAtom.set(nodePath);
-		selectedNodeIdsAtom.set(nodePath ? [nodePath] : []);
+		selectedNodeIdsAtom.set((prev) => nodePath ? prev.includes(nodePath) ? prev.filter((id) => id !== nodePath) : [...prev, nodePath] : []);
 	};
 
 	useEffect(() => {

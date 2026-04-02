@@ -223,7 +223,7 @@ const WithGraph = (props: {
 					const node = props.nodes.find((node) => node.path === value);
 					if (!node) return;
 					currentNodeIdAtom.set(value);
-					selectedNodeIdsAtom.set([value]);
+					selectedNodeIdsAtom.set((prev) => prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value]);
 				}}
 			/>
 
