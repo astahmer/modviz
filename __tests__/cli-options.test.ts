@@ -46,6 +46,26 @@ test("parseCliArgs supports report subcommand and named snapshot flags", () => {
 	expect(report.flags.packageQuery).toBe("zod");
 });
 
+test("parseCliArgs supports diff targets and path filter flags", () => {
+	const diff = parseCliArgs([
+		"diff",
+		"snapshot:before-refactor",
+		"./modviz.json",
+		"--include",
+		"src/routes/**,src/components/**",
+		"--exclude",
+		"**/*.test.ts",
+		"--history-dir",
+		"./tmp/history",
+	]);
+
+	expect(diff.command).toBe("diff");
+	expect(diff.positionals).toEqual(["snapshot:before-refactor", "./modviz.json"]);
+	expect(diff.flags.include).toBe("src/routes/**,src/components/**");
+	expect(diff.flags.exclude).toBe("**/*.test.ts");
+	expect(diff.flags.historyDir).toBe("./tmp/history");
+});
+
 test("parseCliArgs supports space-separated option values and no-open", () => {
 	const parsed = parseCliArgs([
 		"analyze",
@@ -90,6 +110,11 @@ test("validateCliArgs rejects invalid numeric options", () => {
 	const invalidReport = parseCliArgs(["report"]);
 	expect(validateCliArgs(invalidReport)).toBe(
 		"Report command requires --summary, --package, --node, or --list-snapshots.",
+	);
+
+	const invalidDiff = parseCliArgs(["diff", "./baseline.json"]);
+	expect(validateCliArgs(invalidDiff)).toBe(
+		"Diff command requires <baseline> and <current> graph targets.",
 	);
 });
 

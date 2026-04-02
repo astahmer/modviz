@@ -10,8 +10,11 @@ type CommandBuilderState = {
 	launchUi: boolean;
 	outputFile: string;
 	barrelThreshold: number;
+	excludePaths: string;
 	enableLlm: boolean;
 	enableAiAnalysis: boolean;
+	historyDir: string;
+	includePaths: string;
 	ignoreDynamic: boolean;
 	llmModel: string;
 	nodeModules: boolean;
@@ -24,8 +27,11 @@ const defaultCommandBuilderState: CommandBuilderState = {
 	launchUi: true,
 	outputFile: "modviz.json",
 	barrelThreshold: 3,
+	excludePaths: "",
 	enableLlm: false,
 	enableAiAnalysis: false,
+	historyDir: "",
+	includePaths: "",
 	ignoreDynamic: false,
 	llmModel: "gpt-4.1-mini",
 	nodeModules: false,
@@ -44,6 +50,15 @@ const buildAnalyzeCommand = (entryFile: string, config: CommandBuilderState) => 
 	}
 	if (config.barrelThreshold !== defaultCommandBuilderState.barrelThreshold) {
 		parts.push(`--barrel-threshold=${config.barrelThreshold}`);
+	}
+	if (config.includePaths.trim()) {
+		parts.push(`--include=${quoteCliValue(config.includePaths.trim())}`);
+	}
+	if (config.excludePaths.trim()) {
+		parts.push(`--exclude=${quoteCliValue(config.excludePaths.trim())}`);
+	}
+	if (config.historyDir.trim()) {
+		parts.push(`--history-dir=${quoteCliValue(config.historyDir.trim())}`);
 	}
 	if (config.launchUi) {
 		parts.push("--ui");
@@ -187,6 +202,42 @@ function ConfigureRoute() {
 								value={config.snapshotName}
 								onChange={(e) => updateConfig("snapshotName", e.target.value)}
 								placeholder="before-refactor"
+								className="mt-1"
+							/>
+						</div>
+
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								Include paths (optional)
+							</label>
+							<Input
+								value={config.includePaths}
+								onChange={(e) => updateConfig("includePaths", e.target.value)}
+								placeholder="src/routes/**,src/components/**"
+								className="mt-1"
+							/>
+						</div>
+
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								Exclude paths (optional)
+							</label>
+							<Input
+								value={config.excludePaths}
+								onChange={(e) => updateConfig("excludePaths", e.target.value)}
+								placeholder="**/*.test.ts,**/*.stories.tsx"
+								className="mt-1"
+							/>
+						</div>
+
+						<div>
+							<label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+								History dir (optional)
+							</label>
+							<Input
+								value={config.historyDir}
+								onChange={(e) => updateConfig("historyDir", e.target.value)}
+								placeholder=".modviz/history"
 								className="mt-1"
 							/>
 						</div>

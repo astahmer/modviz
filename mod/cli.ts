@@ -27,6 +27,10 @@ import {
 	buildPackageTraceReport,
 	renderTraceReport,
 } from "../shared/modviz-trace.ts";
+import {
+	buildModvizGraphComparison,
+	renderModvizGraphComparison,
+} from "../shared/modviz-compare.ts";
 import { createModuleGraph, type Module, type Plugin } from "@astahmer/module-graph";
 import type { ModuleGraph } from "@astahmer/module-graph/ModuleGraph.js";
 import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
@@ -47,6 +51,10 @@ const validationError = validateCliArgs(parsedArgs);
 if (validationError) {
 	console.error(`Error: ${validationError}`);
 	process.exit(1);
+}
+
+if (flags.historyDir) {
+	process.env.MODVIZ_HISTORY_DIR = path.resolve(flags.historyDir);
 }
 
 if (flags.help || (command === "analyze" && !entryFile && !flags.serve)) {
@@ -75,6 +83,20 @@ if (command === "report") {
 	if (flags.nodeQuery) {
 		console.log(renderTraceReport(buildNodeTraceReport(reportGraph, flags.nodeQuery), flags.limit));
 	}
+	process.exit(0);
+}
+
+if (command === "diff") {
+	const [baselineTarget, currentTarget] = parsedArgs.positionals ?? [];
+	if (!baselineTarget || !currentTarget) {
+		console.error("Error: Diff command requires <baseline> and <current> graph targets");
+		process.exit(1);
+	}
+
+	const baselineGraph = loadGraphTarget(baselineTarget);
+	const currentGraph = loadGraphTarget(currentTarget);
+	const comparison = buildModvizGraphComparison(baselineGraph, currentGraph);
+	console.log(renderModvizGraphComparison(comparison, { limit: flags.limit }));
 	process.exit(0);
 }
 
@@ -152,6 +174,7 @@ const packages = workspaceList.map((workspace) => ({
 const webGraphData = await withProgress("Preparing graph payload", () =>
 	processModuleGraphForWeb(moduleGraph, entryFileForGraph, packages, basePath),
 );
+const pathFilteredGraph = applyPathFilters(webGraphData, flags.include, flags.exclude);
 
 const focusOptions = {
 	packageName: flags.packageQuery,
@@ -162,13 +185,13 @@ const shouldResolveFocus = Boolean(focusOptions.packageName || focusOptions.node
 const shouldBuildLlmReport =
 	flags.llm || flags.llmAnalyze || Boolean(flags.packageQuery) || Boolean(flags.nodeQuery);
 const fullLlmOutput =
-	shouldResolveFocus || shouldBuildLlmReport ? buildModvizLlmOutput(webGraphData) : undefined;
+	shouldResolveFocus || shouldBuildLlmReport ? buildModvizLlmOutput(pathFilteredGraph) : undefined;
 const focusResolution =
 	shouldResolveFocus && fullLlmOutput ? resolveModvizFocus(fullLlmOutput, focusOptions) : undefined;
 const outputGraphData =
 	shouldResolveFocus && focusResolution
-		? applyGraphFocus(webGraphData, focusResolution, focusOptions)
-		: webGraphData;
+		? applyGraphFocus(pathFilteredGraph, focusResolution, focusOptions)
+		: pathFilteredGraph;
 
 writeFileSync(flags.outputFile, JSON.stringify(outputGraphData, null, 2));
 console.log(
@@ -455,12 +478,98 @@ function loadGraphForReport(flags: typeof parsedArgs.flags) {
 	}
 
 	const graphFile = path.resolve(flags.graphFile ?? flags.outputFile);
+	return loadGraphFile(graphFile);
+}
+
+function loadGraphTarget(target: string) {
+	if (target.startsWith("snapshot:")) {
+		return loadSnapshotGraph(target.slice("snapshot:".length));
+	}
+
+	return loadGraphFile(path.resolve(target));
+}
+
+function loadGraphFile(graphFile: string) {
 	if (!existsSync(graphFile)) {
 		console.error(`Error: Graph file "${graphFile}" does not exist`);
 		process.exit(1);
 	}
 
 	return JSON.parse(readFileSync(graphFile, "utf-8")) as ModvizOutput;
+}
+
+function applyPathFilters(output: ModvizOutput, includeValue?: string, excludeValue?: string) {
+	const includePatterns = splitGlobPatterns(includeValue);
+	const excludePatterns = splitGlobPatterns(excludeValue);
+	if (includePatterns.length === 0 && excludePatterns.length === 0) {
+		return output;
+	}
+
+	const includeMatchers = includePatterns.map(createGlobMatcher);
+	const excludeMatchers = excludePatterns.map(createGlobMatcher);
+	const includedPaths = new Set(
+		output.nodes
+			.map((node) => node.path)
+			.filter((nodePath) => {
+				const included =
+					includeMatchers.length === 0 || includeMatchers.some((matcher) => matcher(nodePath));
+				const excluded = excludeMatchers.some((matcher) => matcher(nodePath));
+				return included && !excluded;
+			}),
+	);
+
+	if (includedPaths.size === output.nodes.length) {
+		return output;
+	}
+
+	const filteredNodes = output.nodes
+		.filter((node) => includedPaths.has(node.path))
+		.map((node) => ({
+			...node,
+			importees: node.importees.filter((importee) => includedPaths.has(importee)),
+			importedBy: node.importedBy.filter((importer) => includedPaths.has(importer)),
+			chain: dedupeChains(
+				node.chain
+					.map((chain) => chain.filter((chainNode) => includedPaths.has(chainNode)))
+					.filter((chain) => chain.length > 0),
+			),
+		}));
+
+	const entrypoints = output.metadata.entrypoints.filter((entrypoint) => includedPaths.has(entrypoint));
+	return {
+		metadata: {
+			...output.metadata,
+			entrypoints:
+				entrypoints.length > 0
+					? entrypoints
+					: filteredNodes[0]
+						? [filteredNodes[0].path]
+						: output.metadata.entrypoints,
+			totalFiles: filteredNodes.length,
+			nodeModulesCount: filteredNodes.filter((node) => node.path.includes("node_modules")).length,
+		},
+		nodes: filteredNodes,
+		imports: Array.from(
+			new Set(filteredNodes.flatMap((node) => [node.path, ...node.importees])),
+		).sort((left, right) => left.localeCompare(right)),
+	};
+}
+
+function splitGlobPatterns(value?: string) {
+	return (value ?? "")
+		.split(/[\n,]+/)
+		.map((pattern) => pattern.trim())
+		.filter(Boolean);
+}
+
+function createGlobMatcher(pattern: string) {
+	const escaped = pattern
+		.replace(/[|\\{}()[\]^$+?.]/g, "\\$&")
+		.replace(/\*\*/g, "__DOUBLE_STAR__")
+		.replace(/\*/g, "[^/]*")
+		.replace(/__DOUBLE_STAR__/g, ".*");
+	const regex = new RegExp(`^${escaped}$`);
+	return (candidate: string) => regex.test(candidate);
 }
 
 function applyGraphFocus(

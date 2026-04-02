@@ -329,7 +329,7 @@ export function CompareView(props: {
 	currentGraph: ModvizOutput | null;
 	history: ModvizSnapshotHistoryItem[];
 }) {
-	const [history, setHistory] = useState(props.history);
+	const [historyOverride, setHistoryOverride] = useState<ModvizSnapshotHistoryItem[] | null>(null);
 	const [historyLoading, setHistoryLoading] = useState(false);
 	const currentServerSnapshot = useMemo(
 		() =>
@@ -342,18 +342,24 @@ export function CompareView(props: {
 		[props.currentGraph],
 	);
 	const [baseline, setBaseline] = useState<SnapshotState | null>(null);
-	const [current, setCurrent] = useState<SnapshotState | null>(currentServerSnapshot);
+	const [currentOverride, setCurrentOverride] = useState<SnapshotState | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const history = historyOverride ?? props.history;
+	const current = currentOverride ?? currentServerSnapshot;
+	const assignSnapshot = (slot: SnapshotSlot, snapshot: SnapshotState | null) => {
+		if (slot === "baseline") {
+			setBaseline(snapshot);
+			return;
+		}
 
-	useEffect(() => {
-		setHistory(props.history);
-	}, [props.history]);
+		setCurrentOverride(snapshot);
+	};
 
 	const refreshHistory = async () => {
 		try {
 			setHistoryLoading(true);
 			setErrorMessage(null);
-			setHistory(await fetchSnapshotHistory());
+			setHistoryOverride(await fetchSnapshotHistory());
 		} catch (error) {
 			setErrorMessage(
 				error instanceof Error ? error.message : "Failed to refresh snapshot history.",
@@ -375,12 +381,7 @@ export function CompareView(props: {
 		try {
 			setErrorMessage(null);
 			const snapshot = await parseSnapshotFile(file);
-			if (slot === "baseline") {
-				setBaseline(snapshot);
-				return;
-			}
-
-			setCurrent(snapshot);
+			assignSnapshot(slot, snapshot);
 		} catch (error) {
 			setErrorMessage(
 				error instanceof Error ? error.message : "Failed to load the selected snapshot.",
@@ -393,12 +394,7 @@ export function CompareView(props: {
 			setErrorMessage(null);
 			const graph = await fetchSnapshotGraph(snapshotId);
 			const snapshot = { graph, label: snapshotId } satisfies SnapshotState;
-			if (slot === "baseline") {
-				setBaseline(snapshot);
-				return;
-			}
-
-			setCurrent(snapshot);
+			assignSnapshot(slot, snapshot);
 		} catch (error) {
 			setErrorMessage(
 				error instanceof Error ? error.message : `Failed to load snapshot ${snapshotId}.`,
@@ -438,7 +434,7 @@ export function CompareView(props: {
 								variant="outline"
 								size="sm"
 								onClick={() => {
-									setCurrent(currentServerSnapshot);
+									setCurrentOverride(null);
 									setErrorMessage(null);
 								}}
 								disabled={!currentServerSnapshot}
@@ -455,7 +451,7 @@ export function CompareView(props: {
 									}
 
 									setBaseline(current);
-									setCurrent(baseline);
+									setCurrentOverride(baseline);
 								}}
 								disabled={!baseline || !current}
 							>

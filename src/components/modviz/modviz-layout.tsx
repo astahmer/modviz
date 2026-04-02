@@ -12,7 +12,7 @@ import {
 	Settings,
 	SquareStack,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { useJsonUpdates } from "~/hooks/use-json-updates";
 import { cn } from "~/lib/utils";
@@ -62,6 +62,10 @@ export function ModvizLayout(
 		setActiveSnapshotSelection(selection);
 		await router.invalidate();
 	};
+
+	useEffect(() => {
+		setCustomGraphPath(activeSelection.snapshotId ? "" : activeSelection.graphPath);
+	}, [activeSelection.graphPath, activeSelection.snapshotId]);
 
 	return (
 		<div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.12),_transparent_22%),linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.96))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.16),_transparent_20%),linear-gradient(180deg,_rgba(2,6,23,0.98),_rgba(15,23,42,0.98))]">

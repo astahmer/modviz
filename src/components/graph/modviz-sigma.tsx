@@ -2,7 +2,6 @@ import {
 	ControlsContainer,
 	FullScreenControl,
 	SigmaContainer,
-	useCamera,
 	ZoomControl,
 } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
@@ -10,7 +9,8 @@ import "@react-sigma/graph-search/lib/style.css";
 import { MiniMap } from "@react-sigma/minimap";
 import { fitViewportToNodes } from "@sigma/utils";
 import { useAtom } from "@xstate/store/react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronsUpDown, LocateFixed, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type Sigma from "sigma";
 import type { Coordinates } from "sigma/types";
 import { NodeDetailsModal } from "~/components/dialog/dialog";
@@ -31,6 +31,16 @@ import { GraphCommandMenuDialog } from "~/components/graph/graph-command-menu";
 import { inferPathsLabel } from "~/utils/infer-paths-label";
 import type { ModvizOutput } from "../../../mod/types";
 import type { ExternalGroupingMode } from "~/utils/modviz-data";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "~/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 
 const SIGMA_CONTAINER_SETTINGS = { allowInvalidContainer: true } as const;
 
@@ -107,10 +117,26 @@ const WithGraph = (props: {
 		() => props.nodes.filter((node) => node.path.includes("node_modules")).map((node) => node.path),
 		[props.nodes],
 	);
+	const visibleClusters = useMemo(
+		() => clusterList.filter((cluster) => cluster.nodes.length > 5),
+		[clusterList],
+	);
 	useClusterLabelLayer(sigma, clusterMap, props.hideClusterLabels);
 
 	const graph = sigma.getGraph();
 	const nodes = graph.nodes();
+	const focusNodes = (nodeIds: string[]) => {
+		if (nodeIds.length === 0) {
+			return;
+		}
+
+		fitViewportToNodes(sigma as never, nodeIds, {
+			animate: true,
+		});
+	};
+	const focusCluster = (clusterName: string) => {
+		focusNodes(graph.filterNodes((_, attrs) => attrs.cluster === clusterName));
+	};
 
 	return (
 		<>
@@ -120,58 +146,46 @@ const WithGraph = (props: {
 				{/* <LayoutsControl /> */}
 			</ControlsContainer>
 			<ControlsContainer position={"top-left"} className="z-10!">
-				<div className="flex flex-col gap-2 text-xs p-2">
-					<button
-						className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 bg-white"
-						onClick={() => {
-							fitViewportToNodes(sigma as never, nodes, {
-								animate: true,
-							});
-						}}
-					>
-						Reset view ({nodes.length} nodes)
-					</button>
-					{props.entryNode && (
-						<button
-							className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 bg-white"
-							onClick={() => {
-								fitViewportToNodes(sigma as never, [props.entryNode!], {
-									animate: true,
-								});
-							}}
-							title={props.entryNode}
+				<div className="flex w-[18rem] flex-col gap-2 p-2 text-xs">
+					<div className="flex items-center gap-2">
+						<SidebarIconButton
+							label={`Reset view (${nodes.length} nodes)`}
+							onClick={() => focusNodes(nodes)}
 						>
-							Focus entrypoint
-						</button>
-					)}
+							<RotateCcw className="size-4" />
+						</SidebarIconButton>
+						{props.entryNode ? (
+							<SidebarIconButton
+								label="Focus entrypoint"
+								onClick={() => focusNodes(props.entryNode ? [props.entryNode] : [])}
+							>
+								<LocateFixed className="size-4" />
+							</SidebarIconButton>
+						) : null}
+						<div className="min-w-0 flex-1">
+							<ClusterCombobox
+								clusters={visibleClusters}
+								onFocusCluster={focusCluster}
+							/>
+						</div>
+					</div>
 					{props.externalGrouping === "package" && externalNodeIds.length ? (
 						<button
 							className="flex items-center gap-2 rounded-md bg-white px-2 py-1 hover:bg-gray-100"
-							onClick={() => {
-								fitViewportToNodes(sigma as never, externalNodeIds, {
-									animate: true,
-								});
-							}}
+							onClick={() => focusNodes(externalNodeIds)}
 						>
 							node_modules ({externalNodeIds.length})
 						</button>
 					) : null}
-					<div className="overflow-auto max-h-[300px] flex flex-col gap-2">
-						{clusterList
-							.filter((cluster) => cluster.nodes.length > 5)
-							.map((cluster) => {
+					<div className="max-h-[300px] overflow-auto">
+						<div className="flex flex-col gap-2 pr-1">
+							{visibleClusters.map((cluster) => {
 								return (
 									<button
 										key={cluster.name}
 										title={cluster.path}
-										className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100"
-										onClick={() => {
-											fitViewportToNodes(
-												sigma as never,
-												graph.filterNodes((_, attrs) => attrs.cluster === cluster.name),
-												{ animate: true },
-											);
-										}}
+										className="flex items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-gray-100"
+										onClick={() => focusCluster(cluster.name)}
 										onMouseEnter={() => {
 											hoveredClusterNameAtom.set(cluster.name);
 										}}
@@ -184,6 +198,7 @@ const WithGraph = (props: {
 									</button>
 								);
 							})}
+						</div>
 					</div>
 				</div>
 
@@ -231,6 +246,72 @@ interface Cluster {
 	color?: string;
 	positions: { x: number; y: number }[];
 	nodes: string[];
+}
+
+function SidebarIconButton(props: {
+	label: string;
+	onClick: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<Button size="icon" variant="outline" onClick={props.onClick} aria-label={props.label}>
+					{props.children}
+				</Button>
+			</TooltipTrigger>
+			<TooltipContent>{props.label}</TooltipContent>
+		</Tooltip>
+	);
+}
+
+function ClusterCombobox(props: {
+	clusters: Cluster[];
+	onFocusCluster: (clusterName: string) => void;
+}) {
+	const [open, setOpen] = useState(false);
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+					Jump to cluster
+					<ChevronsUpDown className="size-4 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-[20rem] p-0" align="start">
+				<Command>
+					<CommandInput placeholder="Search cluster groups..." />
+					<CommandList>
+						<CommandEmpty>No cluster found.</CommandEmpty>
+						<CommandGroup heading="Cluster groups">
+							{props.clusters.map((cluster) => (
+								<CommandItem
+									key={cluster.name}
+									value={`${cluster.inferredName || cluster.name} ${cluster.name} ${cluster.path}`}
+									onMouseEnter={() => hoveredClusterNameAtom.set(cluster.name)}
+									onMouseLeave={() => hoveredClusterNameAtom.set(null)}
+									onSelect={() => {
+										props.onFocusCluster(cluster.name);
+										setOpen(false);
+									}}
+								>
+									<div
+										className="size-2 rounded-sm"
+										style={{ backgroundColor: cluster.color }}
+									/>
+									<div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+										<span className="truncate">{cluster.inferredName || cluster.name}</span>
+										<span className="shrink-0 text-xs text-slate-500">{cluster.nodes.length}</span>
+									</div>
+								</CommandItem>
+							))}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
 }
 
 const useClusterMap = (sigma: Sigma<NodeType, EdgeType>) => {

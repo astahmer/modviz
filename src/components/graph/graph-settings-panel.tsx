@@ -1,10 +1,27 @@
 import { FloatingPanel } from "@ark-ui/react/floating-panel";
 import { Portal } from "@ark-ui/react/portal";
 import { RotateCcw, Settings2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout-settings";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+
+const areGraphSettingsEqual = (
+	left: GraphLayoutSettings,
+	right: GraphLayoutSettings,
+) => {
+	return (
+		left.iterations === right.iterations &&
+		left.gravity === right.gravity &&
+		left.scalingRatio === right.scalingRatio &&
+		left.strongGravityMode === right.strongGravityMode &&
+		left.linLogMode === right.linLogMode &&
+		left.adjustSizes === right.adjustSizes &&
+		left.outboundAttractionDistribution === right.outboundAttractionDistribution &&
+		left.hideClusterLabels === right.hideClusterLabels &&
+		left.nodeSizeScale === right.nodeSizeScale
+	);
+};
 
 function NumberField(props: {
 	label: string;
@@ -67,19 +84,20 @@ export function GraphSettingsPanel(props: {
 	onSettingsChange: (settings: GraphLayoutSettings) => void;
 	onReset: () => GraphLayoutSettings;
 }) {
+	if (!props.open) return null;
+
+	return <GraphSettingsPanelContent key={JSON.stringify(props.settings)} {...props} />;
+}
+
+function GraphSettingsPanelContent(props: {
+	settings: GraphLayoutSettings;
+	onOpenChange: (open: boolean) => void;
+	onSettingsChange: (settings: GraphLayoutSettings) => void;
+	onReset: () => GraphLayoutSettings;
+}) {
 	const [draftSettings, setDraftSettings] = useState(props.settings);
-
-	useEffect(() => {
-		if (!props.open) {
-			setDraftSettings(props.settings);
-			return;
-		}
-
-		setDraftSettings(props.settings);
-	}, [props.open, props.settings]);
-
 	const hasChanges = useMemo(
-		() => JSON.stringify(draftSettings) !== JSON.stringify(props.settings),
+		() => !areGraphSettingsEqual(draftSettings, props.settings),
 		[draftSettings, props.settings],
 	);
 
@@ -105,8 +123,6 @@ export function GraphSettingsPanel(props: {
 		const nextSettings = props.onReset();
 		setDraftSettings(nextSettings);
 	};
-
-	if (!props.open) return null;
 
 	return (
 		<FloatingPanel.Root

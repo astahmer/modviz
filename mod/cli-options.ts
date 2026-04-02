@@ -1,12 +1,15 @@
 import type { ModvizOutput, VizNode } from "./types.ts";
 
-export type CliCommand = "analyze" | "serve" | "report";
+export type CliCommand = "analyze" | "serve" | "report" | "diff";
 
 export interface CliFlags {
 	port?: string;
 	open: boolean;
 	ui: boolean;
 	barrelThreshold: number;
+	exclude?: string;
+	historyDir?: string;
+	include?: string;
 	llmAnalyze: boolean;
 	llmBaseUrl?: string;
 	llmModel?: string;
@@ -33,6 +36,7 @@ export interface ParsedCliArgs {
 	serveDataFile?: string;
 	flags: CliFlags;
 	missingValueOptions?: string[];
+	positionals?: string[];
 }
 
 const valueOptionNames = new Set([
@@ -41,6 +45,9 @@ const valueOptionNames = new Set([
 	"--llm-model",
 	"--output-file",
 	"--barrel-threshold",
+	"--exclude",
+	"--history-dir",
+	"--include",
 	"--package",
 	"--node",
 	"--limit",
@@ -112,7 +119,9 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 export function parseCliArgs(args: string[]): ParsedCliArgs {
 	const [firstArg, ...restArgs] = args;
 	const command =
-		firstArg === "analyze" || firstArg === "serve" || firstArg === "report" ? firstArg : "analyze";
+		firstArg === "analyze" || firstArg === "serve" || firstArg === "report" || firstArg === "diff"
+			? firstArg
+			: "analyze";
 	const commandArgs = command === "analyze" && firstArg !== "analyze" ? args : restArgs;
 	const {
 		flags: parsedFlags,
@@ -134,6 +143,9 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			open: !hasFlag("--no-open"),
 			ui: hasFlag("--ui"),
 			barrelThreshold: Number.parseInt(getOptionValue("--barrel-threshold") ?? "3", 10),
+			exclude: getOptionValue("--exclude"),
+			historyDir: getOptionValue("--history-dir"),
+			include: getOptionValue("--include"),
 			llmAnalyze: hasFlag("--llm-analyze"),
 			llmBaseUrl: getOptionValue("--llm-base-url"),
 			llmModel: getOptionValue("--llm-model"),
@@ -154,6 +166,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			listSnapshots: hasFlag("--list-snapshots"),
 		},
 		missingValueOptions,
+		positionals,
 	};
 }
 
@@ -177,6 +190,10 @@ export function validateCliArgs(parsedArgs: ParsedCliArgs) {
 		!flags.help
 	) {
 		return "Report command requires --summary, --package, --node, or --list-snapshots.";
+	}
+
+	if (command === "diff" && !flags.help && (parsedArgs.positionals?.length ?? 0) < 2) {
+		return "Diff command requires <baseline> and <current> graph targets.";
 	}
 
 	if (flags.port && Number.isNaN(Number.parseInt(flags.port, 10))) {
@@ -206,6 +223,7 @@ Usage:
 	modviz analyze <entryFile>                      Generate graph JSON for the UI
 	modviz serve [dataFile]                         Launch the web UI with existing graph data
 	modviz report --summary                         Print a concise terminal summary from an existing graph file
+	modviz diff <baseline> <current>                Print graph deltas between two graph files or snapshot:<id> targets
 	modviz report --package=zod                     Print origin traces for one external package
 	modviz report --node=src/foo.ts                 Print origin traces for one node
 	modviz report --list-snapshots                  Show named snapshot history
@@ -214,10 +232,13 @@ Usage:
 Options:
 	--output-file=<file>   Base JSON output path for the UI graph (default: ./modviz.json)
 	--graph-file=<file>    Existing graph file used by report (default: ./modviz.json)
-	--port=<port>          Port for the web server (default: 3000)
+	--port=<port>          Port for the web server (default: 3628)
 	--no-open              Do not open a browser window when launching the UI
 	--ui                   Launch the browser UI after generating the graph
 	--barrel-threshold=<n> Export count that marks a file as a barrel file (default: 3)
+	--include=<glob,...>   Keep only matching paths in the generated graph
+	--exclude=<glob,...>   Drop matching paths from the generated graph
+	--history-dir=<dir>    Override the snapshot history directory for report, diff, and saved snapshots
 	--serve                Launch the UI server using an existing graph JSON file
 	--llm                  Also emit <output>.llm.json and <output>.llm.md focused on import origins and barrel-file impact
 	--llm-analyze          Use the Vercel AI SDK to turn the structured LLM report into <output>.llm.ai.md
@@ -239,9 +260,11 @@ Examples:
 	modviz analyze src/index.ts --ui --port=4000
 	modviz analyze src/index.ts --llm --snapshot-name=before-refactor
 	modviz analyze src/index.ts --barrel-threshold=5
+	modviz analyze src/index.ts --include='src/routes/**,src/components/**' --exclude='**/*.test.ts'
 	modviz analyze src/index.ts --node-modules --package=googleapis
 	modviz serve ./modviz.json
 	modviz report --summary
+	modviz diff snapshot:before-refactor ./modviz.json
 	modviz report --snapshot=2026-04-01t12-00-00-before-refactor --package=googleapis
 	modviz report --list-snapshots
 	`;
