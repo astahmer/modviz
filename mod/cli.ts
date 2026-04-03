@@ -31,17 +31,18 @@ import {
 	buildModvizGraphComparison,
 	renderModvizGraphComparison,
 } from "../shared/modviz-compare.ts";
-import { createModuleGraph, type Module, type Plugin } from "@astahmer/module-graph";
-import type { ModuleGraph } from "@astahmer/module-graph/ModuleGraph.js";
-import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
-import { exports } from "@astahmer/module-graph/plugins/exports.js";
-import { imports } from "@astahmer/module-graph/plugins/imports.js";
+import { createModuleGraph, type Module, type Plugin } from "/Users/astahmer/dev/open-source/module-graph/index.js";
+import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
+import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
+import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
+import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
 import {
 	unusedExports,
 	type Export,
 	type Import,
-} from "@astahmer/module-graph/plugins/unused-exports.js";
+} from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
+import { sanitizeFileImportSuffixPlugin } from "./module-graph-plugins.ts";
 
 const args = process.argv.slice(2);
 const parsedArgs = parseCliArgs(args);
@@ -151,6 +152,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 		ignoreDynamicImport: flags.ignoreDynamic,
 		plugins: [
+			sanitizeFileImportSuffixPlugin,
 			imports,
 			exports,
 			unusedExports,
@@ -680,7 +682,6 @@ function buildLlmCommandHints(
 		ignoreDynamic: boolean;
 		llm: boolean;
 		llmAnalyze: boolean;
-		moduleLexer?: string;
 		outputFile: string;
 	},
 ) {
@@ -692,7 +693,6 @@ function buildLlmCommandHints(
 		flags.ignoreDynamic ? "--ignore-dynamic" : undefined,
 		flags.llm || flags.llmAnalyze ? "--llm" : undefined,
 		flags.outputFile !== "./modviz.json" ? `--output-file=${flags.outputFile}` : undefined,
-		flags.moduleLexer ? `--module-lexer=${flags.moduleLexer}` : undefined,
 	]
 		.filter(Boolean)
 		.join(" ");
