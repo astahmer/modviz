@@ -125,12 +125,9 @@ const workspaceList = (workspaces ?? []).map((workspace) => ({
 }));
 
 const replaceImportTypeToImport = (source: string) => source.replace(/import type/g, "import");
-// Needed so rs-module-lexer will resolve the import (it would ignore type-only imports otherwise)
 const replaceImportTypeToImportPlugin: Plugin = {
 	name: "replace-import-type-to-import",
-	transformSource: ({ source }) => {
-		return replaceImportTypeToImport(source);
-	},
+	transformSource: ({ source }) => replaceImportTypeToImport(source),
 };
 
 const clusterizePlugin: Plugin = {
@@ -153,7 +150,6 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 		// TODO configurable flag to allow this
 		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 		ignoreDynamicImport: flags.ignoreDynamic,
-		moduleLexer: (flags.moduleLexer as "rs" | "es" | undefined) ?? "rs",
 		plugins: [
 			imports,
 			exports,

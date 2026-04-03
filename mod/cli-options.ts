@@ -22,7 +22,6 @@ export interface CliFlags {
 	packageQuery?: string;
 	nodeQuery?: string;
 	limit: number;
-	moduleLexer?: string;
 	summary: boolean;
 	graphFile?: string;
 	snapshotName?: string;
@@ -51,7 +50,6 @@ const valueOptionNames = new Set([
 	"--package",
 	"--node",
 	"--limit",
-	"--module-lexer",
 	"--graph-file",
 	"--snapshot-name",
 	"--snapshot",
@@ -158,7 +156,6 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			packageQuery: getOptionValue("--package"),
 			nodeQuery: getOptionValue("--node"),
 			limit: Number.parseInt(getOptionValue("--limit") ?? "20", 10),
-			moduleLexer: getOptionValue("--module-lexer"),
 			summary: hasFlag("--summary"),
 			graphFile: getOptionValue("--graph-file"),
 			snapshotName: getOptionValue("--snapshot-name"),
@@ -208,10 +205,6 @@ export function validateCliArgs(parsedArgs: ParsedCliArgs) {
 		return `Invalid --barrel-threshold value: ${flags.barrelThreshold}`;
 	}
 
-	if (flags.moduleLexer && flags.moduleLexer !== "rs" && flags.moduleLexer !== "es") {
-		return `Invalid --module-lexer value: ${flags.moduleLexer}. Use rs or es.`;
-	}
-
 	return null;
 }
 
@@ -253,7 +246,6 @@ Options:
 	--list-snapshots       List available named snapshots
 	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
 	--ignore-dynamic       Ignore dynamic imports
-	--module-lexer=<mode>  Choose import parser: rs or es (default: rs)
 	--help, -h             Show this help message
 
 Examples:
