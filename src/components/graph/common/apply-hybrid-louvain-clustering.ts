@@ -1,10 +1,7 @@
 import type Graph from "graphology";
 import louvain from "graphology-communities-louvain";
 import { colors } from "~/components/graph/common/colors";
-import type {
-	NodeType,
-	EdgeType,
-} from "~/components/graph/common/use-create-graph";
+import type { NodeType, EdgeType } from "~/components/graph/common/use-create-graph";
 
 export function applyHybridLouvainClustering(
 	graph: Graph<NodeType, EdgeType>,
@@ -67,16 +64,12 @@ export function applyHybridLouvainClustering(
 		const clusterColors = new Map<string, string>();
 
 		packageGroups.forEach((nodeIds, packageName) => {
-			const baseColor =
-				packageColors.get(packageName) || colors.deterministic(packageName);
+			const baseColor = packageColors.get(packageName) || colors.deterministic(packageName);
 
 			// Get all sub-communities for this package
 			const subCommunities = new Set<string>();
 			nodeIds.forEach((nodeId) => {
-				const louvainCommunity = graph.getNodeAttribute(
-					nodeId,
-					"louvainCommunity",
-				);
+				const louvainCommunity = graph.getNodeAttribute(nodeId, "louvainCommunity");
 				if (louvainCommunity) {
 					subCommunities.add(louvainCommunity);
 				}
@@ -87,9 +80,7 @@ export function applyHybridLouvainClustering(
 			if (subCommunitiesArray.length > 1) {
 				// Generate deterministic color variations for sub-clusters within the package
 				subCommunitiesArray.forEach((subCommunity, index) => {
-					const subColor = colors.deterministic(
-						`${packageName}-${subCommunity}-${index}`,
-					);
+					const subColor = colors.deterministic(`${packageName}-${subCommunity}-${index}`);
 					clusterColors.set(subCommunity, subColor);
 				});
 			} else {
@@ -106,11 +97,7 @@ export function applyHybridLouvainClustering(
 			if (!isEntry) {
 				const louvainCommunity = attrs.louvainCommunity;
 				if (louvainCommunity && clusterColors.has(louvainCommunity)) {
-					graph.setNodeAttribute(
-						node,
-						"color",
-						clusterColors.get(louvainCommunity)!,
-					);
+					graph.setNodeAttribute(node, "color", clusterColors.get(louvainCommunity)!);
 					graph.setNodeAttribute(node, "cluster", louvainCommunity);
 				}
 			} else {
@@ -124,14 +111,9 @@ export function applyHybridLouvainClustering(
 			}
 		});
 
-		console.log(
-			`Applied hybrid clustering: ${packageGroups.size} packages with sub-clustering`,
-		);
+		console.log(`Applied hybrid clustering: ${packageGroups.size} packages with sub-clustering`);
 	} catch (error) {
-		console.warn(
-			"Hybrid clustering failed, falling back to package-based clustering:",
-			error,
-		);
+		console.warn("Hybrid clustering failed, falling back to package-based clustering:", error);
 	}
 
 	return packageGroups;

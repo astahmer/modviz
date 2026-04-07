@@ -9,6 +9,7 @@
 
 https://everything.antfu.dev/report#selected=nuxt@4.0.3
 tables for:
+
 - Most transitive imports
 - Most imported by
 

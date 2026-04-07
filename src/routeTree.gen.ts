@@ -8,70 +8,288 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createServerRootRoute } from '@tanstack/react-start/server'
-
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TreemapRouteImport } from './routes/treemap'
+import { Route as TraceRouteImport } from './routes/trace'
+import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as ImportsRouteImport } from './routes/imports'
+import { Route as HierarchyRouteImport } from './routes/hierarchy'
+import { Route as GraphRouteImport } from './routes/graph'
+import { Route as ExplorerRouteImport } from './routes/explorer'
+import { Route as ConfigureRouteImport } from './routes/configure'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as IndexRouteImport } from './routes/index'
-import { ServerRoute as ApiUsersUserIdServerRouteImport } from './routes/api/users.$userId'
+import { Route as ApiSnapshotHistoryRouteImport } from './routes/api/snapshot-history'
+import { Route as ApiModvizBundleRouteImport } from './routes/api/modviz-bundle'
+import { Route as ApiJsonStatusRouteImport } from './routes/api/json-status'
+import { Route as ApiUsersUserIdRouteImport } from './routes/api/users.$userId'
+import { Route as ApiSnapshotHistorySnapshotIdRouteImport } from './routes/api/snapshot-history.$snapshotId'
 
-const rootServerRouteImport = createServerRootRoute()
-
+const TreemapRoute = TreemapRouteImport.update({
+  id: '/treemap',
+  path: '/treemap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraceRoute = TraceRouteImport.update({
+  id: '/trace',
+  path: '/trace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportsRoute = ImportsRouteImport.update({
+  id: '/imports',
+  path: '/imports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HierarchyRoute = HierarchyRouteImport.update({
+  id: '/hierarchy',
+  path: '/hierarchy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GraphRoute = GraphRouteImport.update({
+  id: '/graph',
+  path: '/graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExplorerRoute = ExplorerRouteImport.update({
+  id: '/explorer',
+  path: '/explorer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfigureRoute = ConfigureRouteImport.update({
+  id: '/configure',
+  path: '/configure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiUsersUserIdServerRoute = ApiUsersUserIdServerRouteImport.update({
+const ApiSnapshotHistoryRoute = ApiSnapshotHistoryRouteImport.update({
+  id: '/api/snapshot-history',
+  path: '/api/snapshot-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModvizBundleRoute = ApiModvizBundleRouteImport.update({
+  id: '/api/modviz-bundle',
+  path: '/api/modviz-bundle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJsonStatusRoute = ApiJsonStatusRouteImport.update({
+  id: '/api/json-status',
+  path: '/api/json-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersUserIdRoute = ApiUsersUserIdRouteImport.update({
   id: '/api/users/$userId',
   path: '/api/users/$userId',
-  getParentRoute: () => rootServerRouteImport,
+  getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSnapshotHistorySnapshotIdRoute =
+  ApiSnapshotHistorySnapshotIdRouteImport.update({
+    id: '/$snapshotId',
+    path: '/$snapshotId',
+    getParentRoute: () => ApiSnapshotHistoryRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
+  '/configure': typeof ConfigureRoute
+  '/explorer': typeof ExplorerRoute
+  '/graph': typeof GraphRoute
+  '/hierarchy': typeof HierarchyRoute
+  '/imports': typeof ImportsRoute
+  '/summary': typeof SummaryRoute
+  '/trace': typeof TraceRoute
+  '/treemap': typeof TreemapRoute
+  '/api/json-status': typeof ApiJsonStatusRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleRoute
+  '/api/snapshot-history': typeof ApiSnapshotHistoryRouteWithChildren
+  '/api/snapshot-history/$snapshotId': typeof ApiSnapshotHistorySnapshotIdRoute
+  '/api/users/$userId': typeof ApiUsersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
+  '/configure': typeof ConfigureRoute
+  '/explorer': typeof ExplorerRoute
+  '/graph': typeof GraphRoute
+  '/hierarchy': typeof HierarchyRoute
+  '/imports': typeof ImportsRoute
+  '/summary': typeof SummaryRoute
+  '/trace': typeof TraceRoute
+  '/treemap': typeof TreemapRoute
+  '/api/json-status': typeof ApiJsonStatusRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleRoute
+  '/api/snapshot-history': typeof ApiSnapshotHistoryRouteWithChildren
+  '/api/snapshot-history/$snapshotId': typeof ApiSnapshotHistorySnapshotIdRoute
+  '/api/users/$userId': typeof ApiUsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
+  '/configure': typeof ConfigureRoute
+  '/explorer': typeof ExplorerRoute
+  '/graph': typeof GraphRoute
+  '/hierarchy': typeof HierarchyRoute
+  '/imports': typeof ImportsRoute
+  '/summary': typeof SummaryRoute
+  '/trace': typeof TraceRoute
+  '/treemap': typeof TreemapRoute
+  '/api/json-status': typeof ApiJsonStatusRoute
+  '/api/modviz-bundle': typeof ApiModvizBundleRoute
+  '/api/snapshot-history': typeof ApiSnapshotHistoryRouteWithChildren
+  '/api/snapshot-history/$snapshotId': typeof ApiSnapshotHistorySnapshotIdRoute
+  '/api/users/$userId': typeof ApiUsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/compare'
+    | '/configure'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
+    | '/trace'
+    | '/treemap'
+    | '/api/json-status'
+    | '/api/modviz-bundle'
+    | '/api/snapshot-history'
+    | '/api/snapshot-history/$snapshotId'
+    | '/api/users/$userId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/compare'
+    | '/configure'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
+    | '/trace'
+    | '/treemap'
+    | '/api/json-status'
+    | '/api/modviz-bundle'
+    | '/api/snapshot-history'
+    | '/api/snapshot-history/$snapshotId'
+    | '/api/users/$userId'
+  id:
+    | '__root__'
+    | '/'
+    | '/compare'
+    | '/configure'
+    | '/explorer'
+    | '/graph'
+    | '/hierarchy'
+    | '/imports'
+    | '/summary'
+    | '/trace'
+    | '/treemap'
+    | '/api/json-status'
+    | '/api/modviz-bundle'
+    | '/api/snapshot-history'
+    | '/api/snapshot-history/$snapshotId'
+    | '/api/users/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-}
-export interface FileServerRoutesByFullPath {
-  '/api/users/$userId': typeof ApiUsersUserIdServerRoute
-}
-export interface FileServerRoutesByTo {
-  '/api/users/$userId': typeof ApiUsersUserIdServerRoute
-}
-export interface FileServerRoutesById {
-  __root__: typeof rootServerRouteImport
-  '/api/users/$userId': typeof ApiUsersUserIdServerRoute
-}
-export interface FileServerRouteTypes {
-  fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/api/users/$userId'
-  fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/api/users/$userId'
-  id: '__root__' | '/api/users/$userId'
-  fileServerRoutesById: FileServerRoutesById
-}
-export interface RootServerRouteChildren {
-  ApiUsersUserIdServerRoute: typeof ApiUsersUserIdServerRoute
+  CompareRoute: typeof CompareRoute
+  ConfigureRoute: typeof ConfigureRoute
+  ExplorerRoute: typeof ExplorerRoute
+  GraphRoute: typeof GraphRoute
+  HierarchyRoute: typeof HierarchyRoute
+  ImportsRoute: typeof ImportsRoute
+  SummaryRoute: typeof SummaryRoute
+  TraceRoute: typeof TraceRoute
+  TreemapRoute: typeof TreemapRoute
+  ApiJsonStatusRoute: typeof ApiJsonStatusRoute
+  ApiModvizBundleRoute: typeof ApiModvizBundleRoute
+  ApiSnapshotHistoryRoute: typeof ApiSnapshotHistoryRouteWithChildren
+  ApiUsersUserIdRoute: typeof ApiUsersUserIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/treemap': {
+      id: '/treemap'
+      path: '/treemap'
+      fullPath: '/treemap'
+      preLoaderRoute: typeof TreemapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trace': {
+      id: '/trace'
+      path: '/trace'
+      fullPath: '/trace'
+      preLoaderRoute: typeof TraceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/imports': {
+      id: '/imports'
+      path: '/imports'
+      fullPath: '/imports'
+      preLoaderRoute: typeof ImportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hierarchy': {
+      id: '/hierarchy'
+      path: '/hierarchy'
+      fullPath: '/hierarchy'
+      preLoaderRoute: typeof HierarchyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/graph': {
+      id: '/graph'
+      path: '/graph'
+      fullPath: '/graph'
+      preLoaderRoute: typeof GraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explorer': {
+      id: '/explorer'
+      path: '/explorer'
+      fullPath: '/explorer'
+      preLoaderRoute: typeof ExplorerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configure': {
+      id: '/configure'
+      path: '/configure'
+      fullPath: '/configure'
+      preLoaderRoute: typeof ConfigureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -79,29 +297,80 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-  }
-}
-declare module '@tanstack/react-start/server' {
-  interface ServerFileRoutesByPath {
+    '/api/snapshot-history': {
+      id: '/api/snapshot-history'
+      path: '/api/snapshot-history'
+      fullPath: '/api/snapshot-history'
+      preLoaderRoute: typeof ApiSnapshotHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/modviz-bundle': {
+      id: '/api/modviz-bundle'
+      path: '/api/modviz-bundle'
+      fullPath: '/api/modviz-bundle'
+      preLoaderRoute: typeof ApiModvizBundleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/json-status': {
+      id: '/api/json-status'
+      path: '/api/json-status'
+      fullPath: '/api/json-status'
+      preLoaderRoute: typeof ApiJsonStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/users/$userId': {
       id: '/api/users/$userId'
       path: '/api/users/$userId'
       fullPath: '/api/users/$userId'
-      preLoaderRoute: typeof ApiUsersUserIdServerRouteImport
-      parentRoute: typeof rootServerRouteImport
+      preLoaderRoute: typeof ApiUsersUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/snapshot-history/$snapshotId': {
+      id: '/api/snapshot-history/$snapshotId'
+      path: '/$snapshotId'
+      fullPath: '/api/snapshot-history/$snapshotId'
+      preLoaderRoute: typeof ApiSnapshotHistorySnapshotIdRouteImport
+      parentRoute: typeof ApiSnapshotHistoryRoute
     }
   }
 }
 
+interface ApiSnapshotHistoryRouteChildren {
+  ApiSnapshotHistorySnapshotIdRoute: typeof ApiSnapshotHistorySnapshotIdRoute
+}
+
+const ApiSnapshotHistoryRouteChildren: ApiSnapshotHistoryRouteChildren = {
+  ApiSnapshotHistorySnapshotIdRoute: ApiSnapshotHistorySnapshotIdRoute,
+}
+
+const ApiSnapshotHistoryRouteWithChildren =
+  ApiSnapshotHistoryRoute._addFileChildren(ApiSnapshotHistoryRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompareRoute: CompareRoute,
+  ConfigureRoute: ConfigureRoute,
+  ExplorerRoute: ExplorerRoute,
+  GraphRoute: GraphRoute,
+  HierarchyRoute: HierarchyRoute,
+  ImportsRoute: ImportsRoute,
+  SummaryRoute: SummaryRoute,
+  TraceRoute: TraceRoute,
+  TreemapRoute: TreemapRoute,
+  ApiJsonStatusRoute: ApiJsonStatusRoute,
+  ApiModvizBundleRoute: ApiModvizBundleRoute,
+  ApiSnapshotHistoryRoute: ApiSnapshotHistoryRouteWithChildren,
+  ApiUsersUserIdRoute: ApiUsersUserIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-const rootServerRouteChildren: RootServerRouteChildren = {
-  ApiUsersUserIdServerRoute: ApiUsersUserIdServerRoute,
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
 }
-export const serverRouteTree = rootServerRouteImport
-  ._addFileChildren(rootServerRouteChildren)
-  ._addFileTypes<FileServerRouteTypes>()

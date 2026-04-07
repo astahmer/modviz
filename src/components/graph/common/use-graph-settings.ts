@@ -1,116 +1,105 @@
-import {
-	useCamera,
-	useRegisterEvents,
-	useSetSettings,
-	useSigma,
-} from "@react-sigma/core";
+import { useRegisterEvents, useSetSettings, useSigma } from "@react-sigma/core";
 import { useAtom } from "@xstate/store/react";
-import { useControls } from "leva";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clamp } from "~/components/graph/common/clamp";
 import { colors } from "~/components/graph/common/colors";
-import type {
-	EdgeType,
-	NodeType,
-} from "~/components/graph/common/use-create-graph";
+import type { EdgeType, NodeType } from "~/components/graph/common/use-create-graph";
 import {
-	focusedNodeIdAtom,
+	currentNodeIdAtom,
 	highlightedNodeIdAtom,
-	isFocusedModalOpenedAtom,
+	hoveredClusterNameAtom,
+	selectedNodeIdsAtom,
 } from "~/components/graph/common/use-graph-atoms";
 
-export const useGraphSettings = (props: { entryNode?: string }) => {
+export const useGraphSettings = () => {
 	const sigma = useSigma<NodeType, EdgeType>();
 	const setSettings = useSetSettings<NodeType, EdgeType>();
 	const registerEvents = useRegisterEvents<NodeType, EdgeType>();
+	const hoveredClusterName = useAtom(hoveredClusterNameAtom);
+	const selectedNodeIds = useAtom(selectedNodeIdsAtom);
+	const selectedNodeSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
+	const selectedVisibleNodeSet = useMemo(() => {
+		if (selectedNodeSet.size === 0) {
+			return new Set<string>();
+		}
+
+		const graph = sigma.getGraph();
+		const visible = new Set<string>(selectedNodeIds);
+		for (const selectedNodeId of selectedNodeIds) {
+			if (!graph.hasNode(selectedNodeId)) {
+				continue;
+			}
+
+			for (const neighborId of graph.neighbors(selectedNodeId)) {
+				visible.add(neighborId);
+			}
+		}
+
+		return visible;
+	}, [selectedNodeIds, selectedNodeSet.size, sigma]);
 
 	const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-	const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
-	// Hide cluster labels when hovering node
-	useEffect(() => {
-		const clusterLabelLayer = document.getElementById("cluster-label-layers");
-		if (!clusterLabelLayer) return;
-
-		if (hoveredNodeId) {
-			clusterLabelLayer.dataset.hovered = "true";
-		} else {
-			delete clusterLabelLayer.dataset.hovered;
-		}
-	}, [Boolean(hoveredNodeId)]);
-
-	const { gotoNode } = useCamera();
-
-	// registerEvents
 	useEffect(() => {
 		registerEvents({
 			enterNode: (event) => setHoveredNodeId(event.node),
 			leaveNode: () => setHoveredNodeId(null),
-			downNode: (event) => {
-				// setDraggedNodeId(event.node);
-			},
 			clickNode: (event) => {
-				gotoNode(event.node);
-				focusedNodeIdAtom.set((prev) =>
-					prev === event.node ? null : event.node,
+				currentNodeIdAtom.set(event.node);
+				highlightedNodeIdAtom.set(null);
+				selectedNodeIdsAtom.set((previous) =>
+					previous.includes(event.node)
+						? previous.filter((nodeId) => nodeId !== event.node)
+						: [...previous, event.node],
 				);
 			},
-			// clickStage: () => setSelectedNodeId(null),
 			downStage: () => {
 				highlightedNodeIdAtom.set(null);
-			},
-			mousemovebody: (e) => {
-				if (!draggedNodeId) return;
-
-				const pos = sigma.viewportToGraph(e);
-				sigma.getGraph().setNodeAttribute(draggedNodeId, "x", pos.x);
-				sigma.getGraph().setNodeAttribute(draggedNodeId, "y", pos.y);
-
-				// Prevent sigma to move camera:
-				e.preventSigmaDefault();
-				e.original.preventDefault();
-				e.original.stopPropagation();
-			},
-			mouseup: () => {
-				if (draggedNodeId) {
-					setDraggedNodeId(null);
-					sigma.getGraph().removeNodeAttribute(draggedNodeId, "highlighted");
-				}
 			},
 			mousedown: () => {
 				if (!sigma.getCustomBBox()) sigma.setCustomBBox(sigma.getBBox());
 			},
 		});
-	}, [registerEvents, draggedNodeId, sigma, focusedNodeIdAtom]);
+	}, [registerEvents, sigma]);
 
-	useControls({
-		renderLabels: {
-			value: Boolean(hoveredNodeId),
-			onChange: (value) => {
-				setSettings({
-					renderLabels: value,
-				});
-			},
-		},
-	});
-
-	/** When component mount or hovered node change => Setting the sigma reducers */
 	useEffect(() => {
 		setSettings({
 			autoCenter: true,
 			autoRescale: true,
 			zoomDuration: 150,
-			// renderLabels: Boolean(hoveredNodeId),
-			// hideLabelsOnMove: true,
+			renderLabels: Boolean(hoveredNodeId || hoveredClusterName || selectedNodeSet.size > 0),
+			hideLabelsOnMove: true,
 			labelRenderedSizeThreshold: 8,
-			// This function tells sigma to grow sizes linearly with the zoom, instead
-			// of relatively to the zoom ratio's square root:
 			nodeReducer: (nodeId, node) => {
 				const graph = sigma.getGraph();
+				const isHoveredNode = nodeId === hoveredNodeId;
 				const updated = {
 					...node,
 					highlighted: node.highlighted || false,
 				};
+
+				if (selectedNodeSet.size > 0) {
+					if (selectedNodeSet.has(nodeId)) {
+						updated.label = node.label;
+						updated.highlighted = true;
+						updated.size = node.size + clamp(2, 8, node.size * 0.15);
+					} else if (selectedVisibleNodeSet.has(nodeId)) {
+						updated.label = node.label;
+						updated.highlighted = true;
+					} else {
+						updated.color = colors.default;
+						updated.label = isHoveredNode ? node.label : "";
+						updated.highlighted = isHoveredNode;
+					}
+
+					if (isHoveredNode) {
+						updated.label = node.label;
+						updated.highlighted = true;
+						updated.size = node.size + clamp(4, 10, node.size * 0.25);
+					}
+
+					return updated;
+				}
 
 				if (hoveredNodeId && graph.hasNode(hoveredNodeId)) {
 					if (nodeId === hoveredNodeId) {
@@ -118,15 +107,21 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 						updated.size = node.size + clamp(4, 10, node.size * 0.25);
 					}
 
-					if (
-						nodeId === hoveredNodeId ||
-						graph.neighbors(hoveredNodeId).includes(nodeId)
-					) {
+					if (nodeId === hoveredNodeId || graph.neighbors(hoveredNodeId).includes(nodeId)) {
 						// Show labels for active node and neighbors
 						updated.label = node.label;
 						updated.highlighted = true;
 					} else {
 						// Hide labels for non-connected nodes
+						updated.color = colors.default;
+						updated.highlighted = false;
+						updated.label = "";
+					}
+				} else if (hoveredClusterName) {
+					if (node.cluster === hoveredClusterName) {
+						updated.label = node.label;
+						updated.highlighted = true;
+					} else {
 						updated.color = colors.default;
 						updated.highlighted = false;
 						updated.label = "";
@@ -138,18 +133,44 @@ export const useGraphSettings = (props: { entryNode?: string }) => {
 				const graph = sigma.getGraph();
 				const updated: EdgeType = { ...edge, hidden: true };
 
-				if (
-					hoveredNodeId &&
-					graph.extremities(edgeId).includes(hoveredNodeId)
-				) {
+				if (selectedNodeSet.size > 0) {
+					const [source, target] = graph.extremities(edgeId);
+					if (selectedNodeSet.has(source) || selectedNodeSet.has(target)) {
+						updated.hidden = false;
+						updated.color = graph.getNodeAttribute(source, "color");
+					}
+
+					return updated;
+				}
+
+				if (hoveredNodeId && graph.extremities(edgeId).includes(hoveredNodeId)) {
 					// Otheriwse show hovered node edges
 					const activeNode = graph.getNodeAttributes(hoveredNodeId);
 					updated.hidden = false;
 					updated.color = activeNode.color;
+				} else if (hoveredClusterName) {
+					const [source, target] = graph.extremities(edgeId);
+					const sourceNode = graph.getNodeAttributes(source);
+					const targetNode = graph.getNodeAttributes(target);
+
+					if (
+						sourceNode.cluster === hoveredClusterName &&
+						targetNode.cluster === hoveredClusterName
+					) {
+						updated.hidden = false;
+						updated.color = sourceNode.color;
+					}
 				}
 
 				return updated;
 			},
 		});
-	}, [setSettings, hoveredNodeId, sigma, props.entryNode]);
+	}, [
+		hoveredClusterName,
+		hoveredNodeId,
+		selectedNodeSet,
+		selectedVisibleNodeSet,
+		setSettings,
+		sigma,
+	]);
 };

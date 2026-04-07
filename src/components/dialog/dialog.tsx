@@ -3,13 +3,13 @@
 import { Dialog } from "@ark-ui/react/dialog";
 import { Portal } from "@ark-ui/react/portal";
 import { Tabs } from "@ark-ui/react/tabs";
-import { useLoaderData } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useAtom } from "@xstate/store/react";
 import { useMemo, useState } from "react";
 import { LuMaximize, LuMinimize } from "react-icons/lu";
 import {
-	focusedNodeIdAtom,
-	isFocusedModalOpenedAtom,
+	currentNodeIdAtom,
+	isNodeDetailsOpenAtom,
 } from "~/components/graph/common/use-graph-atoms";
 import { Flamegraph } from "~/components/graph/flamegraph";
 import { TreeViewBasic } from "~/components/tree-view/basic";
@@ -29,21 +29,22 @@ import {
 	SelectValueText,
 	createListCollection,
 } from "~/components/ui/select";
-import type { VizNode } from "../../../mod/types";
+import type { ModvizOutput, VizNode } from "../../../mod/types";
+import { getExternalPackageName } from "~/utils/modviz-data";
 
-export function NodeDetailsModal() {
-	const isOpened = useAtom(isFocusedModalOpenedAtom);
-	const focusedNodeId = useAtom(focusedNodeIdAtom);
+export function NodeDetailsModal(props: { output: ModvizOutput }) {
+	const isOpened = useAtom(isNodeDetailsOpenAtom);
+	const currentNodeId = useAtom(currentNodeIdAtom);
 
-	const output = useLoaderData({ from: "/" });
-	const node =
-		isOpened && output.nodes.find((node) => node.path === focusedNodeId);
+	const node = currentNodeId
+		? props.output.nodes.find((candidate) => candidate.path === currentNodeId)
+		: null;
 
 	return (
 		<Dialog.Root
-			open={isOpened}
+			open={Boolean(isOpened && node)}
 			onOpenChange={(details) => {
-				if (!details.open) focusedNodeIdAtom.set(null);
+				if (!details.open) isNodeDetailsOpenAtom.set(false);
 			}}
 			lazyMount
 		>
@@ -53,7 +54,8 @@ export function NodeDetailsModal() {
 					{node && (
 						<NodeDetailsModalContent
 							node={node}
-							entryNodeId={output.metadata.entrypoints.at(0)!}
+							output={props.output}
+							entryNodeId={props.output.metadata.entrypoints.at(0)!}
 						/>
 					)}
 				</Dialog.Positioner>
@@ -64,11 +66,10 @@ export function NodeDetailsModal() {
 
 const NodeDetailsModalContent = (props: {
 	node: VizNode;
+	output: ModvizOutput;
 	entryNodeId: string;
 }) => {
 	const [isMaximized, setIsMaximized] = useState(false);
-
-	const output = useLoaderData({ from: "/" });
 	const [viewMode, setViewMode] =
 		useState<(typeof viewModeCollection)["items"][0]["value"]>("tree-search");
 
@@ -155,10 +156,10 @@ const NodeDetailsModalContent = (props: {
 						className="w-full h-full min-h-0 text-gray-600 dark:text-gray-300"
 					>
 						{viewMode === "tree-search" && (
-							<TransitiveImportsTab node={props.node} />
+							<TransitiveImportsTab node={props.node} output={props.output} />
 						)}
 						{viewMode === "flamegraph" && (
-							<Flamegraph output={output} entryNodeId={props.node.path} />
+							<Flamegraph output={props.output} entryNodeId={props.node.path} />
 						)}
 					</Tabs.Content>
 
@@ -166,29 +167,46 @@ const NodeDetailsModalContent = (props: {
 						value="imports-chain"
 						className="w-full h-full min-h-0 text-gray-600 dark:text-gray-300"
 					>
-						<ImportsChainTab node={props.node} />
+						<ImportsChainTab node={props.node} output={props.output} />
 					</Tabs.Content>
 				</Tabs.Root>
 			</div>
 
-			<div className="flex flex-col items-end text-xs p-2 border-t border-gray-200 dark:border-gray-700">
-				<div className="flex gap-3">
-					Current node: <span>{props.node.path}</span>
+			<div className="flex items-center justify-between text-xs p-2 border-t border-gray-200 dark:border-gray-700">
+				<div className="flex flex-col gap-1">
+					<div className="flex gap-3">
+						Current node: <span>{props.node.path}</span>
+					</div>
+					<div className="flex gap-3">
+						Entrypoint: <span>{props.entryNodeId}</span>
+					</div>
 				</div>
-				<div className="flex gap-3">
-					Entrypoint: <span>{props.entryNodeId}</span>
-				</div>
+				<Link
+					to="/trace"
+					search={getNodeTraceSearch(props.node)}
+					onClick={() => isNodeDetailsOpenAtom.set(false)}
+					className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-500/60 dark:hover:bg-sky-500/10 dark:hover:text-sky-200"
+				>
+					Trace this node →
+				</Link>
 			</div>
 		</Dialog.Content>
 	);
 };
 
-const TransitiveImportsTab = (props: { node: VizNode }) => {
-	const output = useLoaderData({ from: "/" });
+const getNodeTraceSearch = (node: VizNode) => {
+	if (node.path.includes("node_modules")) {
+		const packageName = getExternalPackageName(node);
+		return { package: packageName ?? node.path, node: "", limit: 25 };
+	}
 
+	return { node: node.path, package: "", limit: 25 };
+};
+
+const TransitiveImportsTab = (props: { node: VizNode; output: ModvizOutput }) => {
 	const initialCollection = useMemo(
-		() => mapModvizOutputToImporteesTreeCollection(output, props.node.path),
-		[output.nodes, props.node.path],
+		() => mapModvizOutputToImporteesTreeCollection(props.output, props.node.path),
+		[props.output, props.node.path],
 	);
 	if (!initialCollection) return;
 
@@ -206,8 +224,7 @@ const TransitiveImportsTab = (props: { node: VizNode }) => {
 						)
 					}
 				>
-					{transitiveImports.size} file imported (transitively) from current
-					node
+					{transitiveImports.size} file imported (transitively) from current node
 				</span>
 				<TreeViewBasic
 					key={props.node.path}
@@ -219,50 +236,34 @@ const TransitiveImportsTab = (props: { node: VizNode }) => {
 	);
 };
 
-const ImportsChainTab = (props: { node: VizNode }) => {
-	const output = useLoaderData({ from: "/" });
-
+const ImportsChainTab = (props: { node: VizNode; output: ModvizOutput }) => {
 	const [direction, setDirection] = useState<ImportsChainDirection>(
 		"from-entrypoint-to-current-node",
 	);
 
 	const initialCollection = useMemo(
-		() =>
-			mapModvizOutputToImportsChainTreeCollection(
-				output,
-				props.node.path,
-				direction,
-			),
-		[output.nodes, props.node.path, direction],
+		() => mapModvizOutputToImportsChainTreeCollection(props.output, props.node.path, direction),
+		[props.output, props.node.path, direction],
 	);
 	if (!initialCollection) return;
 
-	const rootNode = output.nodes.find((node) => node.path === props.node.path)!;
+	const rootNode = props.output.nodes.find((node) => node.path === props.node.path)!;
 	const chain = rootNode.chain.at(0) ?? [];
 
 	return (
 		<>
 			<div className="h-full min-h-0 flex flex-col p-2 gap-2">
 				<div className="flex gap-2 items-center">
-					<span
-						onClick={() =>
-							console.log(props.node, initialCollection.rootNode, chain)
-						}
-					>
+					<span onClick={() => console.log(props.node, initialCollection.rootNode, chain)}>
 						<span>
 							Reached{" "}
-							{direction === "from-entrypoint-to-current-node"
-								? "current node"
-								: "entrypoint"}{" "}
+							{direction === "from-entrypoint-to-current-node" ? "current node" : "entrypoint"}{" "}
 							after
 						</span>
 						<span> {chain.length} imports</span>
 					</span>
 					<div className="ml-auto">
-						<ImportsChainDirection
-							value={direction}
-							onValueChange={setDirection}
-						/>
+						<ImportsChainDirection value={direction} onValueChange={setDirection} />
 					</div>
 				</div>
 				<TreeViewBasic
@@ -310,9 +311,7 @@ function ImportsChainDirection(props: {
 		<Select
 			className="min-w-64 *:not-first:mt-2"
 			value={[props.value]}
-			onValueChange={(details) =>
-				props.onValueChange(details.value.at(0) as ImportsChainDirection)
-			}
+			onValueChange={(details) => props.onValueChange(details.value.at(0) as ImportsChainDirection)}
 			collection={directionCollection}
 			positioning={{ sameWidth: true }}
 		>

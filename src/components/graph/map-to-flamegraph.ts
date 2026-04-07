@@ -18,11 +18,21 @@ interface NanovisTreeNode {
 	};
 }
 
+export type FlamegraphBuildOptions = {
+	includeExternal?: boolean;
+	maxChildren?: number;
+	maxDepth?: number;
+};
+
 // Convert ModvizOutput to hierarchical data compatible with nanovis
 export function convertToNanovisHierarchyData(
 	output: ModvizOutput,
 	entryNodeId: string,
+	options: FlamegraphBuildOptions = {},
 ): NanovisTreeNode {
+	const maxDepth = options.maxDepth ?? 6;
+	const maxChildren = options.maxChildren ?? 24;
+	const includeExternal = options.includeExternal ?? true;
 	const entryNode = output.nodes.find((node) => node.path === entryNodeId);
 
 	const nodeMap = new Map<string, NanovisTreeNode>();
@@ -62,14 +72,11 @@ export function convertToNanovisHierarchyData(
 		} as NanovisTreeNode;
 	}
 
-	const rootNode: NanovisTreeNode = Object.assign(
-		{},
-		nodeMap.get(entryNodeId)!,
-		{ children: [] },
-	);
+	const rootNode: NanovisTreeNode = Object.assign({}, nodeMap.get(entryNodeId)!, { children: [] });
 	const allVisited = new Set<string>();
 	const stack = [
 		{
+			depth: 0,
 			nodePath: entryNodeId,
 			parent: rootNode,
 			visited: new Set([entryNodeId]),
@@ -80,7 +87,7 @@ export function convertToNanovisHierarchyData(
 	const childrenMap = new Map<string, NanovisTreeNode[]>();
 	while (stack.length > 0) {
 		stackSize++;
-		const { nodePath, parent, visited } = stack.pop()!;
+		const { depth, nodePath, parent, visited } = stack.pop()!;
 		const wasAlreadyVisited = allVisited.has(nodePath);
 		allVisited.add(nodePath);
 
@@ -98,8 +105,18 @@ export function convertToNanovisHierarchyData(
 		}
 
 		if (wasAlreadyVisited) continue;
+		if (depth >= maxDepth) continue;
 
-		currentTreeNode.meta.importees.forEach((importee) => {
+		const importees = currentTreeNode.meta.importees
+			.filter((importee) => includeExternal || !importee.includes("node_modules"))
+			.sort((left, right) => {
+				const leftNode = nodeMap.get(left);
+				const rightNode = nodeMap.get(right);
+				return (rightNode?.meta.importees.length ?? 0) - (leftNode?.meta.importees.length ?? 0);
+			});
+
+		const visibleImportees = importees.slice(0, maxChildren);
+		visibleImportees.forEach((importee) => {
 			if (visited.has(importee)) {
 				const importeeNode = nodeMap.get(importee)!;
 				if (!importeeNode) return;
@@ -116,11 +133,29 @@ export function convertToNanovisHierarchyData(
 			visited.add(importee);
 
 			stack.push({
+				depth: depth + 1,
 				nodePath: importee,
 				parent: currentTreeNode,
 				visited: new Set([...visited, importee]),
 			});
 		});
+
+		if (importees.length > visibleImportees.length) {
+			currentTreeNode.children.push({
+				id: `${nodePath}#truncated`,
+				text: `… ${importees.length - visibleImportees.length} more`,
+				subtext: "pruned",
+				sizeSelf: 1,
+				children: [],
+				meta: {
+					path: `${nodePath}#truncated`,
+					importees: [],
+					imports: 0,
+					exports: 0,
+					originalNode: currentTreeNode.meta.originalNode,
+				},
+			});
+		}
 	}
 
 	return rootNode;

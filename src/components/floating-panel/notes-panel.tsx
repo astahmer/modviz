@@ -15,10 +15,7 @@ import {
 	Calendar,
 } from "lucide-react";
 import { useState, type PropsWithChildren } from "react";
-import {
-	focusedNodeIdAtom,
-	isFocusedModalOpenedAtom,
-} from "~/components/graph/common/use-graph-atoms";
+import { isNodeDetailsOpenAtom } from "~/components/graph/common/use-graph-atoms";
 
 export function NotesPanel(props: PropsWithChildren) {
 	const [notes, setNotes] = useState([
@@ -61,7 +58,7 @@ export function NotesPanel(props: PropsWithChildren) {
 		setActiveNote(newNote);
 	};
 
-	const isOpened = useAtom(isFocusedModalOpenedAtom);
+	const isOpened = useAtom(isNodeDetailsOpenAtom);
 
 	return (
 		<FloatingPanel.Root
@@ -105,8 +102,7 @@ export function NotesPanel(props: PropsWithChildren) {
 									<FloatingPanel.CloseTrigger
 										className="w-6 h-6 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
 										onClick={() => {
-											// isFocusedModalOpenedAtom.set(false)
-											focusedNodeIdAtom.set(null);
+											isNodeDetailsOpenAtom.set(false);
 										}}
 									>
 										<X className="w-3 h-3" />
@@ -164,11 +160,7 @@ export function NotesPanel(props: PropsWithChildren) {
 														title: e.target.value,
 													};
 													setActiveNote(updatedNote);
-													setNotes(
-														notes.map((n) =>
-															n.id === activeNote.id ? updatedNote : n,
-														),
-													);
+													setNotes(notes.map((n) => (n.id === activeNote.id ? updatedNote : n)));
 												}}
 												className="w-full text-xl font-bold bg-transparent border-none outline-hidden text-gray-900 dark:text-gray-100 placeholder-gray-400"
 												placeholder="Note title..."
@@ -185,11 +177,7 @@ export function NotesPanel(props: PropsWithChildren) {
 														content: e.target.value,
 													};
 													setActiveNote(updatedNote);
-													setNotes(
-														notes.map((n) =>
-															n.id === activeNote.id ? updatedNote : n,
-														),
-													);
+													setNotes(notes.map((n) => (n.id === activeNote.id ? updatedNote : n)));
 												}}
 												placeholder="Start writing your note..."
 												className="w-full h-full resize-none border-none outline-hidden text-base text-gray-700 dark:text-gray-300 bg-transparent placeholder-gray-400 leading-relaxed"

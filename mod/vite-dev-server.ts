@@ -5,10 +5,7 @@ import { createServer } from "vite";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const root = path.join(__dirname, "..");
 
-export async function startServer(options: {
-	port: number | undefined;
-	outputPath: string;
-}) {
+export async function startServer(options: { port: number | undefined; outputPath: string }) {
 	const server = await createServer({
 		// any valid user config options, plus `mode` and `configFile`
 		// configFile: path.join(root, "./vite.config.ts"),
@@ -29,3 +26,8 @@ export async function startServer(options: {
 	server.printUrls();
 	// server.bindCLIShortcuts({ print: true });
 }
+
+startServer({
+	port: 3628,
+	outputPath: path.resolve(process.env.MODVIZ_PATH ?? path.join(process.cwd(), "modviz.json")),
+});
