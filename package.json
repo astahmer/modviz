@@ -11,7 +11,6 @@
   "sideEffects": false,
   "scripts": {
     "cli": "node mod/cli.ts",
-    "build:runtime": "vite build && node ./scripts/build-runtime.mjs",
     "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
@@ -21,7 +20,7 @@
     "typecheck": "tsgo --noEmit",
     "typecheck:tsgo": "tsgo -config tsconfig.json",
     "check": "pnpm run lint && pnpm run typecheck",
-    "build": "pnpm run build:runtime && pnpm run cli:build && pnpm run typecheck",
+    "build": "pnpm vite build && pnpm run cli:build && pnpm run typecheck",
     "prepack": "pnpm run build",
     "start": "node dist/runtime/server/index.mjs"
   },

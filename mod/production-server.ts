@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const packageRoot = path.resolve(__dirname, "..");
-const packagedRuntimeRoot = path.join(packageRoot, "dist", "runtime");
+const packagedRuntimeRoot = path.join(packageRoot, "dist");
 
 const openBrowser = async (url: string) => {
 	const platform = process.platform;
@@ -41,7 +41,7 @@ export async function startProductionServer(options: {
 	outputPath: string;
 	port: number;
 }) {
-	const serverEntry = path.join(packagedRuntimeRoot, "server", "index.mjs");
+	const serverEntry = path.join(packagedRuntimeRoot, "server", "server.js");
 	if (!existsSync(serverEntry)) {
 		throw new Error(
 			[
