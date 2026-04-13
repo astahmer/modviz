@@ -31,16 +31,12 @@ import {
 	buildModvizGraphComparison,
 	renderModvizGraphComparison,
 } from "../shared/modviz-compare.ts";
-import { createModuleGraph, type Module, type Plugin } from "@astahmer/module-graph";
-import type { ModuleGraph } from "@astahmer/module-graph/ModuleGraph.js";
-import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
-import { exports } from "@astahmer/module-graph/plugins/exports.js";
-import { imports } from "@astahmer/module-graph/plugins/imports.js";
-import {
-	unusedExports,
-	type Export,
-	type Import,
-} from "@astahmer/module-graph/plugins/unused-exports.js";
+import { createModuleGraph, type Module, type Plugin } from "#module-graph";
+import type { ModuleGraph } from "#module-graph/ModuleGraph.js";
+import { barrelFile } from "#module-graph/plugins/barrel-file.js";
+import { exports } from "#module-graph/plugins/exports.js";
+import { imports } from "#module-graph/plugins/imports.js";
+import { unusedExports, type Export, type Import } from "#module-graph/plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
 import { sanitizeFileImportSuffixPlugin } from "./module-graph-plugins.ts";
 
