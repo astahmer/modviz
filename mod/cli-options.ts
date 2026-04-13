@@ -239,7 +239,7 @@ Options:
 	--llm-base-url=<url>   Override the OpenAI-compatible base URL used by --llm-analyze
 	--package=<name>       Focus outputs and drilldowns on one external package
 	--node=<path>          Focus outputs and drilldowns on one node path or display path
-	--limit=<n>            Limit printed list output in focused drilldowns (default: 20)
+	--limit=<n>            Limit printed drilldown lists and cap stored origin chains per node (default: 5)
 	--summary              Print a terminal summary of the generated graph
 	--snapshot-name=<name> Save the generated snapshot into history under a named run
 	--snapshot=<id>        Load a named history snapshot for report

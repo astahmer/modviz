@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -29,10 +29,31 @@ export const resolveProductionRuntimePaths = (fromImportUrl: string) => {
 	return {
 		packageRoot,
 		packagedRuntimeRoot,
+		runtimeClientRoot: path.join(packagedRuntimeRoot, "client"),
 		runtimeHostBuildEntry: path.join(packagedRuntimeRoot, "mod", "runtime-host.js"),
 		runtimeHostSourceEntry: path.join(packageRoot, "mod", "runtime-host.ts"),
 		runtimeServerEntry: path.join(packagedRuntimeRoot, "server", "server.js"),
 	};
+};
+
+const STATIC_CONTENT_TYPES: Record<string, string> = {
+	".css": "text/css; charset=utf-8",
+	".gif": "image/gif",
+	".html": "text/html; charset=utf-8",
+	".ico": "image/x-icon",
+	".jpeg": "image/jpeg",
+	".jpg": "image/jpeg",
+	".js": "text/javascript; charset=utf-8",
+	".json": "application/json; charset=utf-8",
+	".map": "application/json; charset=utf-8",
+	".mjs": "text/javascript; charset=utf-8",
+	".png": "image/png",
+	".svg": "image/svg+xml",
+	".txt": "text/plain; charset=utf-8",
+	".webmanifest": "application/manifest+json; charset=utf-8",
+	".webp": "image/webp",
+	".woff": "font/woff",
+	".woff2": "font/woff2",
 };
 
 const isDirectExecution = (importUrl: string) => {
@@ -80,6 +101,82 @@ const createRequestFromNode = (request: IncomingMessage, port: number) => {
 	return new Request(url, requestInit as RequestInit);
 };
 
+const getContentType = (filePath: string) =>
+	STATIC_CONTENT_TYPES[path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
+
+const resolveStaticAssetPath = (clientRoot: string, pathname: string) => {
+	const relativePath = decodeURIComponent(pathname).replace(/^\/+/, "");
+	if (!relativePath) {
+		return null;
+	}
+
+	const absoluteClientRoot = path.resolve(clientRoot);
+	const candidatePath = path.resolve(absoluteClientRoot, relativePath);
+	if (
+		candidatePath !== absoluteClientRoot &&
+		!candidatePath.startsWith(`${absoluteClientRoot}${path.sep}`)
+	) {
+		return null;
+	}
+
+	if (!existsSync(candidatePath)) {
+		return null;
+	}
+
+	const stat = statSync(candidatePath);
+	if (!stat.isFile()) {
+		return null;
+	}
+
+	return {
+		filePath: candidatePath,
+		stat,
+	};
+};
+
+const tryServeStaticAsset = async (
+	request: IncomingMessage,
+	response: ServerResponse,
+	clientRoot: string,
+	port: number,
+) => {
+	const method = (request.method ?? "GET").toUpperCase();
+	if (method !== "GET" && method !== "HEAD") {
+		return false;
+	}
+
+	const requestUrl = new URL(
+		request.url ?? "/",
+		`http://${request.headers.host ?? `localhost:${port}`}`,
+	);
+	if (path.posix.extname(requestUrl.pathname) === "") {
+		return false;
+	}
+
+	const asset = resolveStaticAssetPath(clientRoot, requestUrl.pathname);
+	if (!asset) {
+		return false;
+	}
+
+	response.statusCode = 200;
+	response.setHeader("content-length", String(asset.stat.size));
+	response.setHeader("content-type", getContentType(asset.filePath));
+	response.setHeader(
+		"cache-control",
+		requestUrl.pathname.startsWith("/assets/")
+			? "public, max-age=31536000, immutable"
+			: "public, max-age=3600",
+	);
+
+	if (method === "HEAD") {
+		response.end();
+		return true;
+	}
+
+	await pipeline(createReadStream(asset.filePath), response);
+	return true;
+};
+
 const writeResponseToNode = async (
 	request: IncomingMessage,
 	response: Response,
@@ -117,9 +214,14 @@ const handleNodeRequest = async (
 	fetchHandler: RuntimeFetchHandler,
 	request: IncomingMessage,
 	response: ServerResponse,
+	clientRoot: string,
 	port: number,
 ) => {
 	try {
+		if (await tryServeStaticAsset(request, response, clientRoot, port)) {
+			return;
+		}
+
 		const runtimeRequest = createRequestFromNode(request, port);
 		const runtimeResponse = await fetchHandler(runtimeRequest);
 		await writeResponseToNode(request, runtimeResponse, response);
@@ -163,7 +265,7 @@ export async function startRuntimeHost(options?: { port?: number }) {
 	}
 
 	const server = createServer((request, response) => {
-		void handleNodeRequest(fetchHandler, request, response, port);
+		void handleNodeRequest(fetchHandler, request, response, runtimePaths.runtimeClientRoot, port);
 	});
 
 	await new Promise<void>((resolve, reject) => {
