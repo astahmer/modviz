@@ -28,9 +28,6 @@
     "types": [
       "node"
     ],
-    "customConditions": [
-      "astahmer"
-    ],
     "resolveJsonModule": true,
     "paths": {
       "~/*": [
