@@ -31,6 +31,7 @@ import {
 	buildModvizGraphComparison,
 	renderModvizGraphComparison,
 } from "../shared/modviz-compare.ts";
+import { findImportChainsLimited } from "./import-chains.ts";
 import { createModuleGraph, type Module, type Plugin } from "#module-graph";
 import type { ModuleGraph } from "#module-graph/ModuleGraph.js";
 import { barrelFile } from "#module-graph/plugins/barrel-file.js";
@@ -166,7 +167,13 @@ const packages = workspaceList.map((workspace) => ({
 	path: normalizeRelativePath(workspace.relativePath),
 }));
 const webGraphData = await withProgress("Preparing graph payload", () =>
-	processModuleGraphForWeb(moduleGraph, entryFileForGraph, packages, basePath),
+	processModuleGraphForWeb(
+		moduleGraph,
+		entryFileForGraph,
+		packages,
+		basePath,
+		Number.isFinite(flags.limit) ? flags.limit : 5,
+	),
 );
 const pathFilteredGraph = applyPathFilters(webGraphData, flags.include, flags.exclude);
 
@@ -342,6 +349,7 @@ function processModuleGraphForWeb(
 		name: string;
 	}>,
 	basePath: string,
+	maxChainsPerNode: number,
 ): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
@@ -364,7 +372,7 @@ function processModuleGraphForWeb(
 			importees: Array.from(importees),
 			importedBy: module.importedBy,
 			isBarrelFile: module.isBarrelFile || false,
-			chain: moduleGraph.findImportChains(filePath),
+			chain: findImportChainsLimited(moduleGraph, filePath, maxChainsPerNode),
 		};
 		nodeList.push(node);
 

@@ -33,12 +33,6 @@ export const Route = createRootRoute({
 			},
 			{ rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
 		],
-		scripts: [
-			{
-				src: "/customScript.js",
-				type: "text/javascript",
-			},
-		],
 	}),
 	errorComponent: DefaultCatchBoundary,
 	notFoundComponent: () => <NotFound />,
