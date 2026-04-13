@@ -9,16 +9,6 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "imports": {
-    "#module-graph": {
-      "astahmer": "/Users/astahmer/dev/open-source/module-graph",
-      "default": "@astahmer/module-graph"
-    },
-    "#module-graph/*": {
-      "astahmer": "/Users/astahmer/dev/open-source/module-graph/*",
-      "default": "@astahmer/module-graph/*"
-    }
-  },
   "scripts": {
     "cli": "node mod/cli.ts",
     "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
