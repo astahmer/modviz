@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Plugin } from "/Users/astahmer/dev/open-source/module-graph/index.js";
+import type { Plugin } from "@astahmer/module-graph";
 
 const WINDOWS_ABSOLUTE_PATH_RE = /^[A-Za-z]:[\\/]/;
 const ANALYZABLE_SOURCE_EXTENSIONS = new Set([
