@@ -1,6 +1,6 @@
-# Dependency Graph Visualizer
+# modviz
 
-An interactive CLI and web UI for visualizing module dependency graphs and spotting import hotspots.
+An interactive CLI and packaged web UI for visualizing TypeScript and JavaScript module dependency graphs, tracing import origins, and comparing snapshots over time.
 
 ## 🚀 Features
 
@@ -15,9 +15,17 @@ An interactive CLI and web UI for visualizing module dependency graphs and spott
 
 ## 📦 Installation
 
+Requires Node 22.12+.
+
 ```bash
-# Install dependencies
-pnpm add -D modviz
+# npm
+npm install --save-dev modviz
+
+# pnpm
+pnpm add --save-dev modviz
+
+# one-off execution
+npx modviz analyze src/index.ts --ui
 ```
 
 ## 🛠️ Usage
@@ -25,10 +33,10 @@ pnpm add -D modviz
 ### Analyze and launch the web UI
 
 ```bash
-pnpm run modviz analyze src/index.ts --ui
+pnpm exec modviz analyze src/index.ts --ui
 ```
 
-This serves the prebuilt production UI from `dist/runtime` and launches the packaged Node server instead of rebuilding with Vite on every run.
+This serves the prebuilt production UI from the packaged `dist/client` and `dist/server` assets instead of rebuilding with Vite on every run.
 The UI also polls the graph JSON file timestamp and refreshes automatically when the snapshot changes on disk.
 
 Build the packaged runtime once as the library author:
@@ -40,55 +48,73 @@ pnpm run build
 ### Generate graph data only (no UI)
 
 ```bash
-pnpm run modviz analyze src/index.ts
+pnpm exec modviz analyze src/index.ts
 ```
 
 ### Launch UI with existing data
 
 ```bash
-pnpm run modviz serve ./modviz.json
+pnpm exec modviz serve ./modviz.json
 ```
 
 ### Use custom port
 
 ```bash
-pnpm run modviz analyze src/index.ts --ui --port=4000
+pnpm exec modviz analyze src/index.ts --ui --port=4000
 ```
 
 ### Generate LLM-oriented reports for barrel and import analysis
 
 ```bash
-pnpm run modviz analyze src/index.ts --llm --node-modules
+pnpm exec modviz analyze src/index.ts --llm --node-modules
 ```
 
 ### Generate an AI-written engineering summary from the structured LLM report
 
 ```bash
-MODVIZ_LLM_API_KEY=... pnpm run modviz analyze src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
+MODVIZ_LLM_API_KEY=... pnpm exec modviz analyze src/index.ts --llm-analyze --llm-model=gpt-4.1-mini
 ```
 
 ### Focus outputs on one package or node when the summary is not enough
 
 ```bash
-pnpm run modviz analyze src/index.ts --node-modules --package=googleapis
-pnpm run modviz analyze src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
+pnpm exec modviz analyze src/index.ts --node-modules --package=googleapis
+pnpm exec modviz analyze src/index.ts --node-modules --node=src/adapter-rest/register-app-routes.ts
 ```
 
 ### Save named snapshots to history
 
 ```bash
-pnpm run modviz analyze src/index.ts --snapshot-name=before-refactor
-pnpm run modviz analyze src/index.ts --snapshot-name=after-refactor
+pnpm exec modviz analyze src/index.ts --snapshot-name=before-refactor
+pnpm exec modviz analyze src/index.ts --snapshot-name=after-refactor
 ```
 
 ### Report on an existing graph or named snapshot
 
 ```bash
-pnpm run modviz report --summary
-pnpm run modviz report --package=react
-pnpm run modviz report --snapshot=2026-04-01t10-00-00-before-refactor --node=src/routes/index.ts
-pnpm run modviz report --list-snapshots
+pnpm exec modviz report --summary
+pnpm exec modviz report --package=react
+pnpm exec modviz report --snapshot=2026-04-01t10-00-00-before-refactor --node=src/routes/index.ts
+pnpm exec modviz report --list-snapshots
 ```
+
+## 🚢 Publishing
+
+The package is configured for public npm publishing with `release-it`.
+
+```bash
+# Preview the release flow without tagging or publishing
+pnpm run release:dry-run
+
+# Bump version, create git tag, and publish to npm
+pnpm run release
+```
+
+`npm publish` and `release-it` both run the package verification flow before publishing:
+
+- `pnpm run check`
+- `pnpm run test`
+- `pnpm run build`
 
 ## 🎨 Web UI Features
 
