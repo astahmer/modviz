@@ -18,6 +18,9 @@ function createImportChainSource(
 
 	return {
 		relativeEntrypoints: entrypoints,
+		graph: new Map(
+			Object.entries(edges).map(([modulePath, dependencies]) => [modulePath, new Set(dependencies)]),
+		),
 		modules: new Map(
 			Array.from(importedBy.entries(), ([modulePath, importers]) => [
 				modulePath,

@@ -11,7 +11,7 @@
   "sideEffects": false,
   "scripts": {
     "cli": "node mod/cli.ts",
-    "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
+    "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts --types node --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
