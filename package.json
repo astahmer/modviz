@@ -2,16 +2,27 @@
   "name": "modviz",
   "private": true,
   "bin": {
-    "modviz": "./dist/cli.js"
+    "modviz": "./dist/mod/cli.js"
   },
   "files": [
     "dist"
   ],
   "type": "module",
   "sideEffects": false,
+  "imports": {
+    "#module-graph": {
+      "astahmer": "/Users/astahmer/dev/open-source/module-graph",
+      "default": "@astahmer/module-graph"
+    },
+    "#module-graph/*": {
+      "astahmer": "/Users/astahmer/dev/open-source/module-graph/*",
+      "default": "@astahmer/module-graph/*"
+    }
+  },
   "scripts": {
     "cli": "node mod/cli.ts",
     "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
     "lint": "oxlint --import-plugin --react-plugin --vitest-plugin --jsx-a11y-plugin --node-plugin .",
@@ -20,9 +31,9 @@
     "typecheck": "tsgo --noEmit",
     "typecheck:tsgo": "tsgo -config tsconfig.json",
     "check": "pnpm run lint && pnpm run typecheck",
-    "build": "pnpm vite build && pnpm run cli:build && pnpm run typecheck",
+    "build": "pnpm run clean && pnpm vite build && pnpm run cli:build && pnpm run typecheck",
     "prepack": "pnpm run build",
-    "start": "node dist/runtime/server/index.mjs"
+    "start": "node dist/mod/runtime-host.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.49",
