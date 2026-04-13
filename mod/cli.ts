@@ -31,18 +31,19 @@ import {
 	buildModvizGraphComparison,
 	renderModvizGraphComparison,
 } from "../shared/modviz-compare.ts";
-import { createModuleGraph, type Module, type Plugin } from "/Users/astahmer/dev/open-source/module-graph/index.js";
-import type { ModuleGraph } from "/Users/astahmer/dev/open-source/module-graph/ModuleGraph.js";
-import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/plugins/barrel-file.js";
-import { exports } from "/Users/astahmer/dev/open-source/module-graph/plugins/exports.js";
-import { imports } from "/Users/astahmer/dev/open-source/module-graph/plugins/imports.js";
+import { createModuleGraph, type Module, type Plugin } from "@astahmer/module-graph";
+import { barrelFile } from "@astahmer/module-graph/plugins/barrel-file.js";
+import { exports } from "@astahmer/module-graph/plugins/exports.js";
+import { imports } from "@astahmer/module-graph/plugins/imports.js";
 import {
 	unusedExports,
 	type Export,
 	type Import,
-} from "/Users/astahmer/dev/open-source/module-graph/plugins/unused-exports.js";
+} from "@astahmer/module-graph/plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
 import { sanitizeFileImportSuffixPlugin } from "./module-graph-plugins.ts";
+
+type ModuleGraphInstance = Awaited<ReturnType<typeof createModuleGraph>>;
 
 const args = process.argv.slice(2);
 const parsedArgs = parseCliArgs(args);
@@ -170,7 +171,13 @@ const packages = workspaceList.map((workspace) => ({
 	path: normalizeRelativePath(workspace.relativePath),
 }));
 const webGraphData = await withProgress("Preparing graph payload", () =>
-	processModuleGraphForWeb(moduleGraph, entryFileForGraph, packages, basePath),
+	processModuleGraphForWeb(
+		moduleGraph,
+		entryFileForGraph,
+		packages,
+		basePath,
+		Number.isFinite(flags.limit) ? flags.limit : 5,
+	),
 );
 const pathFilteredGraph = applyPathFilters(webGraphData, flags.include, flags.exclude);
 
@@ -339,13 +346,14 @@ async function withProgress<T>(label: string, work: () => Promise<T> | T) {
 }
 
 function processModuleGraphForWeb(
-	moduleGraph: ModuleGraph,
+	moduleGraph: ModuleGraphInstance,
 	entryFile: string,
 	workspaces: Array<{
 		path: string;
 		name: string;
 	}>,
 	basePath: string,
+	maxChainsPerNode: number,
 ): ModvizOutput {
 	const nodeList: ModvizOutput["nodes"] = [];
 	const edgeList = new Set<string>();
@@ -368,7 +376,7 @@ function processModuleGraphForWeb(
 			importees: Array.from(importees),
 			importedBy: module.importedBy,
 			isBarrelFile: module.isBarrelFile || false,
-			chain: moduleGraph.findImportChains(filePath),
+			chain: moduleGraph.findImportChains(filePath, { maxChains: maxChainsPerNode }),
 		};
 		nodeList.push(node);
 
@@ -533,7 +541,9 @@ function applyPathFilters(output: ModvizOutput, includeValue?: string, excludeVa
 			),
 		}));
 
-	const entrypoints = output.metadata.entrypoints.filter((entrypoint) => includedPaths.has(entrypoint));
+	const entrypoints = output.metadata.entrypoints.filter((entrypoint) =>
+		includedPaths.has(entrypoint),
+	);
 	return {
 		metadata: {
 			...output.metadata,

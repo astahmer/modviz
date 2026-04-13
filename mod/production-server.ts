@@ -2,10 +2,10 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveProductionRuntimePaths } from "./runtime-host.ts";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const packageRoot = path.resolve(__dirname, "..");
-const packagedRuntimeRoot = path.join(packageRoot, "dist", "runtime");
+const runtimePaths = resolveProductionRuntimePaths(import.meta.url);
 
 const openBrowser = async (url: string) => {
 	const platform = process.platform;
@@ -36,16 +36,35 @@ const waitForServer = async (url: string, timeoutMs = 20000) => {
 	throw new Error(`Timed out waiting for the web UI server at ${url}`);
 };
 
+const formatEarlyExit = (code: number | null, signal: NodeJS.Signals | null) => {
+	const details = [code !== null ? `code ${code}` : null, signal ? `signal ${signal}` : null]
+		.filter(Boolean)
+		.join(", ");
+
+	return `The web UI server exited before it became ready${details ? ` (${details})` : ""}.`;
+};
+
 export async function startProductionServer(options: {
 	open?: boolean;
 	outputPath: string;
 	port: number;
 }) {
-	const serverEntry = path.join(packagedRuntimeRoot, "server", "index.mjs");
-	if (!existsSync(serverEntry)) {
+	if (!existsSync(runtimePaths.runtimeServerEntry)) {
 		throw new Error(
 			[
-				`Expected packaged production runtime at ${serverEntry}.`,
+				`Expected packaged production runtime at ${runtimePaths.runtimeServerEntry}.`,
+				"Run `pnpm build` in the modviz package before launching the UI.",
+			].join(" "),
+		);
+	}
+
+	const runtimeHostEntry = existsSync(runtimePaths.runtimeHostBuildEntry)
+		? runtimePaths.runtimeHostBuildEntry
+		: runtimePaths.runtimeHostSourceEntry;
+	if (!existsSync(runtimeHostEntry)) {
+		throw new Error(
+			[
+				`Expected a runtime host entry at ${runtimePaths.runtimeHostBuildEntry} or ${runtimePaths.runtimeHostSourceEntry}.`,
 				"Run `pnpm build` in the modviz package before launching the UI.",
 			].join(" "),
 		);
@@ -57,8 +76,7 @@ export async function startProductionServer(options: {
 		"history",
 	);
 
-	const child = spawn(process.execPath, [serverEntry], {
-		cwd: packagedRuntimeRoot,
+	const child = spawn(process.execPath, [runtimeHostEntry], {
 		env: {
 			...process.env,
 			MODVIZ_PATH: options.outputPath,
@@ -76,13 +94,39 @@ export async function startProductionServer(options: {
 	process.once("SIGTERM", shutdown);
 
 	const url = `http://localhost:${options.port}`;
-	await waitForServer(url);
+	let onEarlyError: ((error: Error) => void) | undefined;
+	let onEarlyExit: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined;
+	const childFailure = new Promise<never>((_, reject) => {
+		onEarlyError = (error) => reject(error);
+		onEarlyExit = (code, signal) => reject(new Error(formatEarlyExit(code, signal)));
+		child.once("error", onEarlyError);
+		child.once("exit", onEarlyExit);
+	});
+
+	try {
+		await Promise.race([waitForServer(url), childFailure]);
+	} finally {
+		if (onEarlyError) {
+			child.off("error", onEarlyError);
+		}
+		if (onEarlyExit) {
+			child.off("exit", onEarlyExit);
+		}
+	}
+
 	if (options.open !== false) {
 		await openBrowser(url);
 	}
 
 	await new Promise<void>((resolve, reject) => {
 		child.once("error", reject);
-		child.once("exit", () => resolve());
+		child.once("exit", (code, signal) => {
+			if (code === 0 || signal === "SIGINT" || signal === "SIGTERM") {
+				resolve();
+				return;
+			}
+
+			reject(new Error(formatEarlyExit(code, signal)));
+		});
 	});
 }
