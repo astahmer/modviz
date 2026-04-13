@@ -1,13 +1,27 @@
 {
   "name": "modviz",
-  "private": true,
+  "type": "module",
+  "version": "0.14.1",
+  "description": "Creates a module graph based on a given entrypoint.",
+  "keywords": [
+    "module",
+    "graph",
+    "cli",
+    "transitive",
+    "import",
+    "export",
+    "dependency",
+    "analysis"
+  ],
+  "license": "ISC",
+  "author": "Alexandre Stahmer",
   "bin": {
     "modviz": "./dist/mod/cli.js"
   },
   "files": [
+    "README.md",
     "dist"
   ],
-  "type": "module",
   "sideEffects": false,
   "scripts": {
     "cli": "node mod/cli.ts",

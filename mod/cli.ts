@@ -31,15 +31,23 @@ import {
 	buildModvizGraphComparison,
 	renderModvizGraphComparison,
 } from "../shared/modviz-compare.ts";
-import { findImportChainsLimited } from "./import-chains.ts";
-import { createModuleGraph, type Module, type Plugin } from "#module-graph";
-import type { ModuleGraph } from "#module-graph/ModuleGraph.js";
-import { barrelFile } from "#module-graph/plugins/barrel-file.js";
-import { exports } from "#module-graph/plugins/exports.js";
-import { imports } from "#module-graph/plugins/imports.js";
-import { unusedExports, type Export, type Import } from "#module-graph/plugins/unused-exports.js";
+import {
+	createModuleGraph,
+	type Module,
+	type Plugin,
+} from "/Users/astahmer/dev/open-source/module-graph/dist/index.js";
+import { barrelFile } from "/Users/astahmer/dev/open-source/module-graph/dist//plugins/barrel-file.js";
+import { exports } from "/Users/astahmer/dev/open-source/module-graph/dist//plugins/exports.js";
+import { imports } from "/Users/astahmer/dev/open-source/module-graph/dist//plugins/imports.js";
+import {
+	unusedExports,
+	type Export,
+	type Import,
+} from "/Users/astahmer/dev/open-source/module-graph/dist//plugins/unused-exports.js";
 import { findWorkspaces } from "find-workspaces";
 import { sanitizeFileImportSuffixPlugin } from "./module-graph-plugins.ts";
+
+type ModuleGraphInstance = Awaited<ReturnType<typeof createModuleGraph>>;
 
 const args = process.argv.slice(2);
 const parsedArgs = parseCliArgs(args);
@@ -342,7 +350,7 @@ async function withProgress<T>(label: string, work: () => Promise<T> | T) {
 }
 
 function processModuleGraphForWeb(
-	moduleGraph: ModuleGraph,
+	moduleGraph: ModuleGraphInstance,
 	entryFile: string,
 	workspaces: Array<{
 		path: string;
@@ -372,7 +380,7 @@ function processModuleGraphForWeb(
 			importees: Array.from(importees),
 			importedBy: module.importedBy,
 			isBarrelFile: module.isBarrelFile || false,
-			chain: findImportChainsLimited(moduleGraph, filePath, maxChainsPerNode),
+			chain: moduleGraph.findImportChains(filePath, { maxChains: maxChainsPerNode }),
 		};
 		nodeList.push(node);
 
