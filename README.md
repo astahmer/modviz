@@ -244,6 +244,7 @@ The generated `modviz.json` contains:
 - `--limit=<n>`: limit list output in drilldowns
 - `--node-modules`: keep `node_modules` in the analyzed graph instead of excluding them
 - `--ignore-dynamic`: ignore dynamic imports
+- `--ignore-type-only`: ignore type-only imports
 - `--module-lexer=rs|es`: choose the import parser
 - `--port=<port>`: choose the UI server port
 - `--snapshot-name=<name>`: save the generated graph into `.modviz/history` as a named snapshot

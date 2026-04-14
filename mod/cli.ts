@@ -126,12 +126,6 @@ const workspaceList = (workspaces ?? []).map((workspace) => ({
 	imports: workspace.package.imports,
 }));
 
-const replaceImportTypeToImport = (source: string) => source.replace(/import type/g, "import");
-const replaceImportTypeToImportPlugin: Plugin = {
-	name: "replace-import-type-to-import",
-	transformSource: ({ source }) => replaceImportTypeToImport(source),
-};
-
 const clusterizePlugin: Plugin = {
 	name: "cluster-plugin",
 	analyze(module) {
@@ -152,6 +146,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 		// TODO configurable flag to allow this
 		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 		ignoreDynamicImport: flags.ignoreDynamic,
+		includeTypeOnlyImports: !flags.ignoreTypeOnly,
 		plugins: [
 			sanitizeFileImportSuffixPlugin,
 			imports,
@@ -160,7 +155,6 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 			barrelFile({
 				amountOfExportsToConsiderModuleAsBarrel: flags.barrelThreshold,
 			}),
-			replaceImportTypeToImportPlugin,
 			clusterizePlugin,
 		],
 	}),

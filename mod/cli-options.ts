@@ -16,6 +16,7 @@ export interface CliFlags {
 	outputFile: string;
 	nodeModules: boolean;
 	ignoreDynamic: boolean;
+	ignoreTypeOnly: boolean;
 	serve: boolean;
 	help: boolean;
 	llm: boolean;
@@ -150,6 +151,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			outputFile: getOptionValue("--output-file") ?? "./modviz.json",
 			nodeModules: hasFlag("--node-modules"),
 			ignoreDynamic: hasFlag("--ignore-dynamic"),
+			ignoreTypeOnly: hasFlag("--ignore-type-only"),
 			serve: effectiveServe,
 			help: commandArgs.includes("--help") || commandArgs.includes("-h"),
 			llm: hasFlag("--llm"),
@@ -246,6 +248,7 @@ Options:
 	--list-snapshots       List available named snapshots
 	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
 	--ignore-dynamic       Ignore dynamic imports
+	--ignore-type-only     Ignore type-only imports
 	--help, -h             Show this help message
 
 Examples:

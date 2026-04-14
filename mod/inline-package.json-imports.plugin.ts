@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Workspace } from "find-workspaces";
 import MagicString from "magic-string";
 import { resolveImports } from "resolve-pkg-maps";
-import type { Plugin } from "#module-graph";
+import type { Plugin } from "@astahmer/module-graph";
 
 export const inlinePackageJsonImportsPlugin = (
 	workspaceList: Array<{
