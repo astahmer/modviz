@@ -103,9 +103,7 @@ test("validateCliArgs rejects invalid numeric options", () => {
 	expect(validateCliArgs(invalidLimit)).toBe("Invalid --limit value: 0");
 
 	const invalidBarrelThreshold = parseCliArgs(["src/index.ts", "--barrel-threshold=0"]);
-	expect(validateCliArgs(invalidBarrelThreshold)).toBe(
-		"Invalid --barrel-threshold value: 0",
-	);
+	expect(validateCliArgs(invalidBarrelThreshold)).toBe("Invalid --barrel-threshold value: 0");
 
 	const invalidReport = parseCliArgs(["report"]);
 	expect(validateCliArgs(invalidReport)).toBe(

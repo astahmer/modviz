@@ -1,44 +1,30 @@
 {
   "name": "modviz",
-  "type": "module",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "CLI and web UI for analyzing and visualizing TypeScript and JavaScript module dependency graphs.",
   "keywords": [
-    "module",
-    "graph",
     "cli",
-    "transitive",
-    "import",
-    "export",
     "dependency-graph",
+    "export",
+    "graph",
+    "import",
     "import-analysis",
     "javascript",
+    "module",
     "module-graph",
+    "transitive",
     "typescript",
     "visualization"
   ],
-  "license": "ISC",
-  "author": "Alexandre Stahmer",
   "homepage": "https://github.com/astahmer/modviz#readme",
   "bugs": {
     "url": "https://github.com/astahmer/modviz/issues"
   },
+  "license": "ISC",
+  "author": "Alexandre Stahmer",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/astahmer/modviz.git"
-  },
-  "packageManager": "pnpm@10.33.0",
-  "engines": {
-    "node": ">=22.12.0",
-    "pnpm": ">=10.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/mod/index.js",
-  "exports": {
-    ".": "./dist/mod/index.js",
-    "./package.json": "./package.json"
   },
   "bin": {
     "modviz": "./dist/mod/cli.js"
@@ -47,7 +33,16 @@
     "README.md",
     "dist"
   ],
+  "type": "module",
   "sideEffects": false,
+  "main": "./dist/mod/index.js",
+  "exports": {
+    ".": "./dist/mod/index.js",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "cli": "node mod/cli.ts",
     "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts mod/index.ts --types node --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
@@ -131,5 +126,10 @@
     "tw-animate-css": "1.4.0",
     "typescript": "6.0.2",
     "vitest": "4.1.4"
-  }
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.33.0"
 }

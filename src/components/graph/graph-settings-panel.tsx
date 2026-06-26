@@ -6,10 +6,7 @@ import type { GraphLayoutSettings } from "~/components/graph/common/graph-layout
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
-const areGraphSettingsEqual = (
-	left: GraphLayoutSettings,
-	right: GraphLayoutSettings,
-) => {
+const areGraphSettingsEqual = (left: GraphLayoutSettings, right: GraphLayoutSettings) => {
 	return (
 		left.iterations === right.iterations &&
 		left.gravity === right.gravity &&

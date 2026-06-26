@@ -34,13 +34,9 @@ type FilteredNodeRow = {
 };
 
 const buildNodeKeywords = (node: VizNode) =>
-	[
-		node.name,
-		node.package?.name,
-		node.cluster,
-		node.path,
-		...node.path.split("/"),
-	].filter(Boolean) as string[];
+	[node.name, node.package?.name, node.cluster, node.path, ...node.path.split("/")].filter(
+		Boolean,
+	) as string[];
 
 const getFilteredNodeRows = (
 	nodesByClusterMap: Map<string, VizNode[]>,
@@ -64,7 +60,8 @@ const getFilteredNodeRows = (
 
 			if (normalizedSearch) {
 				filteredNodes.sort(
-					(left, right) => right.score - left.score || left.node.path.localeCompare(right.node.path),
+					(left, right) =>
+						right.score - left.score || left.node.path.localeCompare(right.node.path),
 				);
 			}
 
@@ -110,10 +107,13 @@ const getNextSelectedValue = ({
 
 	switch (event.key) {
 		case "ArrowDown":
-			return filteredRows[currentIndex >= 0 ? (currentIndex + 1) % filteredRows.length : 0]?.node.path;
+			return filteredRows[currentIndex >= 0 ? (currentIndex + 1) % filteredRows.length : 0]?.node
+				.path;
 		case "ArrowUp":
 			return filteredRows[
-				currentIndex >= 0 ? (currentIndex - 1 + filteredRows.length) % filteredRows.length : filteredRows.length - 1
+				currentIndex >= 0
+					? (currentIndex - 1 + filteredRows.length) % filteredRows.length
+					: filteredRows.length - 1
 			]?.node.path;
 		case "Home":
 			return filteredRows[0]?.node.path;

@@ -184,7 +184,10 @@ function ConfigureRoute() {
 								onChange={(e) =>
 									updateConfig(
 										"barrelThreshold",
-										Math.max(1, Number(e.target.value) || defaultCommandBuilderState.barrelThreshold),
+										Math.max(
+											1,
+											Number(e.target.value) || defaultCommandBuilderState.barrelThreshold,
+										),
 									)
 								}
 								className="mt-1"

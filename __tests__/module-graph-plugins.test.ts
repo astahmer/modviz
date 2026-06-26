@@ -58,4 +58,4 @@ test("sanitizeFileImportSuffixPlugin skips asset imports but preserves code impo
 			source: 'import Feature from "./feature.tsx?raw";',
 		}),
 	).toBe("./feature.tsx");
-	});
+});

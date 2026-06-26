@@ -193,13 +193,15 @@ export const renderModvizGraphComparison = (
 		`- Removed edges: ${comparison.removedEdges.length}`,
 		changedNodes.length > 0
 			? [
-				"",
-				"Largest direct node deltas",
-				...changedNodes.map(
-					(node) =>
-						`- ${node.path}: inbound ${node.baselineIncoming}->${node.currentIncoming}, outbound ${node.baselineOutgoing}->${node.currentOutgoing}, imports ${node.baselineImports}->${node.currentImports}`,
-				),
-			].join("\n")
+					"",
+					"Largest direct node deltas",
+					...changedNodes.map(
+						(node) =>
+							`- ${node.path}: inbound ${node.baselineIncoming}->${node.currentIncoming}, outbound ${node.baselineOutgoing}->${node.currentOutgoing}, imports ${node.baselineImports}->${node.currentImports}`,
+					),
+				].join("\n")
 			: "",
-	].filter(Boolean).join("\n");
+	]
+		.filter(Boolean)
+		.join("\n");
 };

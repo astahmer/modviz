@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";

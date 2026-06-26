@@ -163,10 +163,7 @@ const WithGraph = (props: {
 							</SidebarIconButton>
 						) : null}
 						<div className="min-w-0 flex-1">
-							<ClusterCombobox
-								clusters={visibleClusters}
-								onFocusCluster={focusCluster}
-							/>
+							<ClusterCombobox clusters={visibleClusters} onFocusCluster={focusCluster} />
 						</div>
 					</div>
 					{props.externalGrouping === "package" && externalNodeIds.length ? (
@@ -223,7 +220,9 @@ const WithGraph = (props: {
 					const node = props.nodes.find((node) => node.path === value);
 					if (!node) return;
 					currentNodeIdAtom.set(value);
-					selectedNodeIdsAtom.set((prev) => prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value]);
+					selectedNodeIdsAtom.set((prev) =>
+						prev.includes(value) ? prev.filter((id) => id !== value) : [...prev, value],
+					);
 				}}
 			/>
 
@@ -248,11 +247,7 @@ interface Cluster {
 	nodes: string[];
 }
 
-function SidebarIconButton(props: {
-	label: string;
-	onClick: () => void;
-	children: ReactNode;
-}) {
+function SidebarIconButton(props: { label: string; onClick: () => void; children: ReactNode }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -274,7 +269,12 @@ function ClusterCombobox(props: {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+				<Button
+					variant="outline"
+					role="combobox"
+					aria-expanded={open}
+					className="w-full justify-between"
+				>
 					Jump to cluster
 					<ChevronsUpDown className="size-4 opacity-50" />
 				</Button>
@@ -296,10 +296,7 @@ function ClusterCombobox(props: {
 										setOpen(false);
 									}}
 								>
-									<div
-										className="size-2 rounded-sm"
-										style={{ backgroundColor: cluster.color }}
-									/>
+									<div className="size-2 rounded-sm" style={{ backgroundColor: cluster.color }} />
 									<div className="flex min-w-0 flex-1 items-center justify-between gap-3">
 										<span className="truncate">{cluster.inferredName || cluster.name}</span>
 										<span className="shrink-0 text-xs text-slate-500">{cluster.nodes.length}</span>
