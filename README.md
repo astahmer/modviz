@@ -2,6 +2,9 @@
 
 An interactive CLI and packaged web UI for visualizing TypeScript and JavaScript module dependency graphs, tracing import origins, and comparing snapshots over time.
 
+<img width="2728" height="1846" alt="image" src="https://github.com/user-attachments/assets/e19ff9f0-d326-42fe-a432-babb653f9f62" />
+<img width="2742" height="1422" alt="image" src="https://github.com/user-attachments/assets/7b9590cb-ab1f-4971-a61b-7d2df903202b" />
+
 ## 🚀 Features
 
 - **Interactive Graph Visualization**: Force-directed, hierarchical, and circular layouts
@@ -259,3 +262,6 @@ The generated `modviz.json` contains:
 - **Bundle Analysis**: See which external dependencies are actually used
 - **Documentation**: Generate visual documentation of your codebase structure
 - **Change Review**: Compare snapshots before and after a refactor to confirm which dependency edges moved
+
+<img width="1284" height="711" alt="image" src="https://github.com/user-attachments/assets/45759db3-dd6d-417a-9537-aca596349065" />
+<img width="1290" height="888" alt="image" src="https://github.com/user-attachments/assets/342fdbef-961e-44f4-bd49-f3ece076184e" />
