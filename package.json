@@ -1,6 +1,6 @@
 {
   "name": "modviz",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "CLI and web UI for analyzing and visualizing TypeScript and JavaScript module dependency graphs.",
   "keywords": [
     "cli",
