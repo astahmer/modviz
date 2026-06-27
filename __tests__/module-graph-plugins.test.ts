@@ -38,6 +38,8 @@ test("sanitizeImportSpecifierForAnalysis leaves non-file specifiers untouched", 
 test("shouldSkipImportForAnalysis skips non-code assets after query sanitization", () => {
 	expect(shouldSkipImportForAnalysis("./icons/najar-cross.svg?component")).toBe(true);
 	expect(shouldSkipImportForAnalysis("../styles/app.css?inline")).toBe(true);
+	expect(shouldSkipImportForAnalysis("/images/logo/najar-favicon-2.png")).toBe(true);
+	expect(shouldSkipImportForAnalysis("unfonts.css")).toBe(true);
 	expect(shouldSkipImportForAnalysis("./feature.tsx?worker")).toBe(false);
 	expect(shouldSkipImportForAnalysis("./feature")).toBe(false);
 });

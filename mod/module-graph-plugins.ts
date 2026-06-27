@@ -55,12 +55,12 @@ export function sanitizeImportSpecifierForAnalysis(importee: string) {
 
 export function shouldSkipImportForAnalysis(importee: string) {
 	const sanitizedImportee = sanitizeImportSpecifierForAnalysis(importee);
-	if (sanitizedImportee === importee) {
-		return false;
+	const extension = path.extname(sanitizedImportee).toLowerCase();
+	if (extension.length > 0 && !ANALYZABLE_SOURCE_EXTENSIONS.has(extension)) {
+		return true;
 	}
 
-	const extension = path.extname(sanitizedImportee).toLowerCase();
-	return extension.length > 0 && !ANALYZABLE_SOURCE_EXTENSIONS.has(extension);
+	return false;
 }
 
 export const sanitizeFileImportSuffixPlugin: Plugin = {
