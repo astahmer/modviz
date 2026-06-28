@@ -38,14 +38,15 @@
   "main": "./dist/mod/index.js",
   "exports": {
     ".": "./dist/mod/index.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./modgraph": "./dist/mod/modgraph.js"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "cli": "node mod/cli.ts",
-    "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts mod/index.ts --types node --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
+    "cli:build": "tsgo --ignoreConfig --skipLibCheck mod/cli.ts mod/index.ts modgraph/src/parse-worker.ts --types node --outDir dist --target es2022 --module nodenext --moduleResolution nodenext --allowImportingTsExtensions --rewriteRelativeImportExtensions",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",

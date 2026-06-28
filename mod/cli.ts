@@ -147,6 +147,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 	createModuleGraph(entryFileForGraph, {
 		basePath,
 		verbose: flags.verbose,
+		workers: flags.workers,
 		crashOnError: flags.crashOnError,
 		// TODO configurable flag to allow this
 		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],

@@ -250,6 +250,7 @@ The generated `modviz.json` contains:
 - `--ignore-type-only`: ignore type-only imports
 - `--module-lexer=rs|es`: choose the import parser
 - `--verbose, -v`: print progress while analyzing (use `--verbose=50` to log every 50th module instead of every module)
+- `--workers[=count]`: use worker threads to parse files in parallel (pass `--workers` without a value to use all available CPU cores, or `--workers=4` for a specific count)
 - `--port=<port>`: choose the UI server port
 - `--snapshot-name=<name>`: save the generated graph into `.modviz/history` as a named snapshot
 - `--snapshot=<id>`: use a named snapshot from history for `report`

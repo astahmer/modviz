@@ -31,42 +31,60 @@ program
 	.description("CLI for analyzing JavaScript and TypeScript module graphs")
 	.version(packageJson.version);
 
-program
-	.command("find <entrypoint>")
-	.argument("<pattern>", "Module to find")
-	.description("Output the import chain for a given module")
-	.action(async (entrypoint: string, pattern: string) => {
-		const graph = await createModuleGraph(entrypoint);
+const sharedOptions = (cmd: ReturnType<typeof program.command>) =>
+	cmd.option(
+		"--workers [count]",
+		"number of worker threads for parallel parsing (default: CPU count); pass --workers without a value to use all available cores",
+	);
 
-		for (const module of graph.get(pattern)) {
-			console.log(module);
-		}
-	});
+const parseWorkers = (value: string | boolean | undefined): boolean | number | undefined => {
+	if (value === undefined) return undefined;
+	if (typeof value === "boolean") return value;
+	const n = Number(value);
+	return Number.isFinite(n) && n > 0 ? n : true;
+};
 
-program
-	.command("import-chain <entrypoint>")
-	.argument("<pattern>", "Module to find import chain for")
-	.description("Output the import chain for a given module")
-	.action(async (entrypoint: string, pattern: string) => {
-		const graph = await createModuleGraph(entrypoint);
+sharedOptions(
+	program.command("find <entrypoint>").argument("<pattern>", "Module to find").description("Output the import chain for a given module"),
+).action(async (entrypoint: string, pattern: string, options: { workers?: string | boolean }) => {
+	const graph = await createModuleGraph(entrypoint, { workers: parseWorkers(options.workers) });
 
-		let index = 0;
-		for (const chain of graph.findImportChains(pattern)) {
-			console.log(`Chain ${++index}:`);
-			for (const chainItem of chain) {
-				console.log(chainItem);
-			}
-			console.log();
-		}
-	});
-
-program.argument("<entrypoint>", "Entrypoint").action(async (entrypoint: string) => {
-	const graph = await createModuleGraph(entrypoint);
-
-	for (const module of graph.getUniqueModules()) {
+	for (const module of graph.get(pattern)) {
 		console.log(module);
 	}
 });
+
+sharedOptions(
+	program
+		.command("import-chain <entrypoint>")
+		.argument("<pattern>", "Module to find import chain for")
+		.description("Output the import chain for a given module"),
+).action(async (entrypoint: string, pattern: string, options: { workers?: string | boolean }) => {
+	const graph = await createModuleGraph(entrypoint, { workers: parseWorkers(options.workers) });
+
+	let index = 0;
+	for (const chain of graph.findImportChains(pattern)) {
+		console.log(`Chain ${++index}:`);
+		for (const chainItem of chain) {
+			console.log(chainItem);
+		}
+		console.log();
+	}
+});
+
+program
+	.option(
+		"--workers [count]",
+		"number of worker threads for parallel parsing (default: CPU count); pass --workers without a value to use all available cores",
+	)
+	.argument("<entrypoint>", "Entrypoint")
+	.action(async (entrypoint: string, options: { workers?: string | boolean }) => {
+		const graph = await createModuleGraph(entrypoint, { workers: parseWorkers(options.workers) });
+
+		for (const module of graph.getUniqueModules()) {
+			console.log(module);
+		}
+	});
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	await program.parseAsync(process.argv);

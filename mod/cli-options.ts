@@ -19,6 +19,7 @@ export interface CliFlags {
 	ignoreDynamic: boolean;
 	ignoreTypeOnly: boolean;
 	crashOnError: boolean;
+	workers?: boolean | number;
 	serve: boolean;
 	help: boolean;
 	llm: boolean;
@@ -164,6 +165,14 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			ignoreDynamic: hasFlag("--ignore-dynamic"),
 			ignoreTypeOnly: hasFlag("--ignore-type-only"),
 			crashOnError: hasFlag("--crash-on-error"),
+			workers: (() => {
+				const raw = getOptionValue("--workers");
+				if (raw !== undefined) {
+					const n = Number(raw);
+					return Number.isFinite(n) && n > 0 ? n : true;
+				}
+				return hasFlag("--workers") ? true : undefined;
+			})(),
 			serve: effectiveServe,
 			help: commandArgs.includes("--help") || commandArgs.includes("-h"),
 			llm: hasFlag("--llm"),
@@ -263,6 +272,7 @@ Options:
 	--ignore-dynamic       Ignore dynamic imports
 	--ignore-type-only     Ignore type-only imports
 	--crash-on-error       Crash on parse errors instead of skipping the file
+	--workers[=count]:     Use worker threads to parse files in parallel (pass \`--workers\` without a value to use all available CPU cores, or \`--workers=4\` for a specific count), default: none (synchronous)
 	--help, -h             Show this help message
 
 Examples:

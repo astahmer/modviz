@@ -110,4 +110,13 @@ export interface CreateModuleGraphOptions extends NapiResolveOptions {
 	exclude?: PathMatcherPattern[];
 	foreignModules?: PathMatcherPattern[];
 	virtualModules?: PathMatcherPattern[];
+	/**
+	 * Number of worker threads to use for parallel parsing.
+	 * When `true`, uses `os.availableParallelism()` workers.
+	 * When a number, uses that many workers.
+	 * When `false` or `undefined`, parsing is done synchronously on the main thread.
+	 *
+	 * @see https://oxc-project.github.io/docs/guide/usage.html#parsesync
+	 */
+	workers?: boolean | number;
 }

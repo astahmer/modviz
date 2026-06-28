@@ -6,6 +6,7 @@ import { createFilter, normalizePath } from "@rollup/pluginutils";
 import { parseSync } from "oxc-parser";
 import { ResolverFactory } from "oxc-resolver";
 import { ModuleGraph } from "./module-graph.ts";
+import { ParseWorkerPool } from "./parse-worker-pool.ts";
 import type {
 	CreateModuleGraphOptions,
 	FindImportChainsOptions,
@@ -106,6 +107,7 @@ export async function createModuleGraph(
 		exclude: excludePatterns = [],
 		foreignModules: foreignModulePatterns = [],
 		virtualModules: virtualModulePatterns = [],
+		workers,
 		...resolveOptions
 	} = options;
 
@@ -141,6 +143,11 @@ export async function createModuleGraph(
 	const modules = processedEntrypoints.map(toRelative);
 	let scannedModuleCount = 0;
 
+	const pool =
+		workers
+			? new ParseWorkerPool(typeof workers === "number" ? workers : undefined)
+			: null;
+
 	const logVerbose = (message: string) => {
 		if (verbose) {
 			console.info(message);
@@ -165,8 +172,11 @@ export async function createModuleGraph(
 		return unwrapped;
 	};
 
-	const getModuleInfo = (filename: string, source: string): ModuleInfo => {
-		const result = parseSync(filename, source, { lang: getParserLang(filename) });
+	const getModuleInfo = async (filename: string, source: string): Promise<ModuleInfo> => {
+		const lang = getParserLang(filename);
+		const result = pool
+			? await pool.parse(filename, source, lang)
+			: parseSync(filename, source, { lang });
 		if (result.errors.length > 0) {
 			const errorMessage = result.errors.map((error) => error.message).join("\n");
 			const relPath = toUnix(path.relative(basePath, filename));
@@ -269,9 +279,41 @@ export async function createModuleGraph(
 	}
 
 	while (importsToScan.size > 0) {
-		for (const dep of importsToScan) {
-			importsToScan.delete(dep);
+		const batch = [...importsToScan];
+		importsToScan.clear();
+
+		for (const dep of batch) {
 			scannedModules.add(dep);
+		}
+
+		const parsed = await Promise.all(
+			batch.map(async (dep) => {
+				const filename = path.join(basePath, dep);
+				let source = fs.readFileSync(filename, "utf8");
+
+				for (const { name, transformSource } of plugins) {
+					try {
+						const result = await transformSource?.({
+							filename,
+							source,
+						});
+
+						if (result) {
+							source = result;
+						}
+					} catch (error) {
+						throw new Error(
+							`[PLUGIN] "${name}" failed on the "transformSource" hook.\n\n${getErrorStack(error)}`,
+						);
+					}
+				}
+
+				const moduleInfo = await getModuleInfo(filename, source);
+				return { dep, source, ...moduleInfo };
+			}),
+		);
+
+		for (const { dep, source, imports, facade, hasModuleSyntax } of parsed) {
 			scannedModuleCount += 1;
 
 			if (
@@ -280,28 +322,6 @@ export async function createModuleGraph(
 			) {
 				logVerbose(`[modgraph] scanned ${scannedModuleCount} modules, current: ${dep}`);
 			}
-
-			const filename = path.join(basePath, dep);
-			let source = fs.readFileSync(filename, "utf8");
-
-			for (const { name, transformSource } of plugins) {
-				try {
-					const result = await transformSource?.({
-						filename,
-						source,
-					});
-
-					if (result) {
-						source = result;
-					}
-				} catch (error) {
-					throw new Error(
-						`[PLUGIN] "${name}" failed on the "transformSource" hook.\n\n${getErrorStack(error)}`,
-					);
-				}
-			}
-
-			const { imports, facade, hasModuleSyntax } = getModuleInfo(filename, source);
 
 			importLoop: for (let { n: importee, isDynamic, isTypeOnly } of imports) {
 				if (!importee) {
@@ -508,6 +528,8 @@ export async function createModuleGraph(
 			}
 		}
 	}
+
+	pool?.terminate();
 
 	for (const { name, end } of plugins) {
 		try {

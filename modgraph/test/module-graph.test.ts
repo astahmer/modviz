@@ -125,6 +125,45 @@ describe("CLI", () => {
 			/Chain 1:\s+modgraph\/test\/fixtures\/graph-simple\/index\.js\s+modgraph\/test\/fixtures\/graph-simple\/bar\.js\s+modgraph\/test\/fixtures\/graph-simple\/baz\.js/s,
 		);
 	});
+
+	it("works with --workers flag (after entrypoint)", () => {
+		const result = spawnSync(
+			process.execPath,
+			[
+				path.join(process.cwd(), "modgraph", "src", "bin", "index.ts"),
+				"modgraph/test/fixtures/graph-simple/index.js",
+				"--workers",
+			],
+			{
+				cwd: process.cwd(),
+				encoding: "utf8",
+			},
+		);
+
+		assert.equal(result.status, 0, result.stderr);
+		assert(result.stdout.includes("index.js"));
+		assert(result.stdout.includes("bar.js"));
+		assert(result.stdout.includes("baz.js"));
+	});
+
+	it("works with --workers=2 flag", () => {
+		const result = spawnSync(
+			process.execPath,
+			[
+				path.join(process.cwd(), "modgraph", "src", "bin", "index.ts"),
+				"modgraph/test/fixtures/graph-simple/index.js",
+				"--workers=2",
+			],
+			{
+				cwd: process.cwd(),
+				encoding: "utf8",
+			},
+		);
+
+		assert.equal(result.status, 0, result.stderr);
+		assert(result.stdout.includes("index.js"));
+		assert(result.stdout.includes("bar.js"));
+	});
 });
 
 describe("createModuleGraph", () => {
@@ -520,6 +559,27 @@ describe("createModuleGraph", () => {
 			basePath: fixture("typescript-tsx"),
 		});
 		assert.deepStrictEqual(moduleGraph.getUniqueModules(), ["index.tsx", "component.tsx"]);
+	});
+
+	it("works with workers flag (boolean)", async () => {
+		const moduleGraph = await createModuleGraph("./index.js", {
+			basePath: fixture("graph-simple"),
+			workers: true,
+		});
+		assert(moduleGraph.graph.get("index.js")?.has("bar.js"));
+		assert(moduleGraph.graph.get("bar.js")?.has("baz.js"));
+		assert(moduleGraph.graph.has("baz.js"));
+		assert.deepStrictEqual(moduleGraph.getUniqueModules(), ["index.js", "bar.js", "baz.js"]);
+	});
+
+	it("works with explicit worker count", async () => {
+		const moduleGraph = await createModuleGraph("./index.js", {
+			basePath: fixture("graph-simple"),
+			workers: 2,
+		});
+		assert(moduleGraph.graph.get("index.js")?.has("bar.js"));
+		assert(moduleGraph.graph.get("bar.js")?.has("baz.js"));
+		assert.deepStrictEqual(moduleGraph.findImportChains("baz.js")[0], ["index.js", "bar.js", "baz.js"]);
 	});
 });
 
