@@ -141,9 +141,16 @@ const clusterizePlugin: Plugin = {
 	},
 };
 
+if (flags.verbose) {
+	console.info(
+		`[modviz] entry=${entryFileAbsolute} basePath=${basePath} workspaces=${workspaceList.length} nodeModules=${flags.nodeModules ? "on" : "off"}`,
+	);
+}
+
 const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 	createModuleGraph(entryFileForGraph, {
 		basePath,
+		verbose: flags.verbose,
 		// TODO configurable flag to allow this
 		exclude: flags.nodeModules ? undefined : [(importee) => importee.includes("node_modules")],
 		ignoreDynamicImport: flags.ignoreDynamic,
@@ -158,7 +165,7 @@ const moduleGraph = await withProgress("Analyzing dependency graph", () =>
 			}),
 			clusterizePlugin,
 		],
-	}),
+	} as Parameters<typeof createModuleGraph>[1]),
 );
 
 const packages = workspaceList.map((workspace) => ({
@@ -291,7 +298,7 @@ async function withProgress<T>(label: string, work: () => Promise<T> | T) {
 	const start = Date.now();
 	let spinnerWorker: Worker | undefined;
 
-	if (process.stdout.isTTY) {
+	if (process.stdout.isTTY || flags.verbose) {
 		process.stdout.write(`⏳ ${label}\n`);
 		spinnerWorker = new Worker(
 			`

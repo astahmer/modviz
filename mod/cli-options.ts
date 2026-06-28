@@ -6,6 +6,7 @@ export interface CliFlags {
 	port?: string;
 	open: boolean;
 	ui: boolean;
+	verbose: boolean;
 	barrelThreshold: number;
 	exclude?: string;
 	historyDir?: string;
@@ -80,6 +81,11 @@ const parseOptionTokens = (args: string[]): ParsedOptionTokens => {
 			break;
 		}
 
+		if (currentArg === "-v") {
+			flags.add(currentArg);
+			continue;
+		}
+
 		if (!currentArg.startsWith("--")) {
 			positionals.push(currentArg);
 			continue;
@@ -141,6 +147,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			port: getOptionValue("--port") ?? "3628",
 			open: !hasFlag("--no-open"),
 			ui: hasFlag("--ui"),
+			verbose: hasFlag("--verbose") || hasFlag("-v"),
 			barrelThreshold: Number.parseInt(getOptionValue("--barrel-threshold") ?? "3", 10),
 			exclude: getOptionValue("--exclude"),
 			historyDir: getOptionValue("--history-dir"),
@@ -247,6 +254,7 @@ Options:
 	--snapshot=<id>        Load a named history snapshot for report
 	--list-snapshots       List available named snapshots
 	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
+	--verbose, -v          Print progress and parse context while analyzing
 	--ignore-dynamic       Ignore dynamic imports
 	--ignore-type-only     Ignore type-only imports
 	--help, -h             Show this help message

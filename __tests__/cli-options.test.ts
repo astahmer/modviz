@@ -89,6 +89,14 @@ test("parseCliArgs supports space-separated option values and no-open", () => {
 	expect(parsed.flags.open).toBe(false);
 });
 
+test("parseCliArgs supports verbose mode", () => {
+	const parsed = parseCliArgs(["src/index.ts", "--verbose"]);
+
+	expect(parsed.flags.verbose).toBe(true);
+	const shortFlag = parseCliArgs(["src/index.ts", "-v"]);
+	expect(shortFlag.flags.verbose).toBe(true);
+});
+
 test("validateCliArgs rejects missing option values instead of swallowing the next flag", () => {
 	const parsed = parseCliArgs(["src/index.ts", "--port", "--ui"]);
 	expect(parsed.flags.ui).toBe(true);
