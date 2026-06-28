@@ -97,6 +97,7 @@ export async function createModuleGraph(
 		includeTypeOnlyImports = false,
 		ignoreDynamicImport = false,
 		verbose = false,
+		crashOnError = false,
 		external = {
 			ignore: false,
 			include: [],
@@ -168,9 +169,13 @@ export async function createModuleGraph(
 		const result = parseSync(filename, source, { lang: getParserLang(filename) });
 		if (result.errors.length > 0) {
 			const errorMessage = result.errors.map((error) => error.message).join("\n");
-			throw new Error(
-				`[PARSE] Failed to parse ${toUnix(path.relative(basePath, filename))}\n\n${errorMessage}`,
-			);
+			const relPath = toUnix(path.relative(basePath, filename));
+
+			if (crashOnError) {
+				throw new Error(`[PARSE] Failed to parse ${relPath}\n\n${errorMessage}`);
+			}
+
+			console.error(`[PARSE] Failed to parse ${relPath}\n${errorMessage}`);
 		}
 
 		const imports: ImportRecord[] = [];

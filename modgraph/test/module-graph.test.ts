@@ -244,9 +244,19 @@ describe("createModuleGraph", () => {
 		await assert.rejects(
 			createModuleGraph("./index.ts", {
 				basePath: fixture("parse-error"),
+				crashOnError: true,
 			}),
 			/Failed to parse .*index\.ts/,
 		);
+	});
+
+	it("skips files with parse errors by default", async () => {
+		const moduleGraph = await createModuleGraph("./index.ts", {
+			basePath: fixture("parse-error"),
+		});
+
+		assert.ok(moduleGraph.modules.has("index.ts"));
+		assert.equal(moduleGraph.graph.get("index.ts")?.size, 0);
 	});
 
 	it("tsx", async () => {

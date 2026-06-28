@@ -18,6 +18,7 @@ export interface CliFlags {
 	nodeModules: boolean;
 	ignoreDynamic: boolean;
 	ignoreTypeOnly: boolean;
+	crashOnError: boolean;
 	serve: boolean;
 	help: boolean;
 	llm: boolean;
@@ -162,6 +163,7 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			nodeModules: hasFlag("--node-modules"),
 			ignoreDynamic: hasFlag("--ignore-dynamic"),
 			ignoreTypeOnly: hasFlag("--ignore-type-only"),
+			crashOnError: hasFlag("--crash-on-error"),
 			serve: effectiveServe,
 			help: commandArgs.includes("--help") || commandArgs.includes("-h"),
 			llm: hasFlag("--llm"),
@@ -260,6 +262,7 @@ Options:
 	--verbose, -v          Print progress and parse context while analyzing (e.g. --verbose=50 for every 50th module)
 	--ignore-dynamic       Ignore dynamic imports
 	--ignore-type-only     Ignore type-only imports
+	--crash-on-error       Crash on parse errors instead of skipping the file
 	--help, -h             Show this help message
 
 Examples:
