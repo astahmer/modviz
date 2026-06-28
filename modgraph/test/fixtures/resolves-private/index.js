@@ -1,0 +1,1 @@
+import { privateVar } from "#private";

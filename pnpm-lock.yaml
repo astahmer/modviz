@@ -14,9 +14,6 @@ importers:
       '@ark-ui/react':
         specifier: 5.36.0
         version: 5.36.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@astahmer/module-graph':
-        specifier: 0.14.4
-        version: 0.14.4(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(rollup@4.50.1)
       '@chenglou/pretext':
         specifier: 0.0.8
         version: 0.0.8
@@ -59,6 +56,9 @@ importers:
       '@react-sigma/minimap':
         specifier: 5.0.6
         version: 5.0.6(graphology@0.26.0(graphology-types@0.24.8))(react@19.2.5)(sigma@3.0.2(graphology-types@0.24.8))
+      '@rollup/pluginutils':
+        specifier: 5.3.0
+        version: 5.3.0(rollup@4.50.1)
       '@sigma/utils':
         specifier: 3.0.0
         version: 3.0.0(sigma@3.0.2(graphology-types@0.24.8))
@@ -74,6 +74,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: 3.13.23
         version: 3.13.23(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@thepassle/module-utils':
+        specifier: 0.4.0
+        version: 0.4.0
       '@xstate/store':
         specifier: 3.17.1
         version: 3.17.1(react@19.2.5)(solid-js@1.9.9)
@@ -89,6 +92,9 @@ importers:
       cmdk:
         specifier: 1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      commander:
+        specifier: 14.0.3
+        version: 14.0.3
       find-workspaces:
         specifier: 0.3.1
         version: 0.3.1
@@ -116,6 +122,15 @@ importers:
       nanovis:
         specifier: 1.0.0
         version: 1.0.0
+      oxc-parser:
+        specifier: 0.137.0
+        version: 0.137.0
+      oxc-resolver:
+        specifier: 11.19.1
+        version: 11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      picomatch:
+        specifier: 4.0.4
+        version: 4.0.4
       react:
         specifier: 19.2.5
         version: 19.2.5
@@ -147,6 +162,9 @@ importers:
       '@types/node':
         specifier: 25.6.0
         version: 25.6.0
+      '@types/picomatch':
+        specifier: 4.0.3
+        version: 4.0.3
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
@@ -162,6 +180,9 @@ importers:
       autoprefixer:
         specifier: 10.4.27
         version: 10.4.27(postcss@8.5.9)
+      import-meta-resolve:
+        specifier: 4.2.0
+        version: 4.2.0
       oxfmt:
         specifier: 0.45.0
         version: 0.45.0
@@ -281,10 +302,6 @@ packages:
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
-
-  '@astahmer/module-graph@0.14.4':
-    resolution: {integrity: sha512-BCP+pfp1Y2vEkqFxrFi0ZsgYKMZAPgKDm+fpA9XG6Hvysh6aR1h+ijcCvbxYEs5yS0cYlA0a5CcAVvs3VQ7g8w==}
-    hasBin: true
 
   '@babel/code-frame@7.26.2':
     resolution: {integrity: sha512-RJlIHRueQgwWitWgF8OdFYGZX328Ax5BCemNGlqHfplnRT9ESi8JkFlvaVYbS+UubVY6dpv87Fs2u5M29iNFVQ==}
@@ -3059,6 +3076,9 @@ packages:
     resolution: {integrity: sha512-EULJ8LApcVEPbrfND0cRQqutIOdiIgJ1Mgrhpy755r14xMohPTEpkV/k28SJvuOs9bHRFW8x+KeDAEPiGQPB9Q==}
     deprecated: This is a stub types definition. parse-path provides its own type definitions, so you do not need this installed.
 
+  '@types/picomatch@4.0.3':
+    resolution: {integrity: sha512-iG0T6+nYJ9FAPmx9SsUlnwcq1ZVRuCXcVEvWnntoPlrOpwtSTKNDC9uVAxTsC3PUvJ+99n4RpAcNgBbHX3JSnQ==}
+
   '@types/react-dom@19.1.9':
     resolution: {integrity: sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==}
     peerDependencies:
@@ -4776,6 +4796,9 @@ packages:
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
+
+  import-meta-resolve@4.2.0:
+    resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -7214,19 +7237,6 @@ snapshots:
       '@zag-js/utils': 1.39.1
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
-
-  '@astahmer/module-graph@0.14.4(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(rollup@4.50.1)':
-    dependencies:
-      '@rollup/pluginutils': 5.3.0(rollup@4.50.1)
-      '@thepassle/module-utils': 0.4.0
-      commander: 14.0.3
-      oxc-parser: 0.137.0
-      oxc-resolver: 11.19.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      picomatch: 4.0.4
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-      - rollup
 
   '@babel/code-frame@7.26.2':
     dependencies:
@@ -9944,6 +9954,8 @@ snapshots:
     dependencies:
       parse-path: 7.1.0
 
+  '@types/picomatch@4.0.3': {}
+
   '@types/react-dom@19.1.9(@types/react@19.1.12)':
     dependencies:
       '@types/react': 19.1.12
@@ -12043,6 +12055,8 @@ snapshots:
     dependencies:
       parent-module: 1.0.1
       resolve-from: 4.0.0
+
+  import-meta-resolve@4.2.0: {}
 
   inherits@2.0.4: {}
 

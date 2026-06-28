@@ -4,5 +4,10 @@
     "browser": true,
     "node": true
   },
-  "ignorePatterns": ["dist/**", "coverage/**", "src/routeTree.gen.ts"]
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "src/routeTree.gen.ts",
+    "**/test/fixtures/**"
+  ]
 }
