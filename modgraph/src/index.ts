@@ -108,6 +108,8 @@ export async function createModuleGraph(
 		...resolveOptions
 	} = options;
 
+	const verboseInterval = typeof verbose === "number" ? verbose : verbose ? 1 : 0;
+
 	if (external.ignore && external.include?.length) {
 		throw new Error('Cannot use both "ignore" and "include" in the external option.');
 	}
@@ -267,8 +269,10 @@ export async function createModuleGraph(
 			scannedModules.add(dep);
 			scannedModuleCount += 1;
 
-			// if (verbose && (scannedModuleCount === 1 || scannedModuleCount % 250 === 0)) {
-			if (verbose) {
+			if (
+				verboseInterval > 0 &&
+				(scannedModuleCount === 1 || scannedModuleCount % verboseInterval === 0)
+			) {
 				logVerbose(`[modgraph] scanned ${scannedModuleCount} modules, current: ${dep}`);
 			}
 

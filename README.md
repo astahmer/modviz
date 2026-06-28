@@ -249,10 +249,15 @@ The generated `modviz.json` contains:
 - `--ignore-dynamic`: ignore dynamic imports
 - `--ignore-type-only`: ignore type-only imports
 - `--module-lexer=rs|es`: choose the import parser
+- `--verbose, -v`: print progress while analyzing (use `--verbose=50` to log every 50th module instead of every module)
 - `--port=<port>`: choose the UI server port
 - `--snapshot-name=<name>`: save the generated graph into `.modviz/history` as a named snapshot
 - `--snapshot=<id>`: use a named snapshot from history for `report`
 - `--list-snapshots`: print the named snapshot history
+
+## Development
+
+The `modgraph/` directory inlines the [`@astahmer/module-graph`](https://github.com/astahmer/module-graph) package directly into this repo for easier maintenance. Source lives in `modgraph/src/`, tests in `modgraph/test/` (run via `node --test`).
 
 ## Use Cases
 

@@ -6,7 +6,7 @@ export interface CliFlags {
 	port?: string;
 	open: boolean;
 	ui: boolean;
-	verbose: boolean;
+	verbose: boolean | number;
 	barrelThreshold: number;
 	exclude?: string;
 	historyDir?: string;
@@ -147,7 +147,10 @@ export function parseCliArgs(args: string[]): ParsedCliArgs {
 			port: getOptionValue("--port") ?? "3628",
 			open: !hasFlag("--no-open"),
 			ui: hasFlag("--ui"),
-			verbose: hasFlag("--verbose") || hasFlag("-v"),
+			verbose: (() => {
+				const raw = getOptionValue("--verbose");
+				return raw !== undefined ? Number(raw) : hasFlag("--verbose") || hasFlag("-v");
+			})(),
 			barrelThreshold: Number.parseInt(getOptionValue("--barrel-threshold") ?? "3", 10),
 			exclude: getOptionValue("--exclude"),
 			historyDir: getOptionValue("--history-dir"),
@@ -254,7 +257,7 @@ Options:
 	--snapshot=<id>        Load a named history snapshot for report
 	--list-snapshots       List available named snapshots
 	--node-modules         Keep node_modules in the analyzed graph instead of excluding them
-	--verbose, -v          Print progress and parse context while analyzing
+	--verbose, -v          Print progress and parse context while analyzing (e.g. --verbose=50 for every 50th module)
 	--ignore-dynamic       Ignore dynamic imports
 	--ignore-type-only     Ignore type-only imports
 	--help, -h             Show this help message
